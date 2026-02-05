@@ -1,4 +1,4 @@
--- Sacrament --
+-- Sacrament - Default Configuration
 
 local Config = {}
 
@@ -13,7 +13,7 @@ Config.Defaults = {
     HighlightTransparency = 0.4,
 
     -- Aimlock
-    Smoothness = 0.15,       -- 0.01 = instant, 0.5+ = lento
+    Smoothness = 0.15,       -- 0.01 = instantâneo, 0.5+ = lento
     Prediction = 0.135,      -- fator de previsão (ajuste por ping)
 
     -- Silent Aim
@@ -25,7 +25,15 @@ Config.Defaults = {
     UnlockOnSit = true,
 }
 
--- Cópia editável em runtime
-Config.Current = table.clone(Config.Defaults)
+-- Cópia editável em runtime (polyfill simples para table.clone)
+local function shallowClone(t)
+    local copy = {}
+    for k, v in pairs(t) do
+        copy[k] = v
+    end
+    return copy
+end
+
+Config.Current = shallowClone(Config.Defaults)
 
 return Config
