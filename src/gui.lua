@@ -1,228 +1,330 @@
--- Sacrament - GUI Module (dark theme aprimorado + arrastável) - v0.2 corrigido
+-- Sacrament GUI - Dark Professional Edition (baseado no exemplo SafadinhaPvP)
+-- Discreto, obscuro, alinhado - sem fofura
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 
 local Gui = {}
 local ScreenGui = nil
-local Frame = nil
+local MainFrame = nil
 local Labels = {}
+local Checkboxes = {}
+local TextBoxes = {}
 
--- Variáveis de drag
-local Dragging = false
-local DragStart = nil
-local StartPos = nil
+local lp = Players.LocalPlayer
+
+-- Variáveis de config (serão atualizadas pelos TextBox)
+local prediction = 0.135
+local smoothness = 0.15
 
 local function createGui()
-    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-    local coreGui = game:GetService("CoreGui")
-    
     ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "SacramentStatus"
+    ScreenGui.Name = "SacramentAimGUI"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Enabled = false
-    
-    -- Tenta CoreGui primeiro, fallback PlayerGui
-    local parentSuccess = pcall(function()
-        ScreenGui.Parent = coreGui
-    end)
-    if not parentSuccess then
-        warn("[GUI] CoreGui parent falhou, usando PlayerGui")
-        ScreenGui.Parent = playerGui
-    end
-    
-    Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 260, 0, 220)
-    Frame.Position = UDim2.new(0.5, -130, 0.4, -110)
-    Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-    Frame.BorderSizePixel = 0
-    Frame.ClipsDescendants = true
-    Frame.Parent = ScreenGui
-    
-    -- Gradiente fundo
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 12))
-    }
-    gradient.Rotation = 90
-    gradient.Parent = Frame
-    
+    ScreenGui.Parent = game:GetService("CoreGui")  -- tenta CoreGui pra resistência
+
+    MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 340, 0, 420)
+    MainFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Visible = false
+    MainFrame.Parent = ScreenGui
+
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = Frame
-    
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = MainFrame
+
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(50, 50, 50)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.4
-    stroke.Parent = Frame
-    
-    -- Título bar (área arrastável)
-    local titleBar = Instance.new("Frame")
-    titleBar.Name = "TitleBar"  -- nome explícito pra facilitar
-    titleBar.Size = UDim2.new(1, 0, 0, 36)
-    titleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = Frame
-    
+    stroke.Color = Color3.fromRGB(180, 0, 0)
+    stroke.Thickness = 2
+    stroke.Transparency = 0.5
+    stroke.Parent = MainFrame
+
+    -- Título
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -40, 1, 0)
+    title.Size = UDim2.new(1, 0, 0, 50)
     title.BackgroundTransparency = 1
-    title.Text = "Sacrament v0.2"
-    title.TextColor3 = Color3.fromRGB(200, 200, 255)
+    title.Text = "SACRAMENT AIMLOCK"
+    title.TextColor3 = Color3.fromRGB(220, 20, 20)
     title.Font = Enum.Font.GothamBlack
-    title.TextSize = 16
+    title.TextSize = 24
     title.TextXAlignment = Enum.TextXAlignment.Center
-    title.Parent = titleBar
-    
-    -- Conteúdo
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Size = UDim2.new(1, 0, 1, -36)
-    contentFrame.Position = UDim2.new(0, 0, 0, 36)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.Parent = Frame
-    
-    local yOffset = 10
-    
-    -- Labels de toggles
-    for _, name in ipairs({"Aimlock", "Silent Aim"}) do
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(1, -20, 0, 28)
-        label.Position = UDim2.new(0, 10, 0, yOffset)
-        label.BackgroundTransparency = 1
-        label.Text = name .. ": OFF"
-        label.TextColor3 = Color3.fromRGB(180, 180, 180)
-        label.Font = Enum.Font.GothamSemibold
-        label.TextSize = 15
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = contentFrame
-        
-        Labels[name] = label
-        yOffset = yOffset + 32
-    end
-    
-    -- Target status (placeholder por enquanto)
+    title.Parent = MainFrame
+
+    -- Divisória
+    local divider = Instance.new("Frame")
+    divider.Size = UDim2.new(0.9, 0, 0, 1)
+    divider.Position = UDim2.new(0.05, 0, 0, 55)
+    divider.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+    divider.BorderSizePixel = 0
+    divider.Parent = MainFrame
+
+    -- PVP CONTROLS
+    local pvpTitle = Instance.new("TextLabel")
+    pvpTitle.Size = UDim2.new(0.9, 0, 0, 25)
+    pvpTitle.Position = UDim2.new(0.05, 0, 0, 65)
+    pvpTitle.BackgroundTransparency = 1
+    pvpTitle.Text = "PVP CONTROLS"
+    pvpTitle.TextColor3 = Color3.fromRGB(220, 220, 220)
+    pvpTitle.Font = Enum.Font.GothamBold
+    pvpTitle.TextSize = 16
+    pvpTitle.TextXAlignment = Enum.TextXAlignment.Left
+    pvpTitle.Parent = MainFrame
+
+    -- Aimlock toggle
+    local aimCheck = Instance.new("TextButton")
+    aimCheck.Size = UDim2.new(0, 22, 0, 22)
+    aimCheck.Position = UDim2.new(0.05, 0, 0, 95)
+    aimCheck.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    aimCheck.Text = ""
+    Instance.new("UICorner", aimCheck).CornerRadius = UDim.new(0, 6)
+    aimCheck.Parent = MainFrame
+
+    local aimFill = Instance.new("Frame")
+    aimFill.Size = UDim2.new(0.7, 0, 0.7, 0)
+    aimFill.Position = UDim2.new(0.15, 0, 0.15, 0)
+    aimFill.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    aimFill.Visible = false
+    Instance.new("UICorner", aimFill).CornerRadius = UDim.new(0, 4)
+    aimFill.Parent = aimCheck
+
+    local aimLabel = Instance.new("TextLabel")
+    aimLabel.Size = UDim2.new(0.8, 0, 0, 22)
+    aimLabel.Position = UDim2.new(0.15, 0, 0, 95)
+    aimLabel.BackgroundTransparency = 1
+    aimLabel.Text = "Aimlock Toggle"
+    aimLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    aimLabel.Font = Enum.Font.Gotham
+    aimLabel.TextSize = 15
+    aimLabel.TextXAlignment = Enum.TextXAlignment.Left
+    aimLabel.Parent = MainFrame
+
+    local aimKey = Instance.new("TextLabel")
+    aimKey.Size = UDim2.new(0.3, 0, 0, 22)
+    aimKey.Position = UDim2.new(0.65, 0, 0, 95)
+    aimKey.BackgroundTransparency = 1
+    aimKey.Text = "KEY: E"
+    aimKey.TextColor3 = Color3.fromRGB(180, 180, 180)
+    aimKey.Font = Enum.Font.Gotham
+    aimKey.TextSize = 14
+    aimKey.TextXAlignment = Enum.TextXAlignment.Right
+    aimKey.Parent = MainFrame
+
+    Checkboxes["Aimlock"] = {Check = aimCheck, Fill = aimFill, Label = aimLabel, KeyLabel = aimKey}
+
+    -- Silent Aim toggle
+    local silentCheck = Instance.new("TextButton")
+    silentCheck.Size = UDim2.new(0, 22, 0, 22)
+    silentCheck.Position = UDim2.new(0.05, 0, 0, 125)
+    silentCheck.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    silentCheck.Text = ""
+    Instance.new("UICorner", silentCheck).CornerRadius = UDim.new(0, 6)
+    silentCheck.Parent = MainFrame
+
+    local silentFill = Instance.new("Frame")
+    silentFill.Size = UDim2.new(0.7, 0, 0.7, 0)
+    silentFill.Position = UDim2.new(0.15, 0, 0.15, 0)
+    silentFill.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+    silentFill.Visible = false
+    Instance.new("UICorner", silentFill).CornerRadius = UDim.new(0, 4)
+    silentFill.Parent = silentCheck
+
+    local silentLabel = Instance.new("TextLabel")
+    silentLabel.Size = UDim2.new(0.8, 0, 0, 22)
+    silentLabel.Position = UDim2.new(0.15, 0, 0, 125)
+    silentLabel.BackgroundTransparency = 1
+    silentLabel.Text = "Silent Aim"
+    silentLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    silentLabel.Font = Enum.Font.Gotham
+    silentLabel.TextSize = 15
+    silentLabel.TextXAlignment = Enum.TextXAlignment.Left
+    silentLabel.Parent = MainFrame
+
+    local silentKey = Instance.new("TextLabel")
+    silentKey.Size = UDim2.new(0.3, 0, 0, 22)
+    silentKey.Position = UDim2.new(0.65, 0, 0, 125)
+    silentKey.BackgroundTransparency = 1
+    silentKey.Text = "KEY: Q"
+    silentKey.TextColor3 = Color3.fromRGB(180, 180, 180)
+    silentKey.Font = Enum.Font.Gotham
+    silentKey.TextSize = 14
+    silentKey.TextXAlignment = Enum.TextXAlignment.Right
+    silentKey.Parent = MainFrame
+
+    Checkboxes["SilentAim"] = {Check = silentCheck, Fill = silentFill, Label = silentLabel, KeyLabel = silentKey}
+
+    -- CONFIGS
+    local configTitle = Instance.new("TextLabel")
+    configTitle.Size = UDim2.new(0.9, 0, 0, 25)
+    configTitle.Position = UDim2.new(0.05, 0, 0, 160)
+    configTitle.BackgroundTransparency = 1
+    configTitle.Text = "CONFIGS"
+    configTitle.TextColor3 = Color3.fromRGB(220, 220, 220)
+    configTitle.Font = Enum.Font.GothamBold
+    configTitle.TextSize = 16
+    configTitle.TextXAlignment = Enum.TextXAlignment.Left
+    configTitle.Parent = MainFrame
+
+    -- Prediction
+    local predLabel = Instance.new("TextLabel")
+    predLabel.Size = UDim2.new(0.45, 0, 0, 20)
+    predLabel.Position = UDim2.new(0.05, 0, 0, 190)
+    predLabel.BackgroundTransparency = 1
+    predLabel.Text = "Prediction:"
+    predLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    predLabel.Font = Enum.Font.Gotham
+    predLabel.TextSize = 14
+    predLabel.Parent = MainFrame
+
+    local predBox = Instance.new("TextBox")
+    predBox.Size = UDim2.new(0, 110, 0, 28)
+    predBox.Position = UDim2.new(0.05, 0, 0, 210)
+    predBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    predBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+    predBox.Text = tostring(prediction)
+    predBox.Font = Enum.Font.Gotham
+    predBox.TextSize = 15
+    Instance.new("UICorner", predBox).CornerRadius = UDim.new(0, 6)
+    predBox.Parent = MainFrame
+
+    TextBoxes["Prediction"] = predBox
+
+    -- Smoothness
+    local smoothLabel = Instance.new("TextLabel")
+    smoothLabel.Size = UDim2.new(0.45, 0, 0, 20)
+    smoothLabel.Position = UDim2.new(0.5, 0, 0, 190)
+    smoothLabel.BackgroundTransparency = 1
+    smoothLabel.Text = "Smoothness:"
+    smoothLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    smoothLabel.Font = Enum.Font.Gotham
+    smoothLabel.TextSize = 14
+    smoothLabel.Parent = MainFrame
+
+    local smoothBox = Instance.new("TextBox")
+    smoothBox.Size = UDim2.new(0, 110, 0, 28)
+    smoothBox.Position = UDim2.new(0.5, 0, 0, 210)
+    smoothBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    smoothBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+    smoothBox.Text = tostring(smoothness)
+    smoothBox.Font = Enum.Font.Gotham
+    smoothBox.TextSize = 15
+    Instance.new("UICorner", smoothBox).CornerRadius = UDim.new(0, 6)
+    smoothBox.Parent = MainFrame
+
+    TextBoxes["Smoothness"] = smoothBox
+
+    -- TARGET INFO
+    local targetTitle = Instance.new("TextLabel")
+    targetTitle.Size = UDim2.new(0.9, 0, 0, 25)
+    targetTitle.Position = UDim2.new(0.05, 0, 0, 250)
+    targetTitle.BackgroundTransparency = 1
+    targetTitle.Text = "TARGET INFO"
+    targetTitle.TextColor3 = Color3.fromRGB(220, 220, 220)
+    targetTitle.Font = Enum.Font.GothamBold
+    targetTitle.TextSize = 16
+    targetTitle.TextXAlignment = Enum.TextXAlignment.Left
+    targetTitle.Parent = MainFrame
+
     local targetLabel = Instance.new("TextLabel")
-    targetLabel.Size = UDim2.new(1, -20, 0, 28)
-    targetLabel.Position = UDim2.new(0, 10, 0, yOffset)
+    targetLabel.Size = UDim2.new(0.9, 0, 0, 30)
+    targetLabel.Position = UDim2.new(0.05, 0, 0, 280)
     targetLabel.BackgroundTransparency = 1
-    targetLabel.Text = "Target: Nenhum"
-    targetLabel.TextColor3 = Color3.fromRGB(120, 220, 255)
-    targetLabel.Font = Enum.Font.Gotham
-    targetLabel.TextSize = 14
-    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    targetLabel.Parent = contentFrame
+    targetLabel.Text = "Nenhum alvo"
+    targetLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+    targetLabel.Font = Enum.Font.GothamBold
+    targetLabel.TextSize = 18
+    targetLabel.TextXAlignment = Enum.TextXAlignment.Center
+    targetLabel.Parent = MainFrame
     Labels["Target"] = targetLabel
-    
-    yOffset = yOffset + 32
-    
-    -- FPS
-    local fpsLabel = Instance.new("TextLabel")
-    fpsLabel.Size = UDim2.new(1, -20, 0, 20)
-    fpsLabel.Position = UDim2.new(0, 10, 1, -30)
-    fpsLabel.BackgroundTransparency = 1
-    fpsLabel.Text = "FPS: --"
-    fpsLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    fpsLabel.Font = Enum.Font.Gotham
-    fpsLabel.TextSize = 12
-    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    fpsLabel.Parent = contentFrame
-    Labels["FPS"] = fpsLabel
-    
-    print("[GUI] Janela criada com sucesso")
+
+    -- Status bar
+    local status = Instance.new("TextLabel")
+    status.Size = UDim2.new(0.9, 0, 0, 40)
+    status.Position = UDim2.new(0.05, 0, 0, 340)
+    status.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    status.Text = "Status: OFFLINE"
+    status.TextColor3 = Color3.fromRGB(220, 20, 20)
+    status.Font = Enum.Font.GothamBold
+    status.TextSize = 18
+    status.TextXAlignment = Enum.TextXAlignment.Center
+    Instance.new("UICorner", status).CornerRadius = UDim.new(0, 10)
+    status.Parent = MainFrame
+    Labels["Status"] = status
+
+    print("[GUI] Dark professional criada")
     return ScreenGui
-end
-
--- Funções de drag
-local function startDrag(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        Dragging = true
-        DragStart = input.Position
-        StartPos = Frame.Position
-        print("[GUI Debug] Drag INICIADO")
-    end
-end
-
-local function updateDrag(input)
-    if Dragging then
-        local delta = input.Position - DragStart
-        Frame.Position = UDim2.new(
-            StartPos.X.Scale,
-            StartPos.X.Offset + delta.X,
-            StartPos.Y.Scale,
-            StartPos.Y.Offset + delta.Y
-        )
-    end
-end
-
-local function stopDrag(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        Dragging = false
-        print("[GUI Debug] Drag FINALIZADO")
-    end
 end
 
 function Gui:Init(inputModule)
     local states = inputModule.States
     if not states then
-        warn("[GUI] States não encontrados no InputModule")
+        warn("[GUI] States não encontrados")
         return
     end
-    
+
     ScreenGui = createGui()
-    ScreenGui.Enabled = states.GuiVisible
-    
-    -- Configura drag no TitleBar
-    local titleBar = Frame:FindFirstChild("TitleBar")
-    if titleBar then
-        titleBar.InputBegan:Connect(startDrag)
-        titleBar.InputEnded:Connect(stopDrag)
-        
-        -- Captura movimento global (mais confiável)
-        UserInputService.InputChanged:Connect(function(input)
-            if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                updateDrag(input)
-            end
-        end)
-        
-        print("[GUI Debug] Drag configurado com sucesso no TitleBar")
-    else
-        warn("[GUI] TitleBar não encontrado")
-    end
-    
-    local oldGuiVisible = states.GuiVisible
-    
-    RunService.RenderStepped:Connect(function(delta)
-        if not ScreenGui or not Frame or not Frame.Parent then return end
-        
-        -- Atualiza toggles
-        Labels["Aimlock"].Text = "Aimlock: " .. (states.AimlockEnabled and "ON" or "OFF")
-        Labels["Aimlock"].TextColor3 = states.AimlockEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 80, 80)
-        
-        Labels["Silent Aim"].Text = "Silent Aim: " .. (states.SilentAimEnabled and "ON" or "OFF")
-        Labels["Silent Aim"].TextColor3 = states.SilentAimEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 80, 80)
-        
-        -- FPS
-        local fps = math.floor(1 / delta + 0.5)
-        Labels["FPS"].Text = "FPS: " .. fps
-        
-        -- Sync visibility
-        if states.GuiVisible ~= oldGuiVisible then
-            ScreenGui.Enabled = states.GuiVisible
-            oldGuiVisible = states.GuiVisible
-            print("[GUI Debug] Visibility atualizada: " .. (states.GuiVisible and "ON" or "OFF"))
+    ScreenGui.Enabled = states.GuiVisible  -- começa false, toggle via Insert
+
+    -- Atualiza visual dos toggles e status via poll
+    RunService.RenderStepped:Connect(function()
+        if not MainFrame or not MainFrame.Parent then return end
+
+        -- Aimlock
+        Checkboxes["Aimlock"].Fill.Visible = states.AimlockEnabled
+        Checkboxes["Aimlock"].Check.BackgroundColor3 = states.AimlockEnabled and Color3.fromRGB(40, 20, 20) or Color3.fromRGB(30, 30, 35)
+
+        -- Silent Aim
+        Checkboxes["SilentAim"].Fill.Visible = states.SilentAimEnabled
+        Checkboxes["SilentAim"].Check.BackgroundColor3 = states.SilentAimEnabled and Color3.fromRGB(40, 20, 20) or Color3.fromRGB(30, 30, 35)
+
+        -- Status (placeholder - atualize quando tiver target real)
+        if states.AimlockEnabled or states.SilentAimEnabled then
+            Labels["Status"].Text = "Status: ONLINE"
+            Labels["Status"].TextColor3 = Color3.fromRGB(0, 220, 0)
+            Labels["Status"].BackgroundColor3 = Color3.fromRGB(15, 35, 15)
+        else
+            Labels["Status"].Text = "Status: OFFLINE"
+            Labels["Status"].TextColor3 = Color3.fromRGB(220, 20, 20)
+            Labels["Status"].BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+        end
+
+        -- Target placeholder
+        Labels["Target"].Text = "Nenhum alvo"  -- atualize depois com target real
+    end)
+
+    -- Atualiza configs dos TextBox
+    TextBoxes["Prediction"].FocusLost:Connect(function()
+        local num = tonumber(TextBoxes["Prediction"].Text)
+        if num and num >= 0 and num <= 1 then
+            prediction = num
+        else
+            TextBoxes["Prediction"].Text = tostring(prediction)
         end
     end)
-    
-    print("[GUI] Inicializado - arrastável ativado")
-end
 
-function Gui:Toggle(visible)
-    if ScreenGui then
-        ScreenGui.Enabled = visible
-    end
+    TextBoxes["Smoothness"].FocusLost:Connect(function()
+        local num = tonumber(TextBoxes["Smoothness"].Text)
+        if num and num >= 0 and num <= 1 then
+            smoothness = num
+        else
+            TextBoxes["Smoothness"].Text = tostring(smoothness)
+        end
+    end)
+
+    -- Sync visibility
+    local oldVisible = states.GuiVisible
+    RunService.RenderStepped:Connect(function()
+        if states.GuiVisible ~= oldVisible then
+            ScreenGui.Enabled = states.GuiVisible
+            oldVisible = states.GuiVisible
+        end
+    end)
+
+    print("[GUI] Inicializado - dark professional mode")
 end
 
 return Gui
