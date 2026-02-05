@@ -1,49 +1,22 @@
--- Sacrament Loader - versão final para Xeno (usa game:HttpGet como principal, fallback request/httpget)
-
-local HttpService = game:GetService("HttpService")
+-- Sacrament Loader - versão simplificada usando game:HttpGet (testado no Xeno)
 
 local function HttpGet(url)
-    print("[Loader Debug] Tentando baixar: " .. url)
-    
-    -- Prioridade 1: game:HttpGet (testado e funcionando no seu Xeno)
+    print("[Loader Debug] Tentando game:HttpGet: " .. url)
     local success, content = pcall(game.HttpGet, game, url, true)
     if success then
-        print("[Loader Debug] game:HttpGet OK - length: " .. #content)
+        print("[Loader Debug] Sucesso - conteúdo length: " .. #content)
         return content
     else
         warn("[Loader Debug] game:HttpGet falhou: " .. tostring(content))
+        return nil
     end
-    
-    -- Prioridade 2: request (se disponível)
-    if request then
-        local success, res = pcall(request, {Url = url, Method = "GET"})
-        if success and res and res.Success then
-            print("[Loader Debug] request OK")
-            return res.Body
-        else
-            warn("[Loader Debug] request falhou: " .. tostring(res and res.StatusMessage or "nil"))
-        end
-    end
-    
-    -- Prioridade 3: httpget
-    if httpget then
-        local success, body = pcall(httpget, url)
-        if success then
-            print("[Loader Debug] httpget OK")
-            return body
-        else
-            warn("[Loader Debug] httpget falhou: " .. tostring(body))
-        end
-    end
-    
-    error("[Sacrament Loader] Nenhum método HTTP funcionou.")
 end
 
 local baseUrl = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/"
 
 local function loadModule(path)
     local url = baseUrl .. path
-    local content = HttpGet(url)  -- já printa debug dentro
+    local content = HttpGet(url)
     
     if not content then
         warn("[Sacrament] Fetch falhou para: " .. path)
@@ -56,29 +29,29 @@ local function loadModule(path)
         return nil
     end
     
-    print("[Loader Debug] " .. path .. " compilado OK")
+    print("[Loader Debug] " .. path .. " carregado e compilado OK")
     return func()
 end
 
 local Sacrament = {}
 
 function Sacrament:Init()
-    print("[Sacrament] Framework iniciado no Xeno - v0.1 dev")
+    print("[Sacrament] Framework iniciado - v0.1 dev")
     
     local Config = loadModule("src/config_defaults.lua")
     if Config then
         print("[Sacrament] Config carregada OK")
-        print("Debug AimlockKey: " .. tostring(Config.Current.AimlockKey and Config.Current.AimlockKey.Name))
+        print("Debug: AimlockKey = " .. tostring(Config.Current.AimlockKey.Name))
     else
-        warn("[Sacrament] Config falhou")
+        warn("[Sacrament] Config falhou - verifique nome do arquivo")
     end
     
     local InputModule = loadModule("src/input.lua")
     if InputModule and Config then
         InputModule:Init(Config)
-        print("[Sacrament] Input inicializado OK")
+        print("[Sacrament] Input carregado OK")
     else
-        warn("[Sacrament] Input falhou - verifique arquivo")
+        warn("[Sacrament] Input falhou - verifique se src/input.lua existe")
     end
 end
 
