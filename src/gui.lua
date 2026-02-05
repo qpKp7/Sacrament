@@ -1,4 +1,4 @@
--- Sacrament - GUI Module (dark theme aprimorado, arrastável) - v0.2
+-- Sacrament - GUI Module (dark theme aprimorado + arrastável) - v0.2 corrigido
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8,6 +8,8 @@ local Gui = {}
 local ScreenGui = nil
 local Frame = nil
 local Labels = {}
+
+-- Variáveis de drag
 local Dragging = false
 local DragStart = nil
 local StartPos = nil
@@ -21,24 +23,24 @@ local function createGui()
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Enabled = false
     
-    -- Parent: CoreGui preferencial, fallback PlayerGui
+    -- Tenta CoreGui primeiro, fallback PlayerGui
     local parentSuccess = pcall(function()
         ScreenGui.Parent = coreGui
     end)
     if not parentSuccess then
-        warn("[GUI] CoreGui falhou, usando PlayerGui")
+        warn("[GUI] CoreGui parent falhou, usando PlayerGui")
         ScreenGui.Parent = playerGui
     end
     
     Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 260, 0, 220)  -- maior pra mais espaço
-    Frame.Position = UDim2.new(0.5, -130, 0.4, -110)  -- um pouco mais alto
+    Frame.Size = UDim2.new(0, 260, 0, 220)
+    Frame.Position = UDim2.new(0.5, -130, 0.4, -110)
     Frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
     Frame.BorderSizePixel = 0
     Frame.ClipsDescendants = true
     Frame.Parent = ScreenGui
     
-    -- Gradiente fundo sutil
+    -- Gradiente fundo
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new{
         ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)),
@@ -57,21 +59,9 @@ local function createGui()
     stroke.Transparency = 0.4
     stroke.Parent = Frame
     
-    -- Shadow (simulada com outro frame)
-    local shadow = Instance.new("Frame")
-    shadow.Size = UDim2.new(1, 12, 1, 12)
-    shadow.Position = UDim2.new(0, -6, 0, -6)
-    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.BackgroundTransparency = 0.7
-    shadow.ZIndex = -1
-    shadow.Parent = Frame
-    
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = UDim.new(0, 12)
-    shadowCorner.Parent = shadow
-    
-    -- Título bar (arrastável)
+    -- Título bar (área arrastável)
     local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"  -- nome explícito pra facilitar
     titleBar.Size = UDim2.new(1, 0, 0, 36)
     titleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
     titleBar.BorderSizePixel = 0
@@ -87,7 +77,7 @@ local function createGui()
     title.TextXAlignment = Enum.TextXAlignment.Center
     title.Parent = titleBar
     
-    -- Botão Close (X)
+    -- Botão Close
     local closeBtn = Instance.new("TextButton")
     closeBtn.Size = UDim2.new(0, 30, 0, 30)
     closeBtn.Position = UDim2.new(1, -34, 0, 3)
@@ -103,10 +93,12 @@ local function createGui()
     closeCorner.Parent = closeBtn
     
     closeBtn.MouseButton1Click:Connect(function()
-        if ScreenGui then ScreenGui.Enabled = false end
+        if ScreenGui then
+            ScreenGui.Enabled = false
+        end
     end)
     
-    -- Conteúdo principal
+    -- Conteúdo
     local contentFrame = Instance.new("Frame")
     contentFrame.Size = UDim2.new(1, 0, 1, -36)
     contentFrame.Position = UDim2.new(0, 0, 0, 36)
@@ -114,6 +106,8 @@ local function createGui()
     contentFrame.Parent = Frame
     
     local yOffset = 10
+    
+    -- Labels de toggles
     for _, name in ipairs({"Aimlock", "Silent Aim"}) do
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(1, -20, 0, 28)
@@ -130,7 +124,7 @@ local function createGui()
         yOffset = yOffset + 32
     end
     
-    -- Status extra: Target Name + Distância
+    -- Target status (placeholder por enquanto)
     local targetLabel = Instance.new("TextLabel")
     targetLabel.Size = UDim2.new(1, -20, 0, 28)
     targetLabel.Position = UDim2.new(0, 10, 0, yOffset)
@@ -145,7 +139,7 @@ local function createGui()
     
     yOffset = yOffset + 32
     
-    -- FPS simples (opcional, pra debug)
+    -- FPS
     local fpsLabel = Instance.new("TextLabel")
     fpsLabel.Size = UDim2.new(1, -20, 0, 20)
     fpsLabel.Position = UDim2.new(0, 10, 1, -30)
@@ -158,16 +152,17 @@ local function createGui()
     fpsLabel.Parent = contentFrame
     Labels["FPS"] = fpsLabel
     
-    print("[GUI] Janela aprimorada criada")
+    print("[GUI] Janela criada com sucesso")
     return ScreenGui
 end
 
--- Função de drag
+-- Funções de drag
 local function startDrag(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         Dragging = true
         DragStart = input.Position
         StartPos = Frame.Position
+        print("[GUI Debug] Drag INICIADO")
     end
 end
 
@@ -184,32 +179,38 @@ local function updateDrag(input)
 end
 
 local function stopDrag(input)
-    Dragging = false
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = false
+        print("[GUI Debug] Drag FINALIZADO")
+    end
 end
 
 function Gui:Init(inputModule)
     local states = inputModule.States
     if not states then
-        warn("[GUI] States não encontrados")
+        warn("[GUI] States não encontrados no InputModule")
         return
     end
     
     ScreenGui = createGui()
     ScreenGui.Enabled = states.GuiVisible
     
-    -- Drag no title bar
-    local titleBar = Frame:FindFirstChildWhichIsA("Frame")  -- o titleBar
+    -- Configura drag no TitleBar
+    local titleBar = Frame:FindFirstChild("TitleBar")
     if titleBar then
         titleBar.InputBegan:Connect(startDrag)
-        titleBar.InputChanged:Connect(updateDrag)
         titleBar.InputEnded:Connect(stopDrag)
         
-        -- Suporte touch/mobile
+        -- Captura movimento global (mais confiável)
         UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            if Dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 updateDrag(input)
             end
         end)
+        
+        print("[GUI Debug] Drag configurado com sucesso no TitleBar")
+    else
+        warn("[GUI] TitleBar não encontrado")
     end
     
     local oldGuiVisible = states.GuiVisible
@@ -228,15 +229,15 @@ function Gui:Init(inputModule)
         local fps = math.floor(1 / delta + 0.5)
         Labels["FPS"].Text = "FPS: " .. fps
         
-        -- Visibility sync
+        -- Sync visibility
         if states.GuiVisible ~= oldGuiVisible then
             ScreenGui.Enabled = states.GuiVisible
             oldGuiVisible = states.GuiVisible
-            print("[GUI] Visibility: " .. (states.GuiVisible and "ON" or "OFF"))
+            print("[GUI Debug] Visibility atualizada: " .. (states.GuiVisible and "ON" or "OFF"))
         end
     end)
     
-    print("[GUI] Inicializado - arrastável + aprimorada")
+    print("[GUI] Inicializado - arrastável ativado")
 end
 
 function Gui:Toggle(visible)
