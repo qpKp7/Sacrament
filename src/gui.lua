@@ -1,5 +1,4 @@
--- Sacrament GUI - Dark Professional Edition (baseado no exemplo SafadinhaPvP)
--- Discreto, obscuro, alinhado - sem fofura
+-- Sacrament GUI - Dark Professional (alinhado com sua foto preferida)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -8,13 +7,10 @@ local UIS = game:GetService("UserInputService")
 local Gui = {}
 local ScreenGui = nil
 local MainFrame = nil
-local Labels = {}
 local Checkboxes = {}
 local TextBoxes = {}
+local Labels = {}
 
-local lp = Players.LocalPlayer
-
--- Variáveis de config (serão atualizadas pelos TextBox)
 local prediction = 0.135
 local smoothness = 0.15
 
@@ -22,7 +18,7 @@ local function createGui()
     ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "SacramentAimGUI"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = game:GetService("CoreGui")  -- tenta CoreGui pra resistência
+    ScreenGui.Parent = game:GetService("CoreGui")
 
     MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 340, 0, 420)
@@ -41,7 +37,7 @@ local function createGui()
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(180, 0, 0)
     stroke.Thickness = 2
-    stroke.Transparency = 0.5
+    stroke.Transparency = 0.4
     stroke.Parent = MainFrame
 
     -- Título
@@ -55,7 +51,6 @@ local function createGui()
     title.TextXAlignment = Enum.TextXAlignment.Center
     title.Parent = MainFrame
 
-    -- Divisória
     local divider = Instance.new("Frame")
     divider.Size = UDim2.new(0.9, 0, 0, 1)
     divider.Position = UDim2.new(0.05, 0, 0, 55)
@@ -75,92 +70,70 @@ local function createGui()
     pvpTitle.TextXAlignment = Enum.TextXAlignment.Left
     pvpTitle.Parent = MainFrame
 
-    -- Aimlock toggle
+    -- Aimlock
     local aimCheck = Instance.new("TextButton")
-    aimCheck.Size = UDim2.new(0, 22, 0, 22)
+    aimCheck.Size = UDim2.new(0, 30, 0, 30)
     aimCheck.Position = UDim2.new(0.05, 0, 0, 95)
     aimCheck.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     aimCheck.Text = ""
-    Instance.new("UICorner", aimCheck).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", aimCheck).CornerRadius = UDim.new(0, 8)
     aimCheck.Parent = MainFrame
 
     local aimFill = Instance.new("Frame")
-    aimFill.Size = UDim2.new(0.7, 0, 0.7, 0)
-    aimFill.Position = UDim2.new(0.15, 0, 0.15, 0)
+    aimFill.Size = UDim2.new(0.6, 0, 0.6, 0)
+    aimFill.Position = UDim2.new(0.2, 0, 0.2, 0)
     aimFill.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
     aimFill.Visible = false
-    Instance.new("UICorner", aimFill).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", aimFill).CornerRadius = UDim.new(0, 6)
     aimFill.Parent = aimCheck
 
     local aimLabel = Instance.new("TextLabel")
-    aimLabel.Size = UDim2.new(0.8, 0, 0, 22)
+    aimLabel.Size = UDim2.new(0.5, 0, 0, 30)
     aimLabel.Position = UDim2.new(0.15, 0, 0, 95)
     aimLabel.BackgroundTransparency = 1
-    aimLabel.Text = "Aimlock Toggle"
+    aimLabel.Text = "Aimlock Toggle (E)"
     aimLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
     aimLabel.Font = Enum.Font.Gotham
     aimLabel.TextSize = 15
     aimLabel.TextXAlignment = Enum.TextXAlignment.Left
     aimLabel.Parent = MainFrame
 
-    local aimKey = Instance.new("TextLabel")
-    aimKey.Size = UDim2.new(0.3, 0, 0, 22)
-    aimKey.Position = UDim2.new(0.65, 0, 0, 95)
-    aimKey.BackgroundTransparency = 1
-    aimKey.Text = "KEY: E"
-    aimKey.TextColor3 = Color3.fromRGB(180, 180, 180)
-    aimKey.Font = Enum.Font.Gotham
-    aimKey.TextSize = 14
-    aimKey.TextXAlignment = Enum.TextXAlignment.Right
-    aimKey.Parent = MainFrame
+    Checkboxes["Aimlock"] = {Check = aimCheck, Fill = aimFill}
 
-    Checkboxes["Aimlock"] = {Check = aimCheck, Fill = aimFill, Label = aimLabel, KeyLabel = aimKey}
-
-    -- Silent Aim toggle
+    -- Silent Aim
     local silentCheck = Instance.new("TextButton")
-    silentCheck.Size = UDim2.new(0, 22, 0, 22)
-    silentCheck.Position = UDim2.new(0.05, 0, 0, 125)
+    silentCheck.Size = UDim2.new(0, 30, 0, 30)
+    silentCheck.Position = UDim2.new(0.05, 0, 0, 135)
     silentCheck.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
     silentCheck.Text = ""
-    Instance.new("UICorner", silentCheck).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", silentCheck).CornerRadius = UDim.new(0, 8)
     silentCheck.Parent = MainFrame
 
     local silentFill = Instance.new("Frame")
-    silentFill.Size = UDim2.new(0.7, 0, 0.7, 0)
-    silentFill.Position = UDim2.new(0.15, 0, 0.15, 0)
+    silentFill.Size = UDim2.new(0.6, 0, 0.6, 0)
+    silentFill.Position = UDim2.new(0.2, 0, 0.2, 0)
     silentFill.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
     silentFill.Visible = false
-    Instance.new("UICorner", silentFill).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", silentFill).CornerRadius = UDim.new(0, 6)
     silentFill.Parent = silentCheck
 
     local silentLabel = Instance.new("TextLabel")
-    silentLabel.Size = UDim2.new(0.8, 0, 0, 22)
-    silentLabel.Position = UDim2.new(0.15, 0, 0, 125)
+    silentLabel.Size = UDim2.new(0.5, 0, 0, 30)
+    silentLabel.Position = UDim2.new(0.15, 0, 0, 135)
     silentLabel.BackgroundTransparency = 1
-    silentLabel.Text = "Silent Aim"
+    silentLabel.Text = "Silent Aim (Q)"
     silentLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
     silentLabel.Font = Enum.Font.Gotham
     silentLabel.TextSize = 15
     silentLabel.TextXAlignment = Enum.TextXAlignment.Left
     silentLabel.Parent = MainFrame
 
-    local silentKey = Instance.new("TextLabel")
-    silentKey.Size = UDim2.new(0.3, 0, 0, 22)
-    silentKey.Position = UDim2.new(0.65, 0, 0, 125)
-    silentKey.BackgroundTransparency = 1
-    silentKey.Text = "KEY: Q"
-    silentKey.TextColor3 = Color3.fromRGB(180, 180, 180)
-    silentKey.Font = Enum.Font.Gotham
-    silentKey.TextSize = 14
-    silentKey.TextXAlignment = Enum.TextXAlignment.Right
-    silentKey.Parent = MainFrame
-
-    Checkboxes["SilentAim"] = {Check = silentCheck, Fill = silentFill, Label = silentLabel, KeyLabel = silentKey}
+    Checkboxes["SilentAim"] = {Check = silentCheck, Fill = silentFill}
 
     -- CONFIGS
     local configTitle = Instance.new("TextLabel")
     configTitle.Size = UDim2.new(0.9, 0, 0, 25)
-    configTitle.Position = UDim2.new(0.05, 0, 0, 160)
+    configTitle.Position = UDim2.new(0.05, 0, 0, 175)
     configTitle.BackgroundTransparency = 1
     configTitle.Text = "CONFIGS"
     configTitle.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -169,10 +142,15 @@ local function createGui()
     configTitle.TextXAlignment = Enum.TextXAlignment.Left
     configTitle.Parent = MainFrame
 
-    -- Prediction
+    local configDivider = Instance.new("Frame")
+    configDivider.Size = UDim2.new(0.9, 0, 0, 1)
+    configDivider.Position = UDim2.new(0.05, 0, 0, 205)
+    configDivider.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+    configDivider.Parent = MainFrame
+
     local predLabel = Instance.new("TextLabel")
-    predLabel.Size = UDim2.new(0.45, 0, 0, 20)
-    predLabel.Position = UDim2.new(0.05, 0, 0, 190)
+    predLabel.Size = UDim2.new(0.4, 0, 0, 20)
+    predLabel.Position = UDim2.new(0.05, 0, 0, 215)
     predLabel.BackgroundTransparency = 1
     predLabel.Text = "Prediction:"
     predLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -181,8 +159,8 @@ local function createGui()
     predLabel.Parent = MainFrame
 
     local predBox = Instance.new("TextBox")
-    predBox.Size = UDim2.new(0, 110, 0, 28)
-    predBox.Position = UDim2.new(0.05, 0, 0, 210)
+    predBox.Size = UDim2.new(0, 110, 0, 32)
+    predBox.Position = UDim2.new(0.05, 0, 0, 235)
     predBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     predBox.TextColor3 = Color3.fromRGB(220, 220, 220)
     predBox.Text = tostring(prediction)
@@ -190,13 +168,11 @@ local function createGui()
     predBox.TextSize = 15
     Instance.new("UICorner", predBox).CornerRadius = UDim.new(0, 6)
     predBox.Parent = MainFrame
-
     TextBoxes["Prediction"] = predBox
 
-    -- Smoothness
     local smoothLabel = Instance.new("TextLabel")
-    smoothLabel.Size = UDim2.new(0.45, 0, 0, 20)
-    smoothLabel.Position = UDim2.new(0.5, 0, 0, 190)
+    smoothLabel.Size = UDim2.new(0.4, 0, 0, 20)
+    smoothLabel.Position = UDim2.new(0.55, 0, 0, 215)
     smoothLabel.BackgroundTransparency = 1
     smoothLabel.Text = "Smoothness:"
     smoothLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -205,8 +181,8 @@ local function createGui()
     smoothLabel.Parent = MainFrame
 
     local smoothBox = Instance.new("TextBox")
-    smoothBox.Size = UDim2.new(0, 110, 0, 28)
-    smoothBox.Position = UDim2.new(0.5, 0, 0, 210)
+    smoothBox.Size = UDim2.new(0, 110, 0, 32)
+    smoothBox.Position = UDim2.new(0.55, 0, 0, 235)
     smoothBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     smoothBox.TextColor3 = Color3.fromRGB(220, 220, 220)
     smoothBox.Text = tostring(smoothness)
@@ -214,13 +190,12 @@ local function createGui()
     smoothBox.TextSize = 15
     Instance.new("UICorner", smoothBox).CornerRadius = UDim.new(0, 6)
     smoothBox.Parent = MainFrame
-
     TextBoxes["Smoothness"] = smoothBox
 
     -- TARGET INFO
     local targetTitle = Instance.new("TextLabel")
     targetTitle.Size = UDim2.new(0.9, 0, 0, 25)
-    targetTitle.Position = UDim2.new(0.05, 0, 0, 250)
+    targetTitle.Position = UDim2.new(0.05, 0, 0, 280)
     targetTitle.BackgroundTransparency = 1
     targetTitle.Text = "TARGET INFO"
     targetTitle.TextColor3 = Color3.fromRGB(220, 220, 220)
@@ -229,9 +204,15 @@ local function createGui()
     targetTitle.TextXAlignment = Enum.TextXAlignment.Left
     targetTitle.Parent = MainFrame
 
+    local targetDivider = Instance.new("Frame")
+    targetDivider.Size = UDim2.new(0.9, 0, 0, 1)
+    targetDivider.Position = UDim2.new(0.05, 0, 0, 310)
+    targetDivider.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+    targetDivider.Parent = MainFrame
+
     local targetLabel = Instance.new("TextLabel")
-    targetLabel.Size = UDim2.new(0.9, 0, 0, 30)
-    targetLabel.Position = UDim2.new(0.05, 0, 0, 280)
+    targetLabel.Size = UDim2.new(0.9, 0, 0, 40)
+    targetLabel.Position = UDim2.new(0.05, 0, 0, 320)
     targetLabel.BackgroundTransparency = 1
     targetLabel.Text = "Nenhum alvo"
     targetLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -241,10 +222,10 @@ local function createGui()
     targetLabel.Parent = MainFrame
     Labels["Target"] = targetLabel
 
-    -- Status bar
+    -- Status
     local status = Instance.new("TextLabel")
-    status.Size = UDim2.new(0.9, 0, 0, 40)
-    status.Position = UDim2.new(0.05, 0, 0, 340)
+    status.Size = UDim2.new(0.9, 0, 0, 45)
+    status.Position = UDim2.new(0.05, 0, 0, 370)
     status.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     status.Text = "Status: OFFLINE"
     status.TextColor3 = Color3.fromRGB(220, 20, 20)
@@ -255,33 +236,23 @@ local function createGui()
     status.Parent = MainFrame
     Labels["Status"] = status
 
-    print("[GUI] Dark professional criada")
     return ScreenGui
 end
 
 function Gui:Init(inputModule)
     local states = inputModule.States
-    if not states then
-        warn("[GUI] States não encontrados")
-        return
-    end
+    if not states then return end
 
     ScreenGui = createGui()
-    ScreenGui.Enabled = states.GuiVisible  -- começa false, toggle via Insert
+    ScreenGui.Enabled = states.GuiVisible
 
-    -- Atualiza visual dos toggles e status via poll
     RunService.RenderStepped:Connect(function()
-        if not MainFrame or not MainFrame.Parent then return end
-
-        -- Aimlock
         Checkboxes["Aimlock"].Fill.Visible = states.AimlockEnabled
         Checkboxes["Aimlock"].Check.BackgroundColor3 = states.AimlockEnabled and Color3.fromRGB(40, 20, 20) or Color3.fromRGB(30, 30, 35)
 
-        -- Silent Aim
         Checkboxes["SilentAim"].Fill.Visible = states.SilentAimEnabled
         Checkboxes["SilentAim"].Check.BackgroundColor3 = states.SilentAimEnabled and Color3.fromRGB(40, 20, 20) or Color3.fromRGB(30, 30, 35)
 
-        -- Status (placeholder - atualize quando tiver target real)
         if states.AimlockEnabled or states.SilentAimEnabled then
             Labels["Status"].Text = "Status: ONLINE"
             Labels["Status"].TextColor3 = Color3.fromRGB(0, 220, 0)
@@ -291,31 +262,18 @@ function Gui:Init(inputModule)
             Labels["Status"].TextColor3 = Color3.fromRGB(220, 20, 20)
             Labels["Status"].BackgroundColor3 = Color3.fromRGB(25, 25, 30)
         end
-
-        -- Target placeholder
-        Labels["Target"].Text = "Nenhum alvo"  -- atualize depois com target real
     end)
 
-    -- Atualiza configs dos TextBox
     TextBoxes["Prediction"].FocusLost:Connect(function()
         local num = tonumber(TextBoxes["Prediction"].Text)
-        if num and num >= 0 and num <= 1 then
-            prediction = num
-        else
-            TextBoxes["Prediction"].Text = tostring(prediction)
-        end
+        if num then prediction = num end
     end)
 
     TextBoxes["Smoothness"].FocusLost:Connect(function()
         local num = tonumber(TextBoxes["Smoothness"].Text)
-        if num and num >= 0 and num <= 1 then
-            smoothness = num
-        else
-            TextBoxes["Smoothness"].Text = tostring(smoothness)
-        end
+        if num then smoothness = num end
     end)
 
-    -- Sync visibility
     local oldVisible = states.GuiVisible
     RunService.RenderStepped:Connect(function()
         if states.GuiVisible ~= oldVisible then
@@ -323,8 +281,6 @@ function Gui:Init(inputModule)
             oldVisible = states.GuiVisible
         end
     end)
-
-    print("[GUI] Inicializado - dark professional mode")
 end
 
 return Gui
