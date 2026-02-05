@@ -16,7 +16,7 @@ function Input:Init(loadedConfig)
     Config = loadedConfig.Current or loadedConfig.Defaults
 
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
+        if gameProcessed then return end  -- ignora se for chat/UI do Roblox
 
         local key = input.KeyCode
 
@@ -36,7 +36,7 @@ function Input:Init(loadedConfig)
         end
     end)
 
-    print("[Input] Inicializado - teclas: E = Aimlock, Q = Silent, Insert = GUI")
+    print("[Input] Inicializado - teclas: E (Aimlock), Q (Silent Aim), Insert (GUI toggle)")
 end
 
 return Input
