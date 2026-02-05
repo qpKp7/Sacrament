@@ -1,5 +1,4 @@
--- Sacrament Loader -- 
-
+-- Sacrament Loader --
 local HttpService = game:GetService("HttpService")
 
 local function HttpGet(url)
@@ -12,7 +11,7 @@ local function HttpGet(url)
     elseif httpget then
         return httpget(url)
     else
-        error("[Sacrament Loader] No compatible HttpGet found.")
+        error("[Sacrament Loader] No compatible HttpGet method found.")
     end
 end
 
@@ -22,12 +21,12 @@ local function loadModule(path)
     local url = baseUrl .. path
     local success, result = pcall(HttpGet, url)
     if not success then
-        warn("[Sacrament] Failed to fetch: " .. path .. " - " .. result)
+        warn("[Sacrament] Failed to fetch: " .. path .. " - " .. tostring(result))
         return nil
     end
     local func, err = loadstring(result)
     if not func then
-        warn("[Sacrament] Loadstring error in " .. path .. ": " .. err)
+        warn("[Sacrament] Loadstring error in " .. path .. ": " .. tostring(err))
         return nil
     end
     return func()
