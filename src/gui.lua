@@ -1,9 +1,8 @@
--- Sacrament GUI - Dark Obscure Professional v0.3
--- Refinado, discreto, sem fofura - tons preto carvão + vermelho sangue
+-- Sacrament GUI - Dark Obscure Professional v0.3 - refinada
+-- Sem fofura, discreto, preto carvão + vermelho sangue
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
 
 local Gui = {}
 local ScreenGui = nil
@@ -21,7 +20,7 @@ local function createGui()
     ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "SacramentAimGUI"
     ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = lp:WaitForChild("PlayerGui")  -- PlayerGui pra compatibilidade máxima
+    ScreenGui.Parent = lp:WaitForChild("PlayerGui")
 
     MainFrame = Instance.new("Frame")
     MainFrame.Size = UDim2.new(0, 360, 0, 440)
@@ -30,7 +29,7 @@ local function createGui()
     MainFrame.BorderSizePixel = 0
     MainFrame.Active = true
     MainFrame.Draggable = true
-    MainFrame.Visible = true  -- começa visível pra debug - depois muda pra false
+    MainFrame.Visible = true  -- começa visível pra teste imediato
     MainFrame.Parent = ScreenGui
 
     local corner = Instance.new("UICorner")
@@ -43,7 +42,7 @@ local function createGui()
     stroke.Transparency = 0.65
     stroke.Parent = MainFrame
 
-    -- Título com sombra sutil
+    -- Título com sombra
     local titleShadow = Instance.new("TextLabel")
     titleShadow.Size = UDim2.new(1, 0, 0, 60)
     titleShadow.BackgroundTransparency = 1
@@ -67,7 +66,6 @@ local function createGui()
     title.ZIndex = 1
     title.Parent = MainFrame
 
-    -- Divisória principal
     local mainDivider = Instance.new("Frame")
     mainDivider.Size = UDim2.new(0.92, 0, 0, 1)
     mainDivider.Position = UDim2.new(0.04, 0, 0, 60)
@@ -130,7 +128,7 @@ local function createGui()
 
     Checkboxes["Aimlock"] = {Check = aimCheck, Fill = aimFill}
 
-    -- Silent Aim Toggle
+    -- Silent Aim Toggle (igual, mas com Q)
     local silentCheck = Instance.new("TextButton")
     silentCheck.Size = UDim2.new(0, 26, 0, 26)
     silentCheck.Position = UDim2.new(0.04, 0, 0, 138)
@@ -173,7 +171,7 @@ local function createGui()
 
     Checkboxes["SilentAim"] = {Check = silentCheck, Fill = silentFill}
 
-    -- CONFIGS
+    -- CONFIGS (Prediction + Smoothness)
     local configTitle = Instance.new("TextLabel")
     configTitle.Size = UDim2.new(0.92, 0, 0, 28)
     configTitle.Position = UDim2.new(0.04, 0, 0, 175)
@@ -297,27 +295,30 @@ local function createGui()
     statusText.Parent = statusBar
     Labels["Status"] = statusText
 
-    print("[GUI Debug] GUI criada - MainFrame.Visible = true")
+    print("[GUI Debug] GUI criada com sucesso - verifique se aparece na tela")
     return ScreenGui
 end
 
 function Gui:Init(inputModule)
-    print("[GUI Debug] Init iniciado")
+    print("[GUI Debug] Init chamado - tentando mostrar GUI")
     local states = inputModule.States
     if not states then
-        warn("[GUI] States não encontrados")
+        warn("[GUI] States não encontrados - GUI não pode sincronizar toggles")
         return
     end
 
     ScreenGui = createGui()
 
-    -- Começa visível pra debug - depois muda pra states.GuiVisible
+    -- Força visibilidade inicial pra teste (depois muda pra states.GuiVisible)
     MainFrame.Visible = true
     ScreenGui.Enabled = true
 
-    -- Atualiza visual dos toggles e status
+    -- Atualiza toggles e status em loop
     RunService.RenderStepped:Connect(function()
-        if not MainFrame or not MainFrame.Parent then return end
+        if not MainFrame or not MainFrame.Parent then
+            print("[GUI Debug] MainFrame destruído?")
+            return
+        end
 
         Checkboxes["Aimlock"].Fill.Visible = states.AimlockEnabled
         Checkboxes["Aimlock"].Check.BackgroundColor3 = states.AimlockEnabled and Color3.fromRGB(35, 15, 15) or Color3.fromRGB(22, 22, 28)
@@ -334,33 +335,7 @@ function Gui:Init(inputModule)
         end
     end)
 
-    -- Atualiza configs
-    TextBoxes["Prediction"].FocusLost:Connect(function()
-        local num = tonumber(TextBoxes["Prediction"].Text)
-        if num and num >= 0 and num <= 2 then
-            prediction = num
-        else
-            TextBoxes["Prediction"].Text = tostring(prediction)
-        end
-    end)
-
-    TextBoxes["Smoothness"].FocusLost:Connect(function()
-        local num = tonumber(TextBoxes["Smoothness"].Text)
-        if num and num >= 0 and num <= 1 then
-            smoothness = num
-        else
-            TextBoxes["Smoothness"].Text = tostring(smoothness)
-        end
-    end)
-
-    print("[GUI Debug] GUI inicializada - deve estar visível agora")
-end
-
-function Gui:Toggle(visible)
-    if MainFrame then
-        MainFrame.Visible = visible
-        print("[GUI Debug] Toggle chamado: " .. (visible and "ON" or "OFF"))
-    end
+    print("[GUI Debug] GUI inicializada - deve estar visível na tela agora")
 end
 
 return Gui
