@@ -77,27 +77,6 @@ local function createGui()
     title.TextXAlignment = Enum.TextXAlignment.Center
     title.Parent = titleBar
     
-    -- Botão Close
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -34, 0, 3)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    closeBtn.Text = "X"
-    closeBtn.TextColor3 = Color3.new(1,1,1)
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 14
-    closeBtn.Parent = titleBar
-    
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 6)
-    closeCorner.Parent = closeBtn
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        if ScreenGui then
-            ScreenGui.Enabled = false
-        end
-    end)
-    
     -- Conteúdo
     local contentFrame = Instance.new("Frame")
     contentFrame.Size = UDim2.new(1, 0, 1, -36)
