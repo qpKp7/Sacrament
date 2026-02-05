@@ -1,41 +1,25 @@
-# Compiled Lua sources
-luac.out
+# Lua / Roblox / Exploit files
+*.backup
+*.lua~
+*.old
+*.tmp
+*.log
+Thumbs.db
+.DS_Store
 
-# luarocks build files
-*.src.rock
-*.zip
-*.tar.gz
+# Configs
+config.lua
+config_*.lua
+binds.lua
+keys.lua
+executor_*.lua
+*.key
 
-# Object files
-*.o
-*.os
-*.ko
-*.obj
-*.elf
+# Obfuscated versions
+obfuscated/*
+!obfuscated/.gitkeep
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-*.def
-*.exp
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
