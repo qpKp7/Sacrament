@@ -1,23 +1,23 @@
 -- src/input.lua
--- Sacrament Input Module - Sistema de detecção de teclas (E/Q/Insert)
--- Detecta toggles para Aimlock, Silent Aim e GUI Visibility
--- Compatível com config_defaults.lua (binds customizáveis)
+-- Sacrament Input Module - Sistema de detecção de teclas (E/Q)
+-- Detecta toggles apenas para Aimlock e Silent Aim
+-- Toggle da GUI agora gerenciado no loader ou gui/init.lua
 
 local UserInputService = game:GetService("UserInputService")
 
 local Input = {}
 
--- Estados compartilhados com a GUI e outros módulos
+-- Estados compartilhados (GUI Visible removido daqui)
 Input.States = {
     AimlockEnabled   = false,
     SilentAimEnabled = false,
-    GuiVisible       = false,
+    -- GuiVisible removido - agora controlado pela GUI diretamente
 }
 
 -- Variáveis internas
 local Config = nil
 local lastToggleTime = 0
-local DEBOUNCE_TIME = 0.15  -- segundos para evitar spam de toggle
+local DEBOUNCE_TIME = 0.15  -- segundos para evitar spam
 
 -- ================================================
 -- Inicializa o módulo de input
@@ -29,21 +29,19 @@ function Input:Init(loadedConfig)
         Config = {
             AimlockKey   = Enum.KeyCode.E,
             SilentAimKey = Enum.KeyCode.Q,
-            GuiToggleKey = Enum.KeyCode.Insert,
+            -- GuiToggleKey removido daqui
         }
     else
-        -- Suporta tanto .Current quanto .Defaults
         local cfg = loadedConfig.Current or loadedConfig.Defaults or loadedConfig
         Config = {
             AimlockKey   = cfg.AimlockKey   or Enum.KeyCode.E,
             SilentAimKey = cfg.SilentAimKey or Enum.KeyCode.Q,
-            GuiToggleKey = cfg.GuiToggleKey or Enum.KeyCode.Insert,
         }
     end
 
-    -- Conexão principal de input
+    -- Conexão principal de input (só E e Q agora)
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end  -- ignora se estiver digitando em chat/box/etc
+        if gameProcessed then return end
 
         local now = tick()
         if now - lastToggleTime < DEBOUNCE_TIME then return end
@@ -60,24 +58,18 @@ function Input:Init(loadedConfig)
             Input.States.SilentAimEnabled = not Input.States.SilentAimEnabled
             print("[Input] Silent Aim Toggle: " .. (Input.States.SilentAimEnabled and "ON" or "OFF"))
         end
-
-        if key == Config.GuiToggleKey then
-            Input.States.GuiVisible = not Input.States.GuiVisible
-            print("[Input] GUI Visibility: " .. (Input.States.GuiVisible and "ON" or "OFF"))
-        end
     end)
 
     print("[Input] Inicializado com sucesso")
     print("  → Aimlock   : " .. tostring(Config.AimlockKey.Name))
     print("  → Silent Aim: " .. tostring(Config.SilentAimKey.Name))
-    print("  → Toggle GUI: " .. tostring(Config.GuiToggleKey.Name))
+    -- print de GuiToggleKey removido
 end
 
--- Função opcional para resetar estados (útil em cleanup ou reload)
+-- Função opcional para resetar estados
 function Input:Reset()
     Input.States.AimlockEnabled   = false
     Input.States.SilentAimEnabled = false
-    Input.States.GuiVisible       = false
     print("[Input] Estados resetados")
 end
 
