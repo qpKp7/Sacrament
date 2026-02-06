@@ -1,12 +1,8 @@
--- Sacrament Universal Loader v3.2 - OFFLINE + Diagnóstico GUI (2026-02-06)
--- Funciona em executors que bloqueiam HttpGet (Xeno, Solara, Fluxus, etc.)
--- Bundle embutido completo + alias gui/init → main_frame
--- Force show temporário + dump de sanity para descobrir por que GUI não aparece
+-- Sacrament Universal Loader v3.3 - OFFLINE + Diagnóstico GUI Completo (06/02/2026)
+-- Single-file, bundle embutido, sem dependência de HttpGet
 
 _G.SacramentModules = _G.SacramentModules or {}
 _G.SacramentLoadedOrder = _G.SacramentLoadedOrder or {}
-
-local HttpService = game:GetService("HttpService") -- pode falhar em alguns exploits
 
 -- =============================================================================
 -- Módulos críticos (sem eles = erro fatal)
@@ -30,7 +26,7 @@ for _, v in ipairs(CRITICAL_MODULES) do table.insert(ALL_MODULES, v) end
 for _, v in ipairs(OPTIONAL_MODULES) do table.insert(ALL_MODULES, v) end
 
 -- =============================================================================
--- BUNDLE completo (com main_frame corrigido: parenting + centralizado + DisplayOrder alto)
+-- BUNDLE completo (com correções de parenting, centralização e diagnóstico)
 -- =============================================================================
 local BUNDLE = {
 ["config_defaults.lua"] = [[
@@ -44,7 +40,8 @@ M.Theme = {
     Accent = Color3.fromHex("#C80000"),
     TextBright = Color3.fromHex("#E0E0E0"),
     TextDim = Color3.fromHex("#888888"),
-    Stroke = Color3.fromRGB(200,0,0)
+    StatusGreen = Color3.fromRGB(0, 255, 100),
+    StatusRed = Color3.fromRGB(200, 0, 0)
 }
 return M
 ]],
@@ -106,7 +103,7 @@ function Toggle.Create(parent, label, key, getStateFn)
     cb.Position = UDim2.new(0,10,0.5,-10)
     cb.BackgroundColor3 = Color3.fromHex("#1A1A1A")
     local fill = Instance.new("Frame", cb)
-    fill.Size = UDim2.new(1, -4,1,-4)
+    fill.Size = UDim2.new(1,-4,1,-4)
     fill.Position = UDim2.new(0,2,0,2)
     fill.BackgroundColor3 = Color3.fromHex("#C80000")
     fill.BackgroundTransparency = 1
@@ -162,7 +159,7 @@ M.Main = nil
 M.Enabled = false
 
 function M:Create()
-    if self.ScreenGui then self.ScreenGui:Destroy() print("[GUI] Destruída GUI antiga") end
+    if self.ScreenGui then self.ScreenGui:Destroy() print("[GUI] GUI antiga destruída") end
 
     local sg = Instance.new("ScreenGui")
     sg.Name = "SacramentGUI"
@@ -171,7 +168,6 @@ function M:Create()
     sg.DisplayOrder = 9999
     sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    -- Tentativa de parent
     local parented = false
     pcall(function()
         sg.Parent = game:GetService("CoreGui")
@@ -185,9 +181,7 @@ function M:Create()
             parented = true
         end)
     end
-    if not parented then
-        warn("[GUI] FALHA: Nenhum parent válido encontrado!")
-    end
+    if not parented then warn("[GUI] FALHA: Nenhum parent válido") end
 
     self.ScreenGui = sg
 
@@ -205,7 +199,6 @@ function M:Create()
     main.Parent = sg
     self.Main = main
 
-    -- Título
     local title = Instance.new("TextLabel", main)
     title.Size = UDim2.new(1,0,0,60)
     title.BackgroundTransparency = 1
@@ -215,7 +208,6 @@ function M:Create()
     title.Font = Enum.Font.GothamBlack
     title.TextStrokeTransparency = 0.7
 
-    -- Conteúdo exemplo (simplificado)
     local content = Instance.new("Frame", main)
     content.Size = UDim2.new(1,-20,1,-80)
     content.Position = UDim2.new(0,10,0,70)
@@ -240,11 +232,10 @@ function M:Create()
     game:GetService("RunService").RenderStepped:Connect(function()
         local anyOn = states.Aimlock or states.Silent
         status.Text = anyOn and "LOCK ACTIVE" or "OFFLINE"
-        status.TextColor3 = anyOn and Color3.fromRGB(0,255,100) or cfg.Theme.Accent
+        status.TextColor3 = anyOn and cfg.Theme.StatusGreen or cfg.Theme.StatusRed
     end)
 
-    -- Dump de sanity
-    print("[GUI Sanity]")
+    print("[GUI Sanity Dump]")
     print("  Parent: " .. (sg.Parent and sg.Parent.Name or "NIL"))
     print("  Enabled: " .. tostring(sg.Enabled))
     print("  DisplayOrder: " .. sg.DisplayOrder)
@@ -264,15 +255,15 @@ end
 
 function M:Init()
     self:Create()
-    self.ScreenGui.Enabled = true  -- FORCE para teste
+    self.ScreenGui.Enabled = true
     self.ScreenGui.DisplayOrder = 9999
-    print("[GUI Init] FORÇADA VISÍVEL + DisplayOrder 9999")
+    print("[GUI Init] FORÇADA VISÍVEL + DisplayOrder 9999 para diagnóstico")
 end
 
 return M
-]]
+]],
 
--- ... (adicione os outros módulos do bundle anterior se precisar, mas main_frame é o crítico)
+["gui/updater.lua"] = [[return { Start = function() end } -- opcional]]
 }
 
 -- =============================================================================
@@ -289,7 +280,9 @@ local function load_bundle()
     for _, path in ipairs(ALL_MODULES) do
         local code = BUNDLE[normalize(path)] or BUNDLE[path]
         if not code then
-            if table.find(CRITICAL_MODULES, path) then table.insert(missing, path) end
+            if table.find(CRITICAL_MODULES, path) then
+                table.insert(missing, path)
+            end
             continue
         end
         local fn, err = loadstring(code, "@" .. path)
@@ -313,26 +306,45 @@ local function load_bundle()
 end
 
 -- =============================================================================
--- Execução
+-- Execução principal
 -- =============================================================================
-print("[Loader] Iniciando...")
+print("[Loader] Iniciando v3.3...")
 
-load_bundle()  -- sempre offline por enquanto (já que bloqueado)
+load_bundle()
 
 local input = _G.SacramentModules["input.lua"]
-if input and input.Init then pcall(input.Init) print("[Loader] Input OK") end
+if input and input.Init then
+    pcall(input.Init)
+    print("[Loader] Input inicializado")
+end
 
 local gui = _G.SacramentModules["gui/init.lua"] or _G.SacramentModules["gui/main_frame.lua"]
-if gui and gui.Init then pcall(gui.Init) print("[Loader] GUI Init chamado") end
+if gui and gui.Init then
+    pcall(gui.Init)
+    print("[Loader] GUI Init chamado")
+end
 
--- Conexão Insert
-if _G.__SacramentInsertConn then _G.__SacramentInsertConn:Disconnect() end
-_G.__SacramentInsertConn = game:GetService("UserInputService").InputBegan:Connect(function(i, gp)
+-- Força GUI visível pós-init (diagnóstico)
+if gui and gui.ScreenGui then
+    gui.ScreenGui.Enabled = true
+    gui.ScreenGui.DisplayOrder = 9999
+    print("[Loader] FORCED GUI visible pós-init para debug")
+end
+
+-- Conexão Insert (anti-duplicata)
+if _G.__SacramentInsertConn then
+    _G.__SacramentInsertConn:Disconnect()
+end
+
+_G.__SacramentInsertConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
     if gp then return end
-    if i.KeyCode == Enum.KeyCode.Insert then
+    if input.KeyCode == Enum.KeyCode.Insert then
         print("[Loader] Insert detectado → chamando Toggle()")
-        if gui and gui.Toggle then pcall(gui.Toggle) end
+        if gui and gui.Toggle then
+            pcall(gui.Toggle)
+        end
     end
 end)
 
-print("[Loader] Pronto. Aperte Insert. Veja dumps no console.")
+print("[Loader] Pronto. Aperte Insert para toggle.")
+print("Veja o [GUI Sanity Dump] no console para diagnosticar visibilidade.")
