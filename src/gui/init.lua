@@ -1,208 +1,155 @@
--- src/gui/init.lua
--- Ponto de entrada da GUI Sacrament Aim System
--- Versão flat: sem require(script.Parent), usa módulos pré-carregados via _G.SacramentModules
+-- gui/init.lua - Ponto de entrada da GUI Sacrament (flat, sem requires relativos)
+-- Atualizado 06/02/2026 - com diagnóstico de visibilidade + force show para teste
 
 local Gui = {}
 
 local RunService = game:GetService("RunService")
 
--- ================================================
--- Importação FLAT dos módulos (injetados pelo loader)
--- ================================================
+-- Importação flat dos módulos (injetados pelo loader)
 local Modules = _G.SacramentModules or {}
-local MainFrame   = Modules["gui/main_frame"]
-local Updater     = Modules["gui/updater"]
+local MainFrame   = Modules["gui/main_frame.lua"]
+local Helpers     = Modules["gui/components/helpers.lua"]
+local Section     = Modules["gui/components/section.lua"]
+local Toggle      = Modules["gui/components/toggle.lua"]
+local InputComp   = Modules["gui/components/input.lua"]
+local Updater     = Modules["gui/updater.lua"] or {Start = function() end}  -- fallback se opcional
 
-local Helpers     = Modules["gui/components/helpers"]
-local Section     = Modules["gui/components/section"]
-local Toggle      = Modules["gui/components/toggle"]
-local InputComp   = Modules["gui/components/input"]  -- renomeado para evitar conflito com input.lua
-
-if not MainFrame or not Updater or not Helpers or not Section or not Toggle or not InputComp then
-    warn("[Sacrament GUI] Módulos da GUI não foram injetados corretamente pelo loader")
-    return Gui  -- sai cedo para não crashar tudo
+if not MainFrame or not Helpers or not Section or not Toggle or not InputComp then
+    warn("[GUI] Módulos críticos da GUI não foram carregados pelo loader")
+    return Gui
 end
 
--- Referências expostas
+-- Referências
 Gui.ScreenGui     = nil
+Gui.MainFrame     = nil
+Gui.StatusText    = nil
 Gui.States        = nil
 
-Gui.AimlockToggle = nil
-Gui.SilentToggle  = nil
-Gui.PredictionBox = nil
-Gui.SmoothnessBox = nil
-
-Gui.NameLabel     = nil
-Gui.InfoLabel     = nil
-Gui.AvatarImage   = nil
-Gui.StatusText    = nil
-
 -- ================================================
--- Inicializa a GUI completa
+-- Inicialização da GUI
 -- ================================================
 function Gui:Init(statesModule)
     if not statesModule then
-        warn("[Sacrament GUI] States module não foi passado na inicialização")
+        warn("[GUI] States module não fornecido")
         return
     end
 
     self.States = statesModule
 
-    -- Cria a estrutura principal
+    -- Cria a estrutura principal via main_frame
     MainFrame:Create()
     self.ScreenGui = MainFrame.ScreenGui
+    self.MainFrame = MainFrame.Main
 
-    if not self.ScreenGui then
-        warn("[Sacrament GUI] ScreenGui não foi criada pelo MainFrame")
+    if not self.ScreenGui or not self.MainFrame then
+        warn("[GUI] ScreenGui ou MainFrame não criados")
         return
     end
 
-    -- Adiciona seções e componentes
-    local content = MainFrame.Content
+    local content = MainFrame.Content or Instance.new("Frame", self.MainFrame)
+    content.Size = UDim2.new(1, -20, 1, -80)
+    content.Position = UDim2.new(0, 10, 0, 70)
+    content.BackgroundTransparency = 1
 
     -- PVP CONTROLS
-    local pvpContent = Section.Create(content, "PVP CONTROLS")
-    self.AimlockToggle = Toggle.Create(
-        pvpContent,
+    local pvpSection = Section.Create(content, "PVP CONTROLS")
+    pvpSection.Position = UDim2.new(0, 0, 0, 0)
+
+    Toggle.Create(
+        pvpSection,
         "Aimlock Toggle",
         "E",
-        function() return self.States.AimlockEnabled end
+        function() return self.States.States.Aimlock end
     )
-    self.SilentToggle = Toggle.Create(
-        pvpContent,
+
+    Toggle.Create(
+        pvpSection,
         "Silent Aim",
         "Q",
-        function() return self.States.SilentAimEnabled end
+        function() return self.States.States.Silent end
     )
 
     -- CONFIGS
-    local configContent = Section.Create(content, "CONFIGS")
-    self.PredictionBox = InputComp.Create(configContent, "Prediction:", "0.135", "Prediction")
-    self.SmoothnessBox = InputComp.Create(configContent, "Smoothness:", "0.15", "Smoothness")
+    local configSection = Section.Create(content, "CONFIGS")
+    configSection.Position = UDim2.new(0, 0, 0, 120)
 
-    -- TARGET INFO (placeholder por enquanto)
-    local targetContent = Section.Create(content, "TARGET INFO")
+    InputComp.Create(configSection, "Prediction:", "0.135")
+    InputComp.Create(configSection, "Smoothness:", "0.15")
 
-    local targetFrame = Instance.new("Frame")
-    targetFrame.Size = UDim2.new(1, 0, 0, 100)
-    targetFrame.BackgroundTransparency = 1
-    targetFrame.Parent = targetContent
+    -- TARGET INFO (placeholder)
+    local targetSection = Section.Create(content, "TARGET INFO")
+    targetSection.Position = UDim2.new(0, 0, 0, 240)
 
-    -- Avatar circular
-    local avatar = Instance.new("ImageLabel")
-    avatar.Name = "Avatar"
-    avatar.Size = UDim2.new(0, 80, 0, 80)
-    avatar.Position = UDim2.new(0, 10, 0, 10)
-    avatar.BackgroundTransparency = 1
-    avatar.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    avatar.Visible = false
-    avatar.Parent = targetFrame
-    Helpers.UICorner(avatar, 40)
+    local targetLabel = Instance.new("TextLabel")
+    targetLabel.Size = UDim2.new(1, -20, 0, 30)
+    targetLabel.Position = UDim2.new(0, 10, 0, 10)
+    targetLabel.BackgroundTransparency = 1
+    targetLabel.Text = "Nenhum alvo selecionado"
+    targetLabel.TextColor3 = Color3.fromHex("#888888")
+    targetLabel.TextSize = 14
+    targetLabel.Font = Enum.Font.GothamSemibold
+    targetLabel.Parent = targetSection
 
-    -- Nome do alvo
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Name = "NameLabel"
-    nameLabel.Size = UDim2.new(1, -110, 0, 30)
-    nameLabel.Position = UDim2.new(0, 100, 0, 10)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = "Nenhum alvo selecionado"
-    nameLabel.TextColor3 = Helpers.COLORS.TextPrimary
-    nameLabel.TextSize = 18
-    nameLabel.Font = Helpers.FONTS.Normal
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.TextWrapped = true
-    nameLabel.Parent = targetFrame
+    -- Status bar (já criado no main_frame, mas referenciamos aqui)
+    self.StatusText = MainFrame.StatusText
 
-    -- Info (distância / health)
-    local infoLabel = Instance.new("TextLabel")
-    infoLabel.Name = "InfoLabel"
-    infoLabel.Size = UDim2.new(1, -110, 0, 20)
-    infoLabel.Position = UDim2.new(0, 100, 0, 45)
-    infoLabel.BackgroundTransparency = 1
-    infoLabel.Text = ""
-    infoLabel.TextColor3 = Helpers.COLORS.TextSecondary
-    infoLabel.TextSize = 14
-    infoLabel.Font = Helpers.FONTS.Small
-    infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-    infoLabel.Parent = targetFrame
+    -- Inicia updater (RenderStepped para sync visual)
+    if Updater and Updater.Start then
+        Updater:Start(self)
+    end
 
-    self.NameLabel   = nameLabel
-    self.InfoLabel   = infoLabel
-    self.AvatarImage = avatar
-
-    -- Inicia o updater para visual dinâmico (RenderStepped)
-    Updater:Start(self)
-
-    -- Começa oculta
-    self.ScreenGui.Enabled = false
-    self.ScreenGui.ResetOnSpawn = false
+    -- Começa oculta, mas FORÇA visível para teste diagnóstico
+    self.ScreenGui.Enabled = true
+    self.ScreenGui.DisplayOrder = 9999
     self.ScreenGui.IgnoreGuiInset = true
+    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    print("[Sacrament GUI] Inicialização completa - use Insert para abrir")
+    print("[GUI] Inicialização completa")
+
+    -- Dump de diagnóstico completo
+    print("[GUI Sanity Dump]")
+    print("  ScreenGui.Parent: " .. (self.ScreenGui.Parent and self.ScreenGui.Parent.Name or "NIL"))
+    print("  ScreenGui.Enabled: " .. tostring(self.ScreenGui.Enabled))
+    print("  DisplayOrder: " .. tostring(self.ScreenGui.DisplayOrder))
+    print("  IgnoreGuiInset: " .. tostring(self.ScreenGui.IgnoreGuiInset))
+    if self.MainFrame then
+        print("  MainFrame.Position: " .. tostring(self.MainFrame.Position))
+        print("  MainFrame.AnchorPoint: " .. tostring(self.MainFrame.AnchorPoint))
+        print("  MainFrame.AbsoluteSize: " .. tostring(self.MainFrame.AbsoluteSize))
+        print("  MainFrame.AbsolutePosition: " .. tostring(self.MainFrame.AbsolutePosition))
+    else
+        warn("  MainFrame não encontrado")
+    end
+
+    print("[GUI] FORÇADA VISÍVEL para diagnóstico - se não aparecer, veja Parent e Executor")
 end
 
 -- ================================================
--- Funções expostas
+-- Toggle da GUI
 -- ================================================
+function Gui:Toggle()
+    if not self.ScreenGui then
+        warn("[GUI Toggle] ScreenGui não existe")
+        return
+    end
 
-function Gui:Toggle(visible)
-    if self.ScreenGui then
-        self.ScreenGui.Enabled = visible
-        print("[Sacrament GUI] Visibilidade alterada para: " .. tostring(visible))
-    else
-        warn("[Sacrament GUI] Tentou toggle mas ScreenGui é nil")
+    self.ScreenGui.Enabled = not self.ScreenGui.Enabled
+    print("[GUI Toggle] Insert pressionado → Enabled agora = " .. tostring(self.ScreenGui.Enabled))
+
+    if self.MainFrame then
+        print("  Posição atual: " .. tostring(self.MainFrame.AbsolutePosition))
+        print("  Tamanho atual: " .. tostring(self.MainFrame.AbsoluteSize))
     end
 end
 
--- Atualiza TARGET INFO (futuro target.lua chama isso)
-function Gui:UpdateTargetInfo(playerName, thumbnailUrl, distanceStr, healthStr)
-    if not self.NameLabel then return end
-
-    if playerName and playerName ~= "" then
-        self.NameLabel.Text = playerName
-        local infoText = distanceStr or ""
-        if healthStr then
-            infoText = infoText .. (distanceStr and " | " or "") .. "HP: " .. healthStr
-        end
-        self.InfoLabel.Text = infoText
-
-        if thumbnailUrl and thumbnailUrl ~= "" then
-            self.AvatarImage.Image = thumbnailUrl
-            self.AvatarImage.Visible = true
-        end
-    else
-        self.NameLabel.Text = "Nenhum alvo selecionado"
-        self.InfoLabel.Text = ""
-        self.AvatarImage.Visible = false
-        self.AvatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    end
-end
-
--- Getters para configs (aimlock/silent vão usar)
-function Gui:GetPrediction()
-    if self.PredictionBox and self.PredictionBox.TextBox then
-        local val = tonumber(self.PredictionBox.TextBox.Text)
-        return val or 0.135
-    end
-    return 0.135
-end
-
-function Gui:GetSmoothness()
-    if self.SmoothnessBox and self.SmoothnessBox.TextBox then
-        local val = tonumber(self.SmoothnessBox.TextBox.Text)
-        return val or 0.15
-    end
-    return 0.15
-end
-
+-- ================================================
 -- Cleanup (opcional)
+-- ================================================
 function Gui:Destroy()
-    if Updater and Updater.Stop then Updater:Stop() end
-    if MainFrame and MainFrame.Destroy then MainFrame:Destroy() end
     if self.ScreenGui then
         self.ScreenGui:Destroy()
+        print("[GUI] Destruída")
     end
-    print("[Sacrament GUI] Destruída")
 end
 
 return Gui
