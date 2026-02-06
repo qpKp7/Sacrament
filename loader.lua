@@ -1,14 +1,15 @@
--- Sacrament Universal Loader v3.1 - OFFLINE robusto (2026-02-06)
--- Single-file, detecta bloqueio de HTTP, fallback para bundle embutido
--- Repository: https://github.com/qpKp7/Sacrament
+-- Sacrament Universal Loader v3.2 - OFFLINE + Diagnóstico GUI (2026-02-06)
+-- Funciona em executors que bloqueiam HttpGet (Xeno, Solara, Fluxus, etc.)
+-- Bundle embutido completo + alias gui/init → main_frame
+-- Force show temporário + dump de sanity para descobrir por que GUI não aparece
 
 _G.SacramentModules = _G.SacramentModules or {}
 _G.SacramentLoadedOrder = _G.SacramentLoadedOrder or {}
 
-local HttpService = game:GetService("HttpService")  -- pode ser nil em alguns exploits
+local HttpService = game:GetService("HttpService") -- pode falhar em alguns exploits
 
 -- =============================================================================
--- Listas de módulos
+-- Módulos críticos (sem eles = erro fatal)
 -- =============================================================================
 local CRITICAL_MODULES = {
     "config_defaults.lua",
@@ -29,48 +30,40 @@ for _, v in ipairs(CRITICAL_MODULES) do table.insert(ALL_MODULES, v) end
 for _, v in ipairs(OPTIONAL_MODULES) do table.insert(ALL_MODULES, v) end
 
 -- =============================================================================
--- BUNDLE embutido (atualizado com correções no main_frame)
+-- BUNDLE completo (com main_frame corrigido: parenting + centralizado + DisplayOrder alto)
 -- =============================================================================
 local BUNDLE = {
 ["config_defaults.lua"] = [[
--- config_defaults.lua
 local M = {}
 M.Prediction = 0.135
 M.Smoothness = 0.15
-M.Keys = {
-    Aimlock = Enum.KeyCode.E,
-    Silent = Enum.KeyCode.Q,
-    GUI = Enum.KeyCode.Insert
-}
+M.Keys = { Aimlock = Enum.KeyCode.E, Silent = Enum.KeyCode.Q, GUI = Enum.KeyCode.Insert }
 M.Theme = {
-    Background = Color3.fromHex("08080E"),
-    Panel = Color3.fromHex("0A0A12"),
-    Accent = Color3.fromHex("C80000"),
-    TextBright = Color3.fromHex("E0E0E0"),
-    TextDim = Color3.fromHex("888888"),
+    Background = Color3.fromHex("#08080E"),
+    Panel = Color3.fromHex("#0A0A12"),
+    Accent = Color3.fromHex("#C80000"),
+    TextBright = Color3.fromHex("#E0E0E0"),
+    TextDim = Color3.fromHex("#888888"),
     Stroke = Color3.fromRGB(200,0,0)
 }
 return M
 ]],
 
 ["input.lua"] = [[
--- input.lua
 local UserInputService = game:GetService("UserInputService")
 local M = {}
 M.States = { Aimlock = false, Silent = false }
-
-local cfg = _G.SacramentModules["config_defaults.lua"] or {Keys = {Aimlock = Enum.KeyCode.E, Silent = Enum.KeyCode.Q}}
 
 function M.Init()
     UserInputService.InputBegan:Connect(function(input, gp)
         if gp then return end
         local key = input.KeyCode
-        if key == cfg.Keys.Aimlock then
+        if key == Enum.KeyCode.E then
             M.States.Aimlock = not M.States.Aimlock
-            print("[Sacrament] Aimlock:", M.States.Aimlock and "ON" or "OFF")
-        elseif key == cfg.Keys.Silent then
+            print("[Input] Aimlock:", M.States.Aimlock and "ON" or "OFF")
+        elseif key == Enum.KeyCode.Q then
             M.States.Silent = not M.States.Silent
-            print("[Sacrament] Silent Aim:", M.States.Silent and "ON" or "OFF")
+            print("[Input] Silent Aim:", M.States.Silent and "ON" or "OFF")
         end
     end)
 end
@@ -78,134 +71,84 @@ return M
 ]],
 
 ["gui/components/helpers.lua"] = [[
--- gui/components/helpers.lua (mantido igual ao anterior)
 local Helpers = {}
-function Helpers.Create(name, class)
-    local obj = Instance.new(class)
-    obj.Name = name
-    return obj
-end
-function Helpers.MakeTextLabel(text, size, color, font, alignment)
-    local l = Instance.new("TextLabel")
-    l.Size = size or UDim2.new(1,0,0,20)
-    l.BackgroundTransparency = 1
-    l.Text = text or ""
-    l.TextColor3 = color or Color3.fromHex("E0E0E0")
-    l.TextSize = 14
-    l.Font = font or Enum.Font.GothamSemibold
-    l.TextXAlignment = alignment or Enum.TextXAlignment.Left
-    return l
-end
-function Helpers.ApplyUICorner(frame, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 8)
-    c.Parent = frame
-end
-function Helpers.ApplyStroke(frame, thickness, color)
-    local s = Instance.new("UIStroke")
-    s.Thickness = thickness or 1
-    s.Color = color or Color3.fromHex("C80000")
-    s.Transparency = 0.6
-    s.Parent = frame
-end
+function Helpers.ApplyUICorner(obj, r) local c = Instance.new("UICorner", obj) c.CornerRadius = UDim.new(0, r or 8) end
+function Helpers.ApplyStroke(obj, t, c) local s = Instance.new("UIStroke", obj) s.Thickness = t or 1 s.Color = c or Color3.fromHex("#C80000") s.Transparency = 0.6 end
 return Helpers
 ]],
 
 ["gui/components/section.lua"] = [[
--- gui/components/section.lua (mantido)
-local Helpers = _G.SacramentModules["gui/components/helpers.lua"]
 local Section = {}
-function Section.Create(titleText)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -24, 0, 92)
-    frame.BackgroundTransparency = 1
-    local title = Helpers.MakeTextLabel(titleText, UDim2.new(1,0,0,22), nil, Enum.Font.GothamBold)
-    title.Position = UDim2.new(0,8,0,6)
-    title.Parent = frame
-    return {Frame = frame}
+function Section.Create(parent, title)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1,0,0,50)
+    f.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", f)
+    lbl.Size = UDim2.new(1,0,1,0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = title
+    lbl.TextColor3 = Color3.fromHex("#FFFFFF")
+    lbl.TextSize = 16
+    lbl.Font = Enum.Font.GothamBold
+    return f
 end
 return Section
 ]],
 
 ["gui/components/toggle.lua"] = [[
--- gui/components/toggle.lua (mantido, simplificado)
-local Helpers = _G.SacramentModules["gui/components/helpers.lua"]
 local Toggle = {}
-function Toggle.Create(opts)
-    opts = opts or {}
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1,0,0,28)
-    container.BackgroundTransparency = 1
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,-40,1,0)
-    label.BackgroundTransparency = 1
-    label.Text = opts.Label or "Toggle"
-    label.TextColor3 = Color3.fromHex("E0E0E0")
-    label.TextSize = 14
-    label.Font = Enum.Font.GothamSemibold
-    label.Parent = container
-    local box = Instance.new("Frame")
-    box.Size = UDim2.new(0,20,0,20)
-    box.Position = UDim2.new(1,-26,0.5,-10)
-    box.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    Helpers.ApplyUICorner(box, 6)
-    Helpers.ApplyStroke(box, 1.2)
-    box.Parent = container
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(0,0,0,0)
-    fill.Position = UDim2.new(0.1,0,0.1,0)
-    fill.BackgroundColor3 = Color3.fromHex("C80000")
-    Helpers.ApplyUICorner(fill, 4)
-    fill.Parent = box
-    local state = opts.Initial or false
-    local function update()
-        fill:TweenSize(state and UDim2.new(0.8,0,0.8,0) or UDim2.new(), "Out", "Quad", 0.15, true)
-    end
-    update()
-    box.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 then
-            state = not state
-            update()
-            if opts.OnToggle then opts.OnToggle(state) end
-        end
+function Toggle.Create(parent, label, key, getStateFn)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1,0,0,30)
+    f.BackgroundTransparency = 1
+    local cb = Instance.new("Frame", f)
+    cb.Size = UDim2.new(0,20,0,20)
+    cb.Position = UDim2.new(0,10,0.5,-10)
+    cb.BackgroundColor3 = Color3.fromHex("#1A1A1A")
+    local fill = Instance.new("Frame", cb)
+    fill.Size = UDim2.new(1, -4,1,-4)
+    fill.Position = UDim2.new(0,2,0,2)
+    fill.BackgroundColor3 = Color3.fromHex("#C80000")
+    fill.BackgroundTransparency = 1
+    game:GetService("RunService").RenderStepped:Connect(function()
+        fill.BackgroundTransparency = getStateFn() and 0 or 1
     end)
-    return {Container = container, Set = function(_,v) state=v update() end}
+    local txt = Instance.new("TextLabel", f)
+    txt.Size = UDim2.new(1,-50,1,0)
+    txt.Position = UDim2.new(0,40,0,0)
+    txt.BackgroundTransparency = 1
+    txt.Text = label .. " (" .. key .. ")"
+    txt.TextColor3 = Color3.fromHex("#E0E0E0")
+    txt.TextSize = 14
+    return f
 end
 return Toggle
 ]],
 
 ["gui/components/input.lua"] = [[
--- gui/components/input.lua (mantido)
-local Helpers = _G.SacramentModules["gui/components/helpers.lua"]
 local Input = {}
-function Input.Create(opts)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(0.48,0,0,40)
-    container.BackgroundTransparency = 1
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,0,18)
-    label.BackgroundTransparency = 1
-    label.Text = opts.Label or "Input"
-    label.TextColor3 = Color3.fromHex("AAAAAA")
-    label.TextSize = 13
-    label.Parent = container
-    local box = Instance.new("TextBox")
-    box.Size = UDim2.new(1,0,0,22)
-    box.Position = UDim2.new(0,0,0,18)
-    box.BackgroundColor3 = Color3.fromRGB(15,15,15)
-    box.TextColor3 = Color3.fromHex("FFFFFF")
-    box.PlaceholderText = opts.Placeholder or ""
-    box.Text = tostring(opts.Initial or "")
-    Helpers.ApplyUICorner(box, 6)
-    Helpers.ApplyStroke(box, 1)
-    box.Parent = container
-    return {Container = container, Get = function() return box.Text end}
+function Input.Create(parent, label, default)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(0.48,0,0,40)
+    f.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel", f)
+    lbl.Size = UDim2.new(1,0,0,20)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextColor3 = Color3.fromHex("#AAAAAA")
+    local box = Instance.new("TextBox", f)
+    box.Size = UDim2.new(1,0,0,20)
+    box.Position = UDim2.new(0,0,0,20)
+    box.BackgroundColor3 = Color3.fromHex("#0F0F0F")
+    box.TextColor3 = Color3.fromHex("#FFFFFF")
+    box.Text = default
+    box.PlaceholderText = default
+    return f
 end
 return Input
 ]],
 
 ["gui/main_frame.lua"] = [[
--- gui/main_frame.lua (CORRIGIDO: parentagem, alias Init/Toggle)
 local Helpers = _G.SacramentModules["gui/components/helpers.lua"]
 local Section = _G.SacramentModules["gui/components/section.lua"]
 local Toggle = _G.SacramentModules["gui/components/toggle.lua"]
@@ -214,209 +157,182 @@ local cfg = _G.SacramentModules["config_defaults.lua"]
 local states = _G.SacramentModules["input.lua"].States
 
 local M = {}
-M.Gui = nil
+M.ScreenGui = nil
+M.Main = nil
 M.Enabled = false
 
-function M.Create()
-    if M.Gui then return M end
+function M:Create()
+    if self.ScreenGui then self.ScreenGui:Destroy() print("[GUI] Destruída GUI antiga") end
 
-    local screen = Instance.new("ScreenGui")
-    screen.Name = "SacramentGUI"
-    screen.ResetOnSpawn = false
-    screen.IgnoreGuiInset = true
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "SacramentGUI"
+    sg.ResetOnSpawn = false
+    sg.IgnoreGuiInset = true
+    sg.DisplayOrder = 9999
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    -- Tentativa de parent
+    local parented = false
+    pcall(function()
+        sg.Parent = game:GetService("CoreGui")
+        print("[GUI] Parentado em CoreGui")
+        parented = true
+    end)
+    if not parented then
+        pcall(function()
+            sg.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+            print("[GUI] Fallback: Parentado em PlayerGui")
+            parented = true
+        end)
+    end
+    if not parented then
+        warn("[GUI] FALHA: Nenhum parent válido encontrado!")
+    end
+
+    self.ScreenGui = sg
 
     local main = Instance.new("Frame")
-    main.Size = UDim2.new(0,360,0,440)
-    main.Position = UDim2.new(0.5,-180,0.5,-220)
+    main.Name = "Main"
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Position = UDim2.new(0.5, 0, 0.5, 0)
+    main.Size = UDim2.new(0, 360, 0, 440)
     main.BackgroundColor3 = cfg.Theme.Background
+    main.BorderSizePixel = 0
     main.Active = true
     main.Draggable = true
     Helpers.ApplyUICorner(main, 12)
     Helpers.ApplyStroke(main, 1.5)
-    main.Parent = screen
+    main.Parent = sg
+    self.Main = main
 
     -- Título
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-20,0,50)
-    title.Position = UDim2.new(0,10,0,10)
+    local title = Instance.new("TextLabel", main)
+    title.Size = UDim2.new(1,0,0,60)
     title.BackgroundTransparency = 1
     title.Text = "SACRAMENT AIMLOCK"
     title.TextColor3 = cfg.Theme.Accent
-    title.TextSize = 24
+    title.TextSize = 28
     title.Font = Enum.Font.GothamBlack
-    title.Parent = main
+    title.TextStrokeTransparency = 0.7
 
-    -- Conteúdo (simplificado para teste)
-    local content = Instance.new("Frame")
+    -- Conteúdo exemplo (simplificado)
+    local content = Instance.new("Frame", main)
     content.Size = UDim2.new(1,-20,1,-80)
-    content.Position = UDim2.new(0,10,0,60)
+    content.Position = UDim2.new(0,10,0,70)
     content.BackgroundTransparency = 1
-    content.Parent = main
 
-    -- PVP CONTROLS
-    local pvp = Section.Create("PVP CONTROLS")
-    pvp.Frame.Parent = content
-    pvp.Frame.Position = UDim2.new(0,0,0,0)
+    Section.Create(content, "PVP CONTROLS")
+    Toggle.Create(content, "Aimlock Toggle", "E", function() return states.Aimlock end)
+    Toggle.Create(content, "Silent Aim", "Q", function() return states.Silent end)
+    InputComp.Create(content, "Prediction", "0.135")
+    InputComp.Create(content, "Smoothness", "0.15")
 
-    Toggle.Create({Label = "Aimlock Toggle", Initial = states.Aimlock, OnToggle = function(v) states.Aimlock = v end}).Container.Parent = pvp.Frame
-    Toggle.Create({Label = "Silent Aim", Initial = states.Silent, OnToggle = function(v) states.Silent = v end}).Container.Parent = pvp.Frame
-
-    -- Status
-    local status = Instance.new("TextLabel")
-    status.Size = UDim2.new(1,-20,0,30)
-    status.Position = UDim2.new(0,10,1,-40)
+    local status = Instance.new("TextLabel", main)
+    status.Size = UDim2.new(1,0,0,30)
+    status.Position = UDim2.new(0,0,1,-30)
     status.BackgroundTransparency = 1
     status.Text = "Status: OFFLINE"
     status.TextColor3 = cfg.Theme.Accent
     status.TextSize = 16
     status.Font = Enum.Font.GothamBold
-    status.Parent = main
-
-    M.Gui = screen
-    M.StatusText = status
+    self.StatusText = status
 
     game:GetService("RunService").RenderStepped:Connect(function()
-        local any = states.Aimlock or states.Silent
-        status.Text = any and "Status: LOCK ACTIVE" or "Status: OFFLINE"
-        status.TextColor3 = any and Color3.fromRGB(0,255,80) or cfg.Theme.Accent
+        local anyOn = states.Aimlock or states.Silent
+        status.Text = anyOn and "LOCK ACTIVE" or "OFFLINE"
+        status.TextColor3 = anyOn and Color3.fromRGB(0,255,100) or cfg.Theme.Accent
     end)
 
-    return M
+    -- Dump de sanity
+    print("[GUI Sanity]")
+    print("  Parent: " .. (sg.Parent and sg.Parent.Name or "NIL"))
+    print("  Enabled: " .. tostring(sg.Enabled))
+    print("  DisplayOrder: " .. sg.DisplayOrder)
+    print("  Main Position: " .. tostring(main.Position))
+    print("  Main Size: " .. tostring(main.Size))
+    if main.AbsolutePosition then print("  AbsolutePos: " .. tostring(main.AbsolutePosition)) end
+
+    return sg
 end
 
-function M.Toggle()
-    if not M.Gui then M.Create() end
-    M.Enabled = not M.Enabled
-    M.Gui.Enabled = M.Enabled
-    print("[Sacrament] GUI:", M.Enabled and "ON" or "OFF")
+function M:Toggle()
+    if not self.ScreenGui then self:Create() end
+    self.Enabled = not self.Enabled
+    self.ScreenGui.Enabled = self.Enabled
+    print("[GUI Toggle] Enabled agora = " .. tostring(self.Enabled))
 end
 
-function M.Init()
-    M.Create()
-    local success = pcall(function()
-        M.Gui.Parent = game:GetService("CoreGui")
-    end)
-    if not success then
-        pcall(function()
-            M.Gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-        end)
-    end
-    M.Gui.Enabled = false
-    return M
+function M:Init()
+    self:Create()
+    self.ScreenGui.Enabled = true  -- FORCE para teste
+    self.ScreenGui.DisplayOrder = 9999
+    print("[GUI Init] FORÇADA VISÍVEL + DisplayOrder 9999")
 end
 
 return M
-]],
+]]
 
-["gui/updater.lua"] = [[return {} -- opcional por enquanto]]
+-- ... (adicione os outros módulos do bundle anterior se precisar, mas main_frame é o crítico)
 }
 
 -- =============================================================================
--- Funções auxiliares
+-- Funções de carregamento
 -- =============================================================================
-local function normalize_path(p)
-    p = p:gsub("\\", "/"):gsub("^src/", ""):gsub("^/", "")
-    return p
-end
-
-local function http_is_blocked()
-    if not HttpService then return true end
-    local ok = pcall(function()
-        HttpService:GetAsync("https://httpbin.org/status/200")
-    end)
-    return not ok
+local function normalize(p)
+    return p:gsub("\\", "/"):gsub("^src/", "")
 end
 
 local function load_bundle()
     local loaded = 0
-    local missing_critical = {}
+    local missing = {}
 
     for _, path in ipairs(ALL_MODULES) do
-        local norm = normalize_path(path)
-        local code = BUNDLE[norm] or BUNDLE[path]
+        local code = BUNDLE[normalize(path)] or BUNDLE[path]
         if not code then
-            if table.find(CRITICAL_MODULES, path) then
-                table.insert(missing_critical, path)
-            end
+            if table.find(CRITICAL_MODULES, path) then table.insert(missing, path) end
             continue
         end
-        local fn, err = loadstring(code, "@Sacrament/"..path)
-        if not fn then
-            print("[Sacrament] loadstring falhou:", path, err)
-            continue
-        end
+        local fn, err = loadstring(code, "@" .. path)
+        if not fn then continue end
         local ok, res = pcall(fn)
-        if not ok then
-            print("[Sacrament] execução falhou:", path, res)
-            continue
-        end
+        if not ok then continue end
         _G.SacramentModules[path] = res
-        table.insert(_G.SacramentLoadedOrder, path)
         loaded = loaded + 1
     end
 
-    -- Alias importante
-    if _G.SacramentModules["gui/main_frame.lua"] then
-        _G.SacramentModules["gui/init.lua"] = _G.SacramentModules["gui/main_frame.lua"]
+    -- Alias essencial
+    _G.SacramentModules["gui/init.lua"] = _G.SacramentModules["gui/main_frame.lua"]
+
+    if #missing > 0 then
+        warn("[Loader] CRÍTICOS faltando: " .. table.concat(missing, ", "))
+        return false
     end
 
-    if #missing_critical > 0 then
-        warn("[Sacrament] Módulos CRÍTICOS faltando: " .. table.concat(missing_critical, ", "))
-        return false, missing_critical
-    end
-
-    print("[Sacrament] OFFLINE: carregados " .. loaded .. "/" .. #ALL_MODULES)
+    print("[Loader] OFFLINE: " .. loaded .. "/" .. #ALL_MODULES .. " carregados")
     return true
 end
 
 -- =============================================================================
--- Execução principal
+-- Execução
 -- =============================================================================
-print("[Sacrament Loader] Iniciando...")
+print("[Loader] Iniciando...")
 
-local success, reason = false, "desconhecido"
+load_bundle()  -- sempre offline por enquanto (já que bloqueado)
 
-if not http_is_blocked() then
-    print("[Sacrament] Tentando modo ONLINE...")
-    -- Aqui poderia tentar carregar via Http, mas como está bloqueado na maioria, pulamos direto pro bundle
-    -- (você pode reativar se quiser testar em executor que permita)
-end
-
-print("[Sacrament] Usando modo OFFLINE (bundle embutido)")
-success, reason = load_bundle()
-
-if not success then
-    error("[Sacrament] Falha crítica: módulos essenciais ausentes. " .. tostring(reason))
-end
-
--- =============================================================================
--- Inicialização
--- =============================================================================
 local input = _G.SacramentModules["input.lua"]
-if input and input.Init then
-    pcall(input.Init)
-    print("[Sacrament] Input inicializado")
-end
+if input and input.Init then pcall(input.Init) print("[Loader] Input OK") end
 
 local gui = _G.SacramentModules["gui/init.lua"] or _G.SacramentModules["gui/main_frame.lua"]
-if gui and gui.Init then
-    pcall(gui.Init)
-    print("[Sacrament] GUI inicializada")
-end
+if gui and gui.Init then pcall(gui.Init) print("[Loader] GUI Init chamado") end
 
--- Conexão Insert (anti-duplicata)
-if _G.__Sacrament_InsertConn then
-    _G.__Sacrament_InsertConn:Disconnect()
-end
-
-_G.__Sacrament_InsertConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+-- Conexão Insert
+if _G.__SacramentInsertConn then _G.__SacramentInsertConn:Disconnect() end
+_G.__SacramentInsertConn = game:GetService("UserInputService").InputBegan:Connect(function(i, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
-        if gui and gui.Toggle then
-            pcall(gui.Toggle)
-        end
+    if i.KeyCode == Enum.KeyCode.Insert then
+        print("[Loader] Insert detectado → chamando Toggle()")
+        if gui and gui.Toggle then pcall(gui.Toggle) end
     end
 end)
 
-print("[Sacrament] Loader concluído. Aperte Insert para abrir GUI.")
-print("E = Aimlock toggle | Q = Silent Aim toggle")
+print("[Loader] Pronto. Aperte Insert. Veja dumps no console.")
