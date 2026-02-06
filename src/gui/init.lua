@@ -1,40 +1,41 @@
 -- src/gui/init.lua
--- Ponto de entrada da GUI do Sacrament Aim System
--- Responsável por inicializar tudo, conectar states e expor funções úteis
+-- Ponto de entrada principal da GUI Sacrament Aim System
+-- Inicializa tudo, conecta states e expõe funções para o resto do projeto
 
 local Gui = {}
 
--- Serviços
 local RunService = game:GetService("RunService")
 
--- Módulos internos da GUI
+-- Módulos da GUI
 local MainFrame   = require(script.Parent.main_frame)
-local Updater     = require(script.Parent.updater)  -- vamos criar depois
+local Updater     = require(script.Parent.updater)
 
--- Componentes reutilizáveis
+-- Componentes
 local Helpers     = require(script.Parent.components.helpers)
 local Section     = require(script.Parent.components.section)
 local Toggle      = require(script.Parent.components.toggle)
 local Input       = require(script.Parent.components.input)
 
--- Referências globais (para fácil acesso em outros módulos)
+-- Referências expostas
 Gui.ScreenGui     = nil
-Gui.MainFrame     = nil
 Gui.States        = nil
+
 Gui.AimlockToggle = nil
 Gui.SilentToggle  = nil
 Gui.PredictionBox = nil
 Gui.SmoothnessBox = nil
-Gui.TargetLabel   = nil
+
+Gui.NameLabel     = nil
+Gui.InfoLabel     = nil
 Gui.AvatarImage   = nil
 Gui.StatusText    = nil
 
 -- ================================================
--- Inicialização completa da GUI
+-- Inicializa a GUI completa
 -- ================================================
 function Gui:Init(statesModule)
     if not statesModule then
-        warn("[Sacrament GUI] States module não fornecido na inicialização")
+        warn("[Sacrament GUI] States module não foi passado na inicialização")
         return
     end
 
@@ -43,9 +44,8 @@ function Gui:Init(statesModule)
     -- Cria a estrutura principal
     MainFrame:Create()
     self.ScreenGui = MainFrame.ScreenGui
-    self.MainFrame = MainFrame.Main
 
-    -- Adiciona as seções e componentes no Content
+    -- Adiciona seções e componentes
     local content = MainFrame.Content
 
     -- PVP CONTROLS
@@ -68,99 +68,122 @@ function Gui:Init(statesModule)
     self.PredictionBox = Input.Create(configContent, "Prediction:", "0.135", "Prediction")
     self.SmoothnessBox = Input.Create(configContent, "Smoothness:", "0.15", "Smoothness")
 
-    -- TARGET INFO
+    -- TARGET INFO (melhorado: avatar + nome + info)
     local targetContent = Section.Create(content, "TARGET INFO")
+
     local targetFrame = Instance.new("Frame")
-    targetFrame.Size = UDim2.new(1, 0, 0, 90)
+    targetFrame.Size = UDim2.new(1, 0, 0, 100)
     targetFrame.BackgroundTransparency = 1
     targetFrame.Parent = targetContent
 
-    -- Avatar placeholder (preparado)
+    -- Avatar circular
     local avatar = Instance.new("ImageLabel")
     avatar.Name = "Avatar"
     avatar.Size = UDim2.new(0, 80, 0, 80)
-    avatar.Position = UDim2.new(0, 10, 0.5, -40)
+    avatar.Position = UDim2.new(0, 10, 0, 10)
     avatar.BackgroundTransparency = 1
-    avatar.Image = ""
-    avatar.Visible = false  -- ativar quando tiver target
+    avatar.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    avatar.Visible = false
     avatar.Parent = targetFrame
+    Helpers.UICorner(avatar, 40)
 
-    Helpers.UICorner(avatar, 40)  -- círculo perfeito
+    -- Nome do alvo
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Size = UDim2.new(1, -110, 0, 30)
+    nameLabel.Position = UDim2.new(0, 100, 0, 10)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "Nenhum alvo selecionado"
+    nameLabel.TextColor3 = Helpers.COLORS.TextPrimary
+    nameLabel.TextSize = 18
+    nameLabel.Font = Helpers.FONTS.Normal
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextWrapped = true
+    nameLabel.Parent = targetFrame
 
-    local targetLabel = Instance.new("TextLabel")
-    targetLabel.Name = "TargetLabel"
-    targetLabel.Size = UDim2.new(1, -100, 1, 0)
-    targetLabel.Position = UDim2.new(0, 100, 0, 0)
-    targetLabel.BackgroundTransparency = 1
-    targetLabel.Text = "Nenhum alvo selecionado"
-    targetLabel.TextColor3 = Helpers.COLORS.TextSecondary
-    targetLabel.TextSize = 18
-    targetLabel.Font = Helpers.FONTS.Normal
-    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    targetLabel.TextYAlignment = Enum.TextYAlignment.Center
-    targetLabel.TextWrapped = true
-    targetLabel.Parent = targetFrame
+    -- Info (distância / health)
+    local infoLabel = Instance.new("TextLabel")
+    infoLabel.Name = "InfoLabel"
+    infoLabel.Size = UDim2.new(1, -110, 0, 20)
+    infoLabel.Position = UDim2.new(0, 100, 0, 45)
+    infoLabel.BackgroundTransparency = 1
+    infoLabel.Text = ""
+    infoLabel.TextColor3 = Helpers.COLORS.TextSecondary
+    infoLabel.TextSize = 14
+    infoLabel.Font = Helpers.FONTS.Small
+    infoLabel.TextXAlignment = Enum.TextXAlignment.Left
+    infoLabel.Parent = targetFrame
 
-    self.TargetLabel = targetLabel
+    self.NameLabel   = nameLabel
+    self.InfoLabel   = infoLabel
     self.AvatarImage = avatar
 
-    -- Conecta o updater para atualizações visuais em tempo real
+    -- Inicia o updater para visual dinâmico
     Updater:Start(self)
 
     -- Começa oculta
     self.ScreenGui.Enabled = false
 
-    print("[Sacrament GUI] Inicialização completa - Insert para abrir")
+    print("[Sacrament GUI] Inicialização completa - use Insert para abrir")
 end
 
 -- ================================================
--- Funções expostas para outros módulos
+-- Funções expostas
 -- ================================================
 
--- Toggle visibilidade da GUI
 function Gui:Toggle(visible)
     if self.ScreenGui then
         self.ScreenGui.Enabled = visible
-        print("[Sacrament GUI] Visible set to: " .. tostring(visible))
+        print("[Sacrament GUI] Visibilidade alterada para: " .. tostring(visible))
     end
 end
 
--- Atualiza info do alvo (chamado por target.lua)
-function Gui:UpdateTargetInfo(playerName, thumbnailUrl, distance)
-    if not self.TargetLabel then return end
+-- Atualiza TARGET INFO (chamado pelo target.lua)
+function Gui:UpdateTargetInfo(playerName, thumbnailUrl, distanceStr, healthStr)
+    if not self.NameLabel then return end
 
     if playerName and playerName ~= "" then
-        self.TargetLabel.Text = playerName .. (distance and (" (" .. distance .. ")") or "")
+        self.NameLabel.Text = playerName
+        local infoText = ""
+        if distanceStr then infoText = infoText .. distanceStr end
+        if healthStr then infoText = infoText .. (distanceStr and " | " or "") .. "HP: " .. healthStr end
+        self.InfoLabel.Text = infoText
+
         if thumbnailUrl and thumbnailUrl ~= "" then
             self.AvatarImage.Image = thumbnailUrl
             self.AvatarImage.Visible = true
         end
     else
-        self.TargetLabel.Text = "Nenhum alvo selecionado"
+        self.NameLabel.Text = "Nenhum alvo selecionado"
+        self.InfoLabel.Text = ""
         self.AvatarImage.Visible = false
-        self.AvatarImage.Image = ""
+        self.AvatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
     end
 end
 
--- Atualiza status manualmente (opcional)
-function Gui:UpdateStatus(active)
-    if self.StatusText then
-        if active then
-            self.StatusText.Text = "Status: LOCK ACTIVE"
-            self.StatusText.TextColor3 = Helpers.COLORS.StatusOn
-        else
-            self.StatusText.Text = "Status: OFFLINE"
-            self.StatusText.TextColor3 = Helpers.COLORS.StatusOff
-        end
+-- Getters para configs (usado no aimlock)
+function Gui:GetPrediction()
+    if self.PredictionBox and self.PredictionBox.Text then
+        local val = tonumber(self.PredictionBox.Text)
+        return val and val or 0.135
     end
+    return 0.135
 end
 
--- Destroy tudo (cleanup)
+function Gui:GetSmoothness()
+    if self.SmoothnessBox and self.SmoothnessBox.Text then
+        local val = tonumber(self.SmoothnessBox.Text)
+        return val and val or 0.15
+    end
+    return 0.15
+end
+
+-- Cleanup
 function Gui:Destroy()
     if Updater and Updater.Stop then Updater:Stop() end
     if MainFrame and MainFrame.Destroy then MainFrame:Destroy() end
     self.ScreenGui = nil
-    print("[Sacrament GUI] Destruída")
+    print("[Sacrament GUI] Destruída completamente")
 end
 
 return Gui
