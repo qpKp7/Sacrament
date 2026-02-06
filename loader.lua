@@ -348,3 +348,30 @@ end)
 
 print("[Loader] Pronto. Aperte Insert para toggle.")
 print("Veja o [GUI Sanity Dump] no console para diagnosticar visibilidade.")
+
+local gui = _G.SacramentModules["gui/main_frame.lua"]
+print("GUI OBJ:", gui)
+print("GUI ScreenGui:", gui and gui.Gui, gui and gui.Elements and gui.Elements.Screen)
+
+local screen = gui and (gui.Gui or (gui.Elements and gui.Elements.Screen))
+print("GUI screen resolved:", screen)
+
+if screen then
+    print("ScreenGui.Enabled:", screen.Enabled)
+    print("ScreenGui.Parent:", screen.Parent)
+    print("ScreenGui.DisplayOrder:", screen.DisplayOrder)
+    print("ScreenGui.IgnoreGuiInset:", screen.IgnoreGuiInset)
+    print("ScreenGui.ZIndexBehavior:", screen.ZIndexBehavior)
+else
+    warn("ScreenGui é NIL -> GUI foi 'inicializada' mas não criou/guardou o ScreenGui corretamente.")
+end
+
+if screen then
+    screen.Enabled = true
+    screen.DisplayOrder = 9999
+    screen.IgnoreGuiInset = true
+    screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    print("[FORCE] ScreenGui ligado e priorizado (Enabled=true, DisplayOrder=9999)")
+end
+
