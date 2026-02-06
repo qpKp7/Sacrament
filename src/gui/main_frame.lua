@@ -1,193 +1,234 @@
--- src/gui/main_frame.lua
--- Responsável pela criação da estrutura principal da GUI (ScreenGui + Main Frame + Status Bar)
+-- src/gui/main_frame.lua - Frame principal da GUI Sacrament Aim System
+-- Tema dark underground: carvão #08080E, vermelho sangue #C80000
+-- Atualizado 06/02/2026 - compatível com loader flat + diagnóstico completo
+-- Flat access: _G.SacramentModules["gui/components/helpers.lua"] etc.
 
 local MainFrame = {}
+local Modules = _G.SacramentModules or {}
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+-- Importação flat dos componentes
+local Helpers = Modules["gui/components/helpers.lua"]
+local Section = Modules["gui/components/section.lua"]
+local Toggle = Modules["gui/components/toggle.lua"]
+local InputComp = Modules["gui/components/input.lua"]
+local cfg = Modules["config_defaults.lua"]
+local states = Modules["input.lua"] and Modules["input.lua"].States
 
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 15)
+-- Validar dependências críticas
+if not Helpers or not cfg or not states then
+    warn("[MainFrame] Dependências críticas não carregadas: Helpers/cfg/states")
+    return MainFrame
+end
 
--- Cores e fontes centralizadas (pode vir de helpers depois)
-local COLORS = {
-    Background = Color3.fromRGB(8, 8, 14),          -- #08080E
-    Frame = Color3.fromRGB(10, 10, 18),             -- #0A0A12
-    Accent = Color3.fromRGB(200, 0, 0),             -- #C80000
-    AccentDark = Color3.fromRGB(140, 0, 0),
-    Stroke = Color3.fromRGB(180, 0, 0),
-    TextPrimary = Color3.fromRGB(240, 240, 245),
-    TextSecondary = Color3.fromRGB(160, 160, 180),
-    TextMuted = Color3.fromRGB(100, 100, 120),
-    StatusOff = Color3.fromRGB(180, 0, 0),
-    StatusOn = Color3.fromRGB(0, 220, 80),
-}
-
-local FONTS = {
-    Title = Enum.Font.GothamBlack,
-    Section = Enum.Font.GothamBold,
-    Normal = Enum.Font.GothamSemibold,
-    Small = Enum.Font.Gotham,
-}
-
--- Referências que serão expostas
+-- Elementos da GUI
 MainFrame.ScreenGui = nil
 MainFrame.Main = nil
 MainFrame.Content = nil
 MainFrame.StatusText = nil
-MainFrame.TargetLabel = nil
-MainFrame.AvatarImage = nil
-MainFrame.AimlockToggle = nil
-MainFrame.SilentToggle = nil
-MainFrame.PredictionBox = nil
-MainFrame.SmoothnessBox = nil
+MainFrame.Enabled = false
+MainFrame.Gui = nil
+MainFrame.Elements = {}
 
 -- ================================================
--- Criação da GUI principal
+-- Criação da GUI principal (dark theme completo)
 -- ================================================
 function MainFrame:Create()
+    -- Destroi GUI anterior se existir
     if self.ScreenGui then
         self.ScreenGui:Destroy()
+        print("[MainFrame] GUI anterior destruída")
     end
 
+    -- ScreenGui principal
     local sg = Instance.new("ScreenGui")
-    sg.Name = "SacramentAim"
+    sg.Name = "SacramentGUI"
     sg.ResetOnSpawn = false
     sg.IgnoreGuiInset = true
-    sg.DisplayOrder = 999
-    sg.Parent = PlayerGui
+    sg.DisplayOrder = 9999
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    -- Parenting robusto (CoreGui → PlayerGui fallback)
+    local parentSuccess = false
+    pcall(function()
+        sg.Parent = game:GetService("CoreGui")
+        print("[MainFrame] ✓ Parentado em CoreGui")
+        parentSuccess = true
+    end)
+
+    if not parentSuccess then
+        local success2, playerGui = pcall(function()
+            return game.Players.LocalPlayer:WaitForChild("PlayerGui", 3)
+        end)
+        if success2 and playerGui then
+            sg.Parent = playerGui
+            print("[MainFrame] ✓ Fallback: Parentado em PlayerGui")
+            parentSuccess = true
+        end
+    end
+
+    if not parentSuccess then
+        warn("[MainFrame] ✗ FALHA TOTAL: Nenhum parent válido encontrado!")
+        return nil
+    end
+
     self.ScreenGui = sg
 
-    -- Frame principal
+    -- Frame principal (360x440 centralizado, draggable)
     local main = Instance.new("Frame")
-    main.Name = "Main"
+    main.Name = "MainFrame"
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Position = UDim2.new(0.5, 0, 0.5, 0)
     main.Size = UDim2.new(0, 360, 0, 440)
-    main.Position = UDim2.new(0.5, -180, 0.5, -220)
-    main.BackgroundColor3 = COLORS.Frame
+    main.BackgroundColor3 = cfg.Theme.Background
     main.BorderSizePixel = 0
+    main.Active = true
+    main.Draggable = true
     main.ClipsDescendants = true
+    Helpers.ApplyUICorner(main, 12)
+    Helpers.ApplyStroke(main, 2, cfg.Theme.Accent)
     main.Parent = sg
     self.Main = main
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = main
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = COLORS.Stroke
-    stroke.Transparency = 0.55
-    stroke.Thickness = 1.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = main
-
-    -- Título
+    -- Título "SACRAMENT AIMLOCK" (GothamBlack vermelho sangue + sombra)
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(1, 0, 0, 50)
+    title.Size = UDim2.new(1, -40, 0, 60)
+    title.Position = UDim2.new(0, 20, 0, 15)
     title.BackgroundTransparency = 1
     title.Text = "SACRAMENT AIMLOCK"
-    title.TextColor3 = COLORS.Accent
-    title.TextSize = 26
-    title.Font = FONTS.Title
-    title.TextXAlignment = Enum.TextXAlignment.Center
-    title.TextYAlignment = Enum.TextYAlignment.Center
+    title.TextColor3 = cfg.Theme.Accent
+    title.TextSize = 28
+    title.Font = Enum.Font.GothamBlack
+    title.TextStrokeTransparency = 0.7
+    title.TextStrokeColor3 = Color3.new(0, 0, 0)
+    title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = main
 
-    -- Container de conteúdo (onde vão as seções)
+    -- Container de conteúdo (padding 20px)
     local content = Instance.new("Frame")
     content.Name = "Content"
-    content.Size = UDim2.new(1, -40, 1, -90)
-    content.Position = UDim2.new(0, 20, 0, 60)
+    content.Size = UDim2.new(1, -40, 1, -120)
+    content.Position = UDim2.new(0, 20, 0, 80)
     content.BackgroundTransparency = 1
     content.Parent = main
     self.Content = content
 
-    local list = Instance.new("UIListLayout")
-    list.SortOrder = Enum.SortOrder.LayoutOrder
-    list.Padding = UDim.new(0, 18)
-    list.Parent = content
-
-    -- Barra de status (fundo fixo)
+    -- Status bar inferior (LOCK ACTIVE verde / OFFLINE vermelho)
     local statusBar = Instance.new("Frame")
     statusBar.Name = "StatusBar"
-    statusBar.Size = UDim2.new(1, 0, 0, 36)
-    statusBar.Position = UDim2.new(0, 0, 1, -36)
-    statusBar.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
+    statusBar.Size = UDim2.new(1, -20, 0, 30)
+    statusBar.Position = UDim2.new(0, 10, 1, -45)
+    statusBar.BackgroundColor3 = Color3.fromHex("#1A1A1A")
     statusBar.BorderSizePixel = 0
+    Helpers.ApplyUICorner(statusBar, 8)
+    Helpers.ApplyStroke(statusBar, 1, cfg.Theme.Accent)
     statusBar.Parent = main
-
-    local statusCorner = Instance.new("UICorner")
-    statusCorner.CornerRadius = UDim.new(0, 10)
-    statusCorner.Parent = statusBar
 
     local statusText = Instance.new("TextLabel")
     statusText.Name = "StatusText"
-    statusText.Size = UDim2.new(1, -20, 1, 0)
-    statusText.Position = UDim2.new(0, 10, 0, 0)
+    statusText.Size = UDim2.new(1, 0, 1, 0)
     statusText.BackgroundTransparency = 1
     statusText.Text = "Status: OFFLINE"
-    statusText.TextColor3 = COLORS.StatusOff
-    statusText.TextSize = 15
-    statusText.Font = FONTS.Section
-    statusText.TextXAlignment = Enum.TextXAlignment.Left
+    statusText.TextColor3 = cfg.Theme.StatusRed
+    statusText.TextSize = 16
+    statusText.Font = Enum.Font.GothamBold
+    statusText.TextXAlignment = Enum.TextXAlignment.Center
     statusText.Parent = statusBar
     self.StatusText = statusText
 
-    -- Tornar arrastável
-    self:MakeDraggable(main)
+    -- Updater RenderStepped (sync toggles + status)
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if not sg.Parent then return end
+        local anyActive = states.Aimlock or states.Silent
+        statusText.Text = anyActive and "Status: LOCK ACTIVE" or "Status: OFFLINE"
+        statusText.TextColor3 = anyActive and cfg.Theme.StatusGreen or cfg.Theme.StatusRed
+    end)
 
-    print("[Sacrament MainFrame] Estrutura principal criada")
+    -- ================================================
+    -- API compatível com Loader (Init/Toggle/Gui)
+    -- ================================================
+    self.Gui = sg
+    self.Elements = {
+        Screen = sg,
+        Main = main,
+        Title = title,
+        Content = content,
+        StatusBar = statusBar,
+        StatusText = statusText
+    }
+    self.Enabled = false
+
+    -- Dump de sanity completo
+    print("[MainFrame Sanity Dump]")
+    print("  ✓ ScreenGui: " .. tostring(sg))
+    print("  ✓ Parent: " .. (sg.Parent and sg.Parent.Name or "NIL"))
+    print("  ✓ MainFrame: " .. tostring(main))
+    print("  ✓ Position: " .. tostring(main.Position))
+    print("  ✓ Size: " .. tostring(main.Size))
+    print("  ✓ AbsoluteSize: " .. tostring(main.AbsoluteSize))
+    print("  ✓ DisplayOrder: " .. sg.DisplayOrder)
+    print("  ✓ Draggable: " .. tostring(main.Draggable))
+
+    print("[MainFrame] ✓ Criação completa - GUI pronta para toggle")
     return sg
 end
 
 -- ================================================
--- Função auxiliar: tornar frame arrastável
+-- Inicialização (chamada pelo loader)
 -- ================================================
-function MainFrame:MakeDraggable(frame)
-    local dragging, dragInput, dragStart, startPos
-
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
+function MainFrame:Init()
+    self:Create()
+    -- Começa oculta (Insert toggle ativa)
+    if self.ScreenGui then
+        self.ScreenGui.Enabled = false
+        self.Enabled = false
+        print("[MainFrame] ✓ Init OK - GUI criada e oculta (Insert para abrir)")
+    end
+    return self
 end
 
 -- ================================================
--- Cleanup (chamar quando destruir a GUI)
+-- Toggle visibilidade (Insert key)
+-- ================================================
+function MainFrame:Toggle(forceState)
+    if not self.ScreenGui then
+        warn("[MainFrame] Toggle: ScreenGui nil → criando...")
+        self:Create()
+    end
+
+    if forceState ~= nil then
+        self.Enabled = forceState
+    else
+        self.Enabled = not self.Enabled
+    end
+
+    self.ScreenGui.Enabled = self.Enabled
+    print("[MainFrame Toggle] Insert → Enabled = " .. tostring(self.Enabled) .. " | Parent = " .. (self.ScreenGui.Parent and self.ScreenGui.Parent.Name or "NIL"))
+
+    return self.Enabled
+end
+
+-- ================================================
+-- Getters para aimlock/silent (futuro uso)
+-- ================================================
+function MainFrame:GetPrediction()
+    return cfg.Prediction or 0.135
+end
+
+function MainFrame:GetSmoothness()
+    return cfg.Smoothness or 0.15
+end
+
+-- ================================================
+-- Cleanup
 -- ================================================
 function MainFrame:Destroy()
     if self.ScreenGui then
         self.ScreenGui:Destroy()
-        self.ScreenGui = nil
+        print("[MainFrame] GUI destruída")
     end
-    print("[Sacrament MainFrame] Destruído")
+    self.ScreenGui = nil
+    self.Main = nil
 end
 
 return MainFrame
