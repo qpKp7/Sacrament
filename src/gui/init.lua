@@ -1,20 +1,27 @@
 -- src/gui/init.lua
--- Ponto de entrada principal da GUI Sacrament Aim System
--- Inicializa tudo, conecta states e expõe funções para o resto do projeto
+-- Ponto de entrada da GUI Sacrament Aim System
+-- Versão flat: sem require(script.Parent), usa módulos pré-carregados via _G.SacramentModules
 
 local Gui = {}
 
 local RunService = game:GetService("RunService")
 
--- Módulos da GUI
-local MainFrame   = require(script.Parent.main_frame)
-local Updater     = require(script.Parent.updater)
+-- ================================================
+-- Importação FLAT dos módulos (injetados pelo loader)
+-- ================================================
+local Modules = _G.SacramentModules or {}
+local MainFrame   = Modules["gui/main_frame"]
+local Updater     = Modules["gui/updater"]
 
--- Componentes
-local Helpers     = require(script.Parent.components.helpers)
-local Section     = require(script.Parent.components.section)
-local Toggle      = require(script.Parent.components.toggle)
-local Input       = require(script.Parent.components.input)
+local Helpers     = Modules["gui/components/helpers"]
+local Section     = Modules["gui/components/section"]
+local Toggle      = Modules["gui/components/toggle"]
+local InputComp   = Modules["gui/components/input"]  -- renomeado para evitar conflito com input.lua
+
+if not MainFrame or not Updater or not Helpers or not Section or not Toggle or not InputComp then
+    warn("[Sacrament GUI] Módulos da GUI não foram injetados corretamente pelo loader")
+    return Gui  -- sai cedo para não crashar tudo
+end
 
 -- Referências expostas
 Gui.ScreenGui     = nil
@@ -45,6 +52,11 @@ function Gui:Init(statesModule)
     MainFrame:Create()
     self.ScreenGui = MainFrame.ScreenGui
 
+    if not self.ScreenGui then
+        warn("[Sacrament GUI] ScreenGui não foi criada pelo MainFrame")
+        return
+    end
+
     -- Adiciona seções e componentes
     local content = MainFrame.Content
 
@@ -65,10 +77,10 @@ function Gui:Init(statesModule)
 
     -- CONFIGS
     local configContent = Section.Create(content, "CONFIGS")
-    self.PredictionBox = Input.Create(configContent, "Prediction:", "0.135", "Prediction")
-    self.SmoothnessBox = Input.Create(configContent, "Smoothness:", "0.15", "Smoothness")
+    self.PredictionBox = InputComp.Create(configContent, "Prediction:", "0.135", "Prediction")
+    self.SmoothnessBox = InputComp.Create(configContent, "Smoothness:", "0.15", "Smoothness")
 
-    -- TARGET INFO (melhorado: avatar + nome + info)
+    -- TARGET INFO (placeholder por enquanto)
     local targetContent = Section.Create(content, "TARGET INFO")
 
     local targetFrame = Instance.new("Frame")
@@ -118,11 +130,13 @@ function Gui:Init(statesModule)
     self.InfoLabel   = infoLabel
     self.AvatarImage = avatar
 
-    -- Inicia o updater para visual dinâmico
+    -- Inicia o updater para visual dinâmico (RenderStepped)
     Updater:Start(self)
 
     -- Começa oculta
     self.ScreenGui.Enabled = false
+    self.ScreenGui.ResetOnSpawn = false
+    self.ScreenGui.IgnoreGuiInset = true
 
     print("[Sacrament GUI] Inicialização completa - use Insert para abrir")
 end
@@ -135,18 +149,21 @@ function Gui:Toggle(visible)
     if self.ScreenGui then
         self.ScreenGui.Enabled = visible
         print("[Sacrament GUI] Visibilidade alterada para: " .. tostring(visible))
+    else
+        warn("[Sacrament GUI] Tentou toggle mas ScreenGui é nil")
     end
 end
 
--- Atualiza TARGET INFO (chamado pelo target.lua)
+-- Atualiza TARGET INFO (futuro target.lua chama isso)
 function Gui:UpdateTargetInfo(playerName, thumbnailUrl, distanceStr, healthStr)
     if not self.NameLabel then return end
 
     if playerName and playerName ~= "" then
         self.NameLabel.Text = playerName
-        local infoText = ""
-        if distanceStr then infoText = infoText .. distanceStr end
-        if healthStr then infoText = infoText .. (distanceStr and " | " or "") .. "HP: " .. healthStr end
+        local infoText = distanceStr or ""
+        if healthStr then
+            infoText = infoText .. (distanceStr and " | " or "") .. "HP: " .. healthStr
+        end
         self.InfoLabel.Text = infoText
 
         if thumbnailUrl and thumbnailUrl ~= "" then
@@ -161,29 +178,31 @@ function Gui:UpdateTargetInfo(playerName, thumbnailUrl, distanceStr, healthStr)
     end
 end
 
--- Getters para configs (usado no aimlock)
+-- Getters para configs (aimlock/silent vão usar)
 function Gui:GetPrediction()
-    if self.PredictionBox and self.PredictionBox.Text then
-        local val = tonumber(self.PredictionBox.Text)
-        return val and val or 0.135
+    if self.PredictionBox and self.PredictionBox.TextBox then
+        local val = tonumber(self.PredictionBox.TextBox.Text)
+        return val or 0.135
     end
     return 0.135
 end
 
 function Gui:GetSmoothness()
-    if self.SmoothnessBox and self.SmoothnessBox.Text then
-        local val = tonumber(self.SmoothnessBox.Text)
-        return val and val or 0.15
+    if self.SmoothnessBox and self.SmoothnessBox.TextBox then
+        local val = tonumber(self.SmoothnessBox.TextBox.Text)
+        return val or 0.15
     end
     return 0.15
 end
 
--- Cleanup
+-- Cleanup (opcional)
 function Gui:Destroy()
     if Updater and Updater.Stop then Updater:Stop() end
     if MainFrame and MainFrame.Destroy then MainFrame:Destroy() end
-    self.ScreenGui = nil
-    print("[Sacrament GUI] Destruída completamente")
+    if self.ScreenGui then
+        self.ScreenGui:Destroy()
+    end
+    print("[Sacrament GUI] Destruída")
 end
 
 return Gui
