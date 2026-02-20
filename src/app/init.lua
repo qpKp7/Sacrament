@@ -1,16 +1,11 @@
 --!strict
-local InputHandler = require(script.Parent.input.inputhandler)
-local UIManager = require(script.Parent.gui.uimanager)
-
-export type Adapter = {
-    mountGui: (gui: ScreenGui) -> (),
-    connectInputBegan: (callback: (InputObject, boolean) -> ()) -> RBXScriptConnection,
-    getViewportSize: () -> Vector2
-}
+local Import = (_G :: any).SacramentImport
+local InputHandler = Import("input/inputhandler")
+local UIManager = Import("gui/uimanager")
 
 local App = {}
 
-function App.Start(adapter: Adapter?)
+function App.Start(adapter: any?)
     InputHandler.Init(adapter)
     UIManager.Init(adapter)
 end
