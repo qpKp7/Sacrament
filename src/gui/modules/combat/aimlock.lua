@@ -29,11 +29,12 @@ local function playTween(instance: Instance, tweenInfo: TweenInfo, properties: {
     tween:Play()
 end
 
-local function applyDecimalLogic(box: TextBox, default: string)
+local function applyDecimalLogic(box: TextBox, default: string, maxLen: number)
     box.FocusLost:Connect(function()
         local text = box.Text
         local clean = ""
         local dotFound = false
+        
         for i = 1, #text do
             local char = string.sub(text, i, i)
             if char:match("%d") then
@@ -43,6 +44,8 @@ local function applyDecimalLogic(box: TextBox, default: string)
                 clean = clean .. char
             end
         end
+        
+        clean = string.sub(clean, 1, maxLen)
         
         local num = tonumber(clean)
         if not num then
@@ -56,8 +59,13 @@ local function applyDecimalLogic(box: TextBox, default: string)
 end
 
 local function formatKeyName(name: string): string
-    local numMap = {One="1", Two="2", Three="3", Four="4", Five="5", Six="6", Seven="7", Eight="8", Nine="9", Zero="0"}
-    return numMap[name] or name
+    local map = {
+        One="1", Two="2", Three="3", Four="4", Five="5",
+        Six="6", Seven="7", Eight="8", Nine="9", Zero="0",
+        MouseButton1="MB1", MouseButton2="MB2", MouseButton3="MB3",
+        MouseButton4="MB4", MouseButton5="MB5"
+    }
+    return map[name] or name
 end
 
 function AimlockFactory.new(): AimlockUI
@@ -79,10 +87,10 @@ function AimlockFactory.new(): AimlockUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER AREA
+    -- HEADER AREA (Left Side)
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(0, 230, 0, 40)
+    header.Size = UDim2.new(0, 240, 0, 40)
     header.BackgroundColor3 = COLOR_BG
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -97,7 +105,7 @@ function AimlockFactory.new(): AimlockUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(0, 75, 0, 30)
+    title.Size = UDim2.new(0, 70, 0, 30)
     title.BackgroundColor3 = COLOR_BG
     title.BorderSizePixel = 0
     title.Text = "Aimlock"
@@ -110,7 +118,7 @@ function AimlockFactory.new(): AimlockUI
 
     local connectorContainer = Instance.new("Frame")
     connectorContainer.Name = "ConnectorContainer"
-    connectorContainer.Size = UDim2.new(0, 40, 0, 30)
+    connectorContainer.Size = UDim2.new(0, 60, 0, 30)
     connectorContainer.BackgroundColor3 = COLOR_BG
     connectorContainer.BorderSizePixel = 0
     connectorContainer.LayoutOrder = 2
@@ -118,9 +126,9 @@ function AimlockFactory.new(): AimlockUI
 
     local connectorLine = Instance.new("Frame")
     connectorLine.Name = "Line"
-    connectorLine.Size = UDim2.new(0.5, 0, 0, 2)
-    connectorLine.Position = UDim2.new(0.5, 0, 0.5, -1)
-    connectorLine.BackgroundColor3 = COLOR_RED_DARK
+    connectorLine.Size = UDim2.new(0.7, 0, 0, 2)
+    connectorLine.Position = UDim2.new(0.15, 0, 0.5, -1)
+    connectorLine.BackgroundColor3 = COLOR_TOGGLE_OFF
     connectorLine.BorderSizePixel = 0
     connectorLine.Parent = connectorContainer
 
@@ -157,14 +165,14 @@ function AimlockFactory.new(): AimlockUI
     arrowBtn.Text = ">"
     arrowBtn.TextColor3 = COLOR_ARROW_CLOSED
     arrowBtn.Font = FONT_MAIN
-    arrowBtn.TextSize = 18
+    arrowBtn.TextSize = 16
     arrowBtn.LayoutOrder = 4
     arrowBtn.Parent = header
 
-    -- SUBFRAME AREA
+    -- SUBFRAME AREA (Right Side)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, -230, 0, 0)
+    subFrame.Size = UDim2.new(1, -240, 0, 0)
     subFrame.BackgroundColor3 = COLOR_BG
     subFrame.BorderSizePixel = 0
     subFrame.AutomaticSize = Enum.AutomaticSize.Y
@@ -175,6 +183,7 @@ function AimlockFactory.new(): AimlockUI
     local verticalSeparator = Instance.new("Frame")
     verticalSeparator.Name = "VerticalSeparator"
     verticalSeparator.Size = UDim2.new(0, 2, 1, 0)
+    verticalSeparator.Position = UDim2.new(0, 0, 0, 0)
     verticalSeparator.BackgroundColor3 = COLOR_RED_DARK
     verticalSeparator.BorderSizePixel = 0
     verticalSeparator.Parent = subFrame
@@ -190,11 +199,13 @@ function AimlockFactory.new(): AimlockUI
 
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Padding = UDim.new(0, 12)
     contentLayout.Parent = contentArea
 
     local function createDivider(order: number)
         local div = Instance.new("Frame")
-        div.Size = UDim2.new(1, 0, 0, 2)
+        div.Size = UDim2.new(1, 15, 0, 2)
+        div.Position = UDim2.new(0, -15, 0, 0)
         div.BackgroundColor3 = COLOR_RED_DARK
         div.BorderSizePixel = 0
         div.LayoutOrder = order
@@ -204,7 +215,7 @@ function AimlockFactory.new(): AimlockUI
     local function createRow(name: string, labelText: string, layoutOrder: number): (Frame, Frame)
         local row = Instance.new("Frame")
         row.Name = name .. "Row"
-        row.Size = UDim2.new(1, 0, 0, 40)
+        row.Size = UDim2.new(1, 0, 0, 30)
         row.BackgroundColor3 = COLOR_BG
         row.BorderSizePixel = 0
         row.LayoutOrder = layoutOrder
@@ -249,10 +260,10 @@ function AimlockFactory.new(): AimlockUI
     keyBtn.BackgroundColor3 = COLOR_BOX_BG
     keyBtn.BackgroundTransparency = 1
     keyBtn.BorderSizePixel = 0
-    keyBtn.Text = "[ NONE ]"
+    keyBtn.Text = "NONE"
     keyBtn.TextColor3 = COLOR_RED_DARK
     keyBtn.Font = FONT_MAIN
-    keyBtn.TextSize = 12
+    keyBtn.TextSize = 13
     keyBtn.Parent = keyCont
 
     createDivider(2)
@@ -268,10 +279,10 @@ function AimlockFactory.new(): AimlockUI
     predBox.Text = "0.000"
     predBox.TextColor3 = COLOR_WHITE
     predBox.Font = FONT_MAIN
-    predBox.TextSize = 12
+    predBox.TextSize = 13
     predBox.ClearTextOnFocus = false
     predBox.Parent = predCont
-    applyDecimalLogic(predBox, "0.000")
+    applyDecimalLogic(predBox, "0.000", 5)
 
     createDivider(4)
 
@@ -286,10 +297,10 @@ function AimlockFactory.new(): AimlockUI
     smoothBox.Text = "0.500"
     smoothBox.TextColor3 = COLOR_WHITE
     smoothBox.Font = FONT_MAIN
-    smoothBox.TextSize = 12
+    smoothBox.TextSize = 13
     smoothBox.ClearTextOnFocus = false
     smoothBox.Parent = smoothCont
-    applyDecimalLogic(smoothBox, "0.500")
+    applyDecimalLogic(smoothBox, "0.500", 5)
 
     -- LOGIC
     maid:GiveTask(toggleBg.MouseButton1Click:Connect(function()
@@ -297,7 +308,7 @@ function AimlockFactory.new(): AimlockUI
         
         local targetKnobPos = isEnabled and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
         local targetBgColor = isEnabled and COLOR_RED_LIGHT or COLOR_TOGGLE_OFF
-        local targetLineColor = isEnabled and COLOR_RED_LIGHT or COLOR_RED_DARK
+        local targetLineColor = isEnabled and COLOR_RED_LIGHT or COLOR_TOGGLE_OFF
         
         playTween(toggleKnob, tInfo, {Position = targetKnobPos}, maid)
         playTween(toggleBg, tInfo, {BackgroundColor3 = targetBgColor}, maid)
@@ -317,19 +328,19 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(keyBtn.MouseButton1Click:Connect(function()
         if capturingKey then return end
         capturingKey = true
-        keyBtn.Text = "[ ... ]"
+        keyBtn.Text = "..."
         
         local connection
         connection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
-                keyBtn.Text = "[ " .. formatKeyName(input.KeyCode.Name) .. " ]"
+                keyBtn.Text = formatKeyName(input.KeyCode.Name)
                 capturingKey = false
                 connection:Disconnect()
             elseif input.UserInputType == Enum.UserInputType.MouseButton1 or
                    input.UserInputType == Enum.UserInputType.MouseButton2 or
                    input.UserInputType == Enum.UserInputType.MouseButton3 or
                    input.UserInputType.Name:match("Mouse") then
-                keyBtn.Text = "[ " .. input.UserInputType.Name .. " ]"
+                keyBtn.Text = formatKeyName(input.UserInputType.Name)
                 capturingKey = false
                 connection:Disconnect()
             end
