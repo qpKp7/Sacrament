@@ -1,7 +1,8 @@
 --!strict
-local UIState = require(script.Parent.Parent.state.uistate)
-local Maid = require(script.Parent.Parent.utils.maid)
-local MainFrameModule = require(script.Parent.components.mainframe)
+local Import = (_G :: any).SacramentImport
+local UIState = Import("state/uistate")
+local Maid = Import("utils/maid")
+local MainFrameModule = Import("gui/components/mainframe")
 
 local UIManager = {}
 local uiMaid = Maid.new()
