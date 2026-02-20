@@ -93,7 +93,7 @@ function AimlockFactory.new(): AimlockUI
     -- HEADER AREA (Left Side)
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(0, 240, 0, 40)
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundColor3 = COLOR_BG
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -103,25 +103,25 @@ function AimlockFactory.new(): AimlockUI
     headerLayout.FillDirection = Enum.FillDirection.Horizontal
     headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    headerLayout.Padding = UDim.new(0, 10)
+    headerLayout.Padding = UDim.new(0, 15)
     headerLayout.Parent = header
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(0, 70, 0, 30)
+    title.Size = UDim2.new(0, 80, 0, 30)
     title.BackgroundColor3 = COLOR_BG
     title.BorderSizePixel = 0
     title.Text = "Aimlock"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
-    title.TextSize = 14
+    title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.LayoutOrder = 1
     title.Parent = header
 
     local connectorContainer = Instance.new("Frame")
     connectorContainer.Name = "ConnectorContainer"
-    connectorContainer.Size = UDim2.new(0, 60, 0, 30)
+    connectorContainer.Size = UDim2.new(0, 90, 0, 30)
     connectorContainer.BackgroundColor3 = COLOR_BG
     connectorContainer.BorderSizePixel = 0
     connectorContainer.LayoutOrder = 2
@@ -129,8 +129,8 @@ function AimlockFactory.new(): AimlockUI
 
     local connectorLine = Instance.new("Frame")
     connectorLine.Name = "Line"
-    connectorLine.Size = UDim2.new(1, -14, 0, 2)
-    connectorLine.Position = UDim2.new(0, 7, 0.5, -1)
+    connectorLine.Size = UDim2.new(1, -20, 0, 2)
+    connectorLine.Position = UDim2.new(0, 10, 0.5, -1)
     connectorLine.BackgroundColor3 = COLOR_TOGGLE_OFF
     connectorLine.BorderSizePixel = 0
     connectorLine.Parent = connectorContainer
@@ -162,25 +162,34 @@ function AimlockFactory.new(): AimlockUI
 
     local arrowBtn = Instance.new("TextButton")
     arrowBtn.Name = "ArrowBtn"
-    arrowBtn.Size = UDim2.new(0, 25, 0, 30)
+    arrowBtn.Size = UDim2.new(0, 30, 0, 35)
     arrowBtn.BackgroundColor3 = COLOR_BG
     arrowBtn.BorderSizePixel = 0
     arrowBtn.Text = ">"
     arrowBtn.TextColor3 = COLOR_ARROW_CLOSED
     arrowBtn.Font = FONT_MAIN
-    arrowBtn.TextSize = 16
+    arrowBtn.TextSize = 20
     arrowBtn.LayoutOrder = 4
     arrowBtn.Parent = header
+
+    -- VERTICAL SEPARATOR
+    local verticalSeparator = Instance.new("Frame")
+    verticalSeparator.Name = "VerticalSeparator"
+    verticalSeparator.Size = UDim2.new(0, 2, 1, 0)
+    verticalSeparator.BackgroundColor3 = COLOR_RED_DARK
+    verticalSeparator.BorderSizePixel = 0
+    verticalSeparator.LayoutOrder = 2
+    verticalSeparator.Parent = container
 
     -- SUBFRAME AREA (Right Side)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, -240, 0, 0)
+    subFrame.Size = UDim2.new(1, -282, 0, 0)
     subFrame.BackgroundColor3 = COLOR_BG
     subFrame.BorderSizePixel = 0
     subFrame.AutomaticSize = Enum.AutomaticSize.Y
     subFrame.Visible = false
-    subFrame.LayoutOrder = 2
+    subFrame.LayoutOrder = 3
     subFrame.Parent = container
 
     local subFrameLayout = Instance.new("UIListLayout")
@@ -188,33 +197,24 @@ function AimlockFactory.new(): AimlockUI
     subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
     subFrameLayout.Parent = subFrame
 
-    local verticalSeparator = Instance.new("Frame")
-    verticalSeparator.Name = "VerticalSeparator"
-    verticalSeparator.Size = UDim2.new(0, 2, 1, 0)
-    verticalSeparator.Position = UDim2.new(0, 0, 0, 0)
-    verticalSeparator.BackgroundColor3 = COLOR_RED_DARK
-    verticalSeparator.BorderSizePixel = 0
-    verticalSeparator.LayoutOrder = 1
-    verticalSeparator.Parent = subFrame
-
     local contentArea = Instance.new("Frame")
     contentArea.Name = "ContentArea"
-    contentArea.Size = UDim2.new(1, -2, 0, 0)
+    contentArea.Size = UDim2.new(1, 0, 0, 0)
+    contentArea.Position = UDim2.new(0, 0, 0, 0)
     contentArea.BackgroundColor3 = COLOR_BG
     contentArea.BorderSizePixel = 0
     contentArea.AutomaticSize = Enum.AutomaticSize.Y
-    contentArea.LayoutOrder = 2
     contentArea.Parent = subFrame
 
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Padding = UDim.new(0, 12)
+    contentLayout.Padding = UDim.new(0, 15)
     contentLayout.Parent = contentArea
 
     local function createDivider(order: number)
         local div = Instance.new("Frame")
-        div.Size = UDim2.new(1, 15, 0, 2)
-        div.Position = UDim2.new(0, -15, 0, 0)
+        div.Size = UDim2.new(1, 0, 0, 2)
+        div.Position = UDim2.new(0, 0, 0, 0)
         div.BackgroundColor3 = COLOR_RED_DARK
         div.BorderSizePixel = 0
         div.LayoutOrder = order
@@ -224,7 +224,7 @@ function AimlockFactory.new(): AimlockUI
     local function createRow(name: string, labelText: string, layoutOrder: number): (Frame, Frame)
         local row = Instance.new("Frame")
         row.Name = name .. "Row"
-        row.Size = UDim2.new(1, 0, 0, 30)
+        row.Size = UDim2.new(1, 0, 0, 40)
         row.BackgroundColor3 = COLOR_BG
         row.BorderSizePixel = 0
         row.LayoutOrder = layoutOrder
@@ -237,22 +237,22 @@ function AimlockFactory.new(): AimlockUI
         rowLayout.Parent = row
 
         local pad = Instance.new("UIPadding")
-        pad.PaddingLeft = UDim.new(0, 15)
+        pad.PaddingLeft = UDim.new(0, 20)
         pad.Parent = row
 
         local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(0.5, -15, 1, 0)
+        lbl.Size = UDim2.new(0.5, 0, 1, 0)
         lbl.BackgroundColor3 = COLOR_BG
         lbl.BorderSizePixel = 0
         lbl.Text = labelText
         lbl.TextColor3 = COLOR_WHITE
         lbl.Font = FONT_MAIN
-        lbl.TextSize = 13
+        lbl.TextSize = 16
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = row
 
         local inputCont = Instance.new("Frame")
-        inputCont.Size = UDim2.new(0, 80, 0, 28)
+        inputCont.Size = UDim2.new(0, 120, 0, 32)
         inputCont.Position = UDim2.new(1, 0, 0.5, 0)
         inputCont.AnchorPoint = Vector2.new(1, 0.5)
         inputCont.BackgroundColor3 = COLOR_BOX_BG
@@ -283,7 +283,7 @@ function AimlockFactory.new(): AimlockUI
     keyBtn.Text = "NONE"
     keyBtn.TextColor3 = COLOR_RED_DARK
     keyBtn.Font = FONT_MAIN
-    keyBtn.TextSize = 13
+    keyBtn.TextSize = 16
     keyBtn.Parent = keyCont
 
     createDivider(2)
@@ -299,7 +299,7 @@ function AimlockFactory.new(): AimlockUI
     predBox.Text = "0.000"
     predBox.TextColor3 = COLOR_WHITE
     predBox.Font = FONT_MAIN
-    predBox.TextSize = 13
+    predBox.TextSize = 16
     predBox.ClearTextOnFocus = false
     predBox.Parent = predCont
     enforceDecimalBox(predBox, "0.000", 3, 5)
@@ -315,7 +315,7 @@ function AimlockFactory.new(): AimlockUI
     smoothBox.Text = "0.50"
     smoothBox.TextColor3 = COLOR_WHITE
     smoothBox.Font = FONT_MAIN
-    smoothBox.TextSize = 13
+    smoothBox.TextSize = 16
     smoothBox.ClearTextOnFocus = false
     smoothBox.Parent = smoothCont
     enforceDecimalBox(smoothBox, "0.50", 2, 4)
