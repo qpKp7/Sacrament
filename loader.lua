@@ -8,7 +8,7 @@ export type Adapter = {
 }
 
 function Sacrament:Init()
-    local cacheBuster = tostring(os.time())
+    local cacheBuster = tostring(math.floor(os.clock() * 1000))
     local url = string.format("https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua?cb=%s", cacheBuster)
     
     local success, response = pcall(function()
@@ -28,12 +28,17 @@ function Sacrament:Init()
     
     local adapter: Adapter = {
         mountGui = function(gui: ScreenGui)
-            local Players = game:GetService("Players")
-            local player = Players.LocalPlayer
-            if player then
-                local playerGui = player:FindFirstChild("PlayerGui")
-                if playerGui then
-                    gui.Parent = playerGui
+            local coreSuccess, CoreGui = pcall(function()
+                return game:GetService("CoreGui")
+            end)
+            
+            if coreSuccess and CoreGui then
+                gui.Parent = CoreGui
+            else
+                local Players = game:GetService("Players")
+                local player = Players.LocalPlayer
+                if player then
+                    gui.Parent = player:WaitForChild("PlayerGui")
                 end
             end
         end,
