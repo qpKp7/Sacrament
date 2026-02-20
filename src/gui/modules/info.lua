@@ -9,7 +9,7 @@ export type InfoModule = {
 
 local InfoModuleFactory = {}
 
-local function createTextLabel(name: string, text: string, size: number, fontFace: Font, hexColorNoHash: string): TextLabel
+local function createTextLabel(name: string, text: string, size: number, font: Enum.Font, hexColorNoHash: string): TextLabel
     local lbl = Instance.new("TextLabel")
     lbl.Name = name
     lbl.Size = UDim2.new(0.9, 0, 0, size + 10)
@@ -17,7 +17,7 @@ local function createTextLabel(name: string, text: string, size: number, fontFac
     lbl.RichText = true
     lbl.Text = text
     lbl.TextColor3 = Color3.fromHex(hexColorNoHash)
-    lbl.FontFace = fontFace
+    lbl.Font = font
     lbl.TextSize = size
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Center
@@ -71,43 +71,40 @@ function InfoModuleFactory.new(): InfoModule
     
     local highlightRich = "#" .. highlightColorHex
 
-    local cursiveFont = Font.new("rbxasset://fonts/families/Garamond.json", Enum.FontWeight.Regular, Enum.FontStyle.Italic)
-    local oldEnglishFont = Font.fromEnum(Enum.Font.Fantasy)
-
-    local line1 = createTextLabel("Line1", "This exploit was forged to rise above all players.", 22, cursiveFont, mainColorHex)
+    local line1 = createTextLabel("Line1", "This exploit was forged to rise above all players.", 22, Enum.Font.Bodoni, mainColorHex)
     line1.LayoutOrder = 1
     line1.Parent = container
 
     local line2Text = string.format("Those who use <font color=\"%s\">Sacrament</font> are not more cheaters, they are <font color=\"%s\">gods</font>.", highlightRich, highlightRich)
-    local line2 = createTextLabel("Line2", line2Text, 22, cursiveFont, mainColorHex)
+    local line2 = createTextLabel("Line2", line2Text, 22, Enum.Font.Bodoni, mainColorHex)
     line2.LayoutOrder = 2
     line2.Parent = container
 
-    local line3 = createTextLabel("Line3", "This cult bears no responsibility for the unholy power unleashed by this tool.", 22, cursiveFont, mainColorHex)
+    local line3 = createTextLabel("Line3", "This cult bears no responsibility for the unholy power unleashed by this tool.", 22, Enum.Font.Bodoni, mainColorHex)
     line3.LayoutOrder = 3
     line3.Parent = container
 
     local spacer1 = Instance.new("Frame")
     spacer1.Name = "Spacer1"
-    spacer1.Size = UDim2.new(1, 0, 0, 15)
+    spacer1.Size = UDim2.new(1, 0, 0, 20)
     spacer1.BackgroundTransparency = 1
     spacer1.LayoutOrder = 4
     spacer1.Parent = container
 
     local invokeText = string.format("You do not inject Sacrament,\nYou <font color=\"%s\">invoke</font> it.", highlightRich)
-    local centralBlock = createTextLabel("CentralBlock", invokeText, 26, cursiveFont, mainColorHex)
+    local centralBlock = createTextLabel("CentralBlock", invokeText, 26, Enum.Font.Bodoni, mainColorHex)
     centralBlock.Size = UDim2.new(0.9, 0, 0, 60)
     centralBlock.LayoutOrder = 5
     centralBlock.Parent = container
 
     local spacer2 = Instance.new("Frame")
     spacer2.Name = "Spacer2"
-    spacer2.Size = UDim2.new(1, 0, 0, 30)
+    spacer2.Size = UDim2.new(1, 0, 0, 60)
     spacer2.BackgroundTransparency = 1
     spacer2.LayoutOrder = 6
     spacer2.Parent = container
 
-    local footer = createTextLabel("Footer", "Created by @cardstolen", 20, oldEnglishFont, footerColorHex)
+    local footer = createTextLabel("Footer", "Created by @cardstolen", 28, Enum.Font.Antique, footerColorHex)
     footer.LayoutOrder = 7
     footer.Parent = container
 
