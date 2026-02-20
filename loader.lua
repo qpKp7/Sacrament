@@ -1,30 +1,48 @@
 --!strict
 
+export type Adapter = {
+	mountGui: (screenGui: ScreenGui) -> (),
+	connectInputBegan: (fn: (input: InputObject, gameProcessed: boolean) -> ()) -> RBXScriptConnection,
+	getViewportSize: (() -> Vector2)?,
+}
+
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
-local function tryStart()
-	local bootstrapperModule = ReplicatedStorage:FindFirstChild("SacramentGui_Bootstrapper")
-	if bootstrapperModule and bootstrapperModule:IsA("ModuleScript") then
-		local bootstrapper = require(bootstrapperModule)
-		if type(bootstrapper) == "table" and type(bootstrapper.start) == "function" then
-			bootstrapper.start()
-			return true
-		end
+local Loader = {}
+
+function Loader.start(): ()
+	local player = Players.LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
+
+	if playerGui:GetAttribute("SacramentBootstrapped") == true then
+		return
 	end
+	playerGui:SetAttribute("SacramentBootstrapped", true)
 
-	local root = ReplicatedStorage:FindFirstChild("SacramentGui")
-	if root and root:IsA("Folder") then
-		local candidate = root:FindFirstChild("bootstrapper")
-		if candidate and candidate:IsA("ModuleScript") then
-			local bootstrapper = require(candidate)
-			if type(bootstrapper) == "table" and type(bootstrapper.start) == "function" then
-				bootstrapper.start()
-				return true
+	local root = ReplicatedStorage:WaitForChild("Sacrament")
+
+	local adapter: Adapter = {
+		mountGui = function(screenGui: ScreenGui)
+			screenGui.Parent = playerGui
+		end,
+
+		connectInputBegan = function(fn: (input: InputObject, gameProcessed: boolean) -> ())
+			return UserInputService.InputBegan:Connect(fn)
+		end,
+
+		getViewportSize = function(): Vector2
+			local cam = workspace.CurrentCamera
+			if cam then
+				return cam.ViewportSize
 			end
-		end
-	end
+			return Vector2.new(0, 0)
+		end,
+	}
 
-	return false
+	local App = require(root:WaitForChild("config"):WaitForChild("app"))
+	;(App :: any).start(adapter)
 end
 
-tryStart()
+return Loader
