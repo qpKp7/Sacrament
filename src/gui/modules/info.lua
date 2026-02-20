@@ -75,7 +75,7 @@ function InfoModuleFactory.new(): InfoModule
     local highlightRich = "#" .. highlightColorHex
 
     local mainFont = Font.fromName("Garamond", Enum.FontWeight.Regular, Enum.FontStyle.Italic)
-    local footerFont = Font.fromName("Grenze Gotisch", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+    local footerFont = Font.fromName("GrenzeGotisch", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
 
     local lines = {
         "This exploit was forged to rise above all players.",
