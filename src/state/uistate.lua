@@ -3,7 +3,7 @@ local Signal = require(script.Parent.Parent.utils.signal)
 local Constants = require(script.Parent.Parent.config.constants)
 
 local UIState = {
-    IsVisible = false,
+    IsVisible = true,
     ActiveTab = Constants.MODULE_NAMES[1],
     
     VisibilityChanged = Signal.new() :: Signal.Signal<boolean>,
