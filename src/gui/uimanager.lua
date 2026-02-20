@@ -1,27 +1,33 @@
 --!strict
 local Players = game:GetService("Players")
-local UIState = require(script.Parent.Parent.state.UIState)
-local Maid = require(script.Parent.Parent.utils.Maid)
-local MainFrameModule = require(script.Parent.components.MainFrame)
+local UIState = require(script.Parent.Parent.state.uistate)
+local Maid = require(script.Parent.Parent.utils.maid)
+local MainFrameModule = require(script.Parent.components.mainframe)
 
 local UIManager = {}
 local uiMaid = Maid.new()
 
-function UIManager.Init()
-    local player = Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-
+function UIManager.Init(adapter: any?)
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "SacramentUI"
     screenGui.ResetOnSpawn = false
     screenGui.IgnoreGuiInset = true
     screenGui.Enabled = UIState.IsVisible
-    screenGui.Parent = playerGui
     uiMaid:GiveTask(screenGui)
 
     local mainFrame = MainFrameModule.new()
     mainFrame.Instance.Parent = screenGui
     uiMaid:GiveTask(mainFrame)
+
+    if adapter and adapter.mountGui then
+        adapter.mountGui(screenGui)
+    else
+        local player = Players.LocalPlayer
+        if player then
+            local playerGui = player:WaitForChild("PlayerGui")
+            screenGui.Parent = playerGui
+        end
+    end
 
     uiMaid:GiveTask(UIState.VisibilityChanged:Connect(function(isVisible: boolean)
         screenGui.Enabled = isVisible
