@@ -9,15 +9,15 @@ export type InfoModule = {
 
 local InfoModuleFactory = {}
 
-local function createTextLabel(name: string, text: string, size: number, font: Enum.Font, hexColorNoHash: string): TextLabel
+local function createTextLabel(name: string, text: string, size: number, fontFace: Font, hexColorNoHash: string): TextLabel
     local lbl = Instance.new("TextLabel")
     lbl.Name = name
-    lbl.Size = UDim2.new(0.9, 0, 0, size + 10)
+    lbl.Size = UDim2.new(1, 0, 0, size + 15)
     lbl.BackgroundTransparency = 1
     lbl.RichText = true
     lbl.Text = text
     lbl.TextColor3 = Color3.fromHex(hexColorNoHash)
-    lbl.Font = font
+    lbl.FontFace = fontFace
     lbl.TextSize = size
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Center
@@ -51,62 +51,65 @@ function InfoModuleFactory.new(): InfoModule
     gradient.Rotation = 90
     gradient.Parent = container
 
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.VerticalAlignment = Enum.VerticalAlignment.Center
-    layout.Padding = UDim.new(0, 10)
-    layout.Parent = container
+    local mainLayout = Instance.new("Frame")
+    mainLayout.Name = "MainLayout"
+    mainLayout.Size = UDim2.fromScale(1, 1)
+    mainLayout.BackgroundTransparency = 1
+    mainLayout.Parent = container
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    listLayout.Padding = UDim.new(0, 5)
+    listLayout.Parent = mainLayout
 
     local padding = Instance.new("UIPadding")
-    padding.PaddingTop = UDim.new(0, 20)
-    padding.PaddingBottom = UDim.new(0, 20)
-    padding.PaddingLeft = UDim.new(0, 20)
-    padding.PaddingRight = UDim.new(0, 20)
-    padding.Parent = container
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 15)
+    padding.Parent = mainLayout
 
     local mainColorHex = "7E6262"
     local highlightColorHex = "680303"
-    local footerColorHex = "2C0000"
-    
+    local footerColorHex = "3D0000"
     local highlightRich = "#" .. highlightColorHex
 
-    local line1 = createTextLabel("Line1", "This exploit was forged to rise above all players.", 22, Enum.Font.Bodoni, mainColorHex)
-    line1.LayoutOrder = 1
-    line1.Parent = container
+    local mainFont = Font.fromName("Garamond", Enum.FontWeight.Regular, Enum.FontStyle.Italic)
+    local footerFont = Font.fromName("Grenze Gotisch", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
 
-    local line2Text = string.format("Those who use <font color=\"%s\">Sacrament</font> are not more cheaters, they are <font color=\"%s\">gods</font>.", highlightRich, highlightRich)
-    local line2 = createTextLabel("Line2", line2Text, 22, Enum.Font.Bodoni, mainColorHex)
-    line2.LayoutOrder = 2
-    line2.Parent = container
+    local lines = {
+        "This exploit was forged to rise above all players.",
+        string.format("Those who use <font color=\"%s\">Sacrament</font> are not more cheaters, they are <font color=\"%s\">gods</font>.", highlightRich, highlightRich),
+        "This cult bears no responsibility for the unholy power unleashed by this tool."
+    }
 
-    local line3 = createTextLabel("Line3", "This cult bears no responsibility for the unholy power unleashed by this tool.", 22, Enum.Font.Bodoni, mainColorHex)
-    line3.LayoutOrder = 3
-    line3.Parent = container
+    for i, txt in ipairs(lines) do
+        local lbl = createTextLabel("Line"..i, txt, 20, mainFont, mainColorHex)
+        lbl.LayoutOrder = i
+        lbl.Parent = mainLayout
+    end
 
-    local spacer1 = Instance.new("Frame")
-    spacer1.Name = "Spacer1"
-    spacer1.Size = UDim2.new(1, 0, 0, 20)
-    spacer1.BackgroundTransparency = 1
-    spacer1.LayoutOrder = 4
-    spacer1.Parent = container
+    local spacer = Instance.new("Frame")
+    spacer.Size = UDim2.new(1, 0, 0, 25)
+    spacer.BackgroundTransparency = 1
+    spacer.LayoutOrder = 4
+    spacer.Parent = mainLayout
 
     local invokeText = string.format("You do not inject Sacrament,\nYou <font color=\"%s\">invoke</font> it.", highlightRich)
-    local centralBlock = createTextLabel("CentralBlock", invokeText, 26, Enum.Font.Bodoni, mainColorHex)
-    centralBlock.Size = UDim2.new(0.9, 0, 0, 60)
-    centralBlock.LayoutOrder = 5
-    centralBlock.Parent = container
+    local invokeLbl = createTextLabel("Invoke", invokeText, 26, mainFont, mainColorHex)
+    invokeLbl.LayoutOrder = 5
+    invokeLbl.Parent = mainLayout
 
-    local spacer2 = Instance.new("Frame")
-    spacer2.Name = "Spacer2"
-    spacer2.Size = UDim2.new(1, 0, 0, 60)
-    spacer2.BackgroundTransparency = 1
-    spacer2.LayoutOrder = 6
-    spacer2.Parent = container
+    local footerContainer = Instance.new("Frame")
+    footerContainer.Name = "FooterContainer"
+    footerContainer.Size = UDim2.new(1, 0, 0, 60)
+    footerContainer.Position = UDim2.new(0, 0, 1, -70)
+    footerContainer.BackgroundTransparency = 1
+    footerContainer.Parent = container
 
-    local footer = createTextLabel("Footer", "Created by @cardstolen", 28, Enum.Font.Antique, footerColorHex)
-    footer.LayoutOrder = 7
-    footer.Parent = container
+    local footer = createTextLabel("Footer", "Created by @cardstolen", 32, footerFont, footerColorHex)
+    footer.Size = UDim2.fromScale(1, 1)
+    footer.Parent = footerContainer
 
     maid:GiveTask(container)
 
