@@ -2,6 +2,8 @@
 local Import = (_G :: any).SacramentImport
 local Constants = Import("config/constants")
 local Colors = Import("themes/colors")
+local UIState = Import("state/uistate")
+local Maid = Import("utils/maid")
 
 export type ContentArea = {
     Instance: Frame,
@@ -11,6 +13,8 @@ export type ContentArea = {
 local ContentAreaModule = {}
 
 function ContentAreaModule.new(): ContentArea
+    local maid = Maid.new()
+
     local content = Instance.new("Frame")
     content.Name = "ContentRounded"
     content.Size = UDim2.new(1 - Constants.SIDEBAR_WIDTH, -2, 1, 0)
@@ -32,10 +36,34 @@ function ContentAreaModule.new(): ContentArea
     leftStraightEdge.Active = false
     leftStraightEdge.Parent = content
 
+    local currentModuleMaid = Maid.new()
+    maid:GiveTask(currentModuleMaid)
+
+    local function loadTabContent(tabName: string)
+        currentModuleMaid:DoCleaning()
+        
+        local modulePath = "gui/modules/" .. string.lower(tabName)
+        local success, moduleFactory = pcall(function()
+            return Import(modulePath)
+        end)
+        
+        if success and type(moduleFactory) == "table" and type(moduleFactory.new) == "function" then
+            local moduleInstance = moduleFactory.new()
+            if moduleInstance and moduleInstance.Instance then
+                moduleInstance.Instance.Parent = content
+                currentModuleMaid:GiveTask(moduleInstance)
+            end
+        end
+    end
+
+    maid:GiveTask(UIState.TabChanged:Connect(loadTabContent))
+    loadTabContent(UIState.ActiveTab)
+
     local self = {}
     self.Instance = content
 
     function self:Destroy()
+        maid:Destroy()
         content:Destroy()
     end
 
