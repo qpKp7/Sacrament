@@ -29,32 +29,35 @@ local function playTween(instance: Instance, tweenInfo: TweenInfo, properties: {
     tween:Play()
 end
 
-local function applyDecimalLogic(box: TextBox, default: string, maxLen: number)
-    box.FocusLost:Connect(function()
+local function enforceDecimalBox(box: TextBox, default: string, decimals: number, maxLen: number)
+    box:GetPropertyChangedSignal("Text"):Connect(function()
         local text = box.Text
-        local clean = ""
-        local dotFound = false
+        local clean = string.gsub(text, "[^%d%.]", "")
+        local dots = 0
         
-        for i = 1, #text do
-            local char = string.sub(text, i, i)
-            if char:match("%d") then
-                clean = clean .. char
-            elseif char == "." and not dotFound then
-                dotFound = true
-                clean = clean .. char
-            end
+        clean = string.gsub(clean, "%.", function()
+            dots = dots + 1
+            return dots == 1 and "." or ""
+        end)
+        
+        if #clean > maxLen then
+            clean = string.sub(clean, 1, maxLen)
         end
         
-        clean = string.sub(clean, 1, maxLen)
-        
-        local num = tonumber(clean)
+        if box.Text ~= clean then
+            box.Text = clean
+        end
+    end)
+    
+    box.FocusLost:Connect(function()
+        local num = tonumber(box.Text)
         if not num then
             box.Text = default
             return
         end
         
         num = math.clamp(num, 0, 1)
-        box.Text = string.format("%.3f", num)
+        box.Text = string.format("%." .. tostring(decimals) .. "f", num)
     end)
 end
 
@@ -126,8 +129,8 @@ function AimlockFactory.new(): AimlockUI
 
     local connectorLine = Instance.new("Frame")
     connectorLine.Name = "Line"
-    connectorLine.Size = UDim2.new(0.7, 0, 0, 2)
-    connectorLine.Position = UDim2.new(0.15, 0, 0.5, -1)
+    connectorLine.Size = UDim2.new(1, -14, 0, 2)
+    connectorLine.Position = UDim2.new(0, 7, 0.5, -1)
     connectorLine.BackgroundColor3 = COLOR_TOGGLE_OFF
     connectorLine.BorderSizePixel = 0
     connectorLine.Parent = connectorContainer
@@ -180,21 +183,27 @@ function AimlockFactory.new(): AimlockUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
+    local subFrameLayout = Instance.new("UIListLayout")
+    subFrameLayout.FillDirection = Enum.FillDirection.Horizontal
+    subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    subFrameLayout.Parent = subFrame
+
     local verticalSeparator = Instance.new("Frame")
     verticalSeparator.Name = "VerticalSeparator"
     verticalSeparator.Size = UDim2.new(0, 2, 1, 0)
     verticalSeparator.Position = UDim2.new(0, 0, 0, 0)
     verticalSeparator.BackgroundColor3 = COLOR_RED_DARK
     verticalSeparator.BorderSizePixel = 0
+    verticalSeparator.LayoutOrder = 1
     verticalSeparator.Parent = subFrame
 
     local contentArea = Instance.new("Frame")
     contentArea.Name = "ContentArea"
-    contentArea.Size = UDim2.new(1, -15, 0, 0)
-    contentArea.Position = UDim2.new(0, 15, 0, 0)
+    contentArea.Size = UDim2.new(1, -2, 0, 0)
     contentArea.BackgroundColor3 = COLOR_BG
     contentArea.BorderSizePixel = 0
     contentArea.AutomaticSize = Enum.AutomaticSize.Y
+    contentArea.LayoutOrder = 2
     contentArea.Parent = subFrame
 
     local contentLayout = Instance.new("UIListLayout")
@@ -220,8 +229,19 @@ function AimlockFactory.new(): AimlockUI
         row.BorderSizePixel = 0
         row.LayoutOrder = layoutOrder
 
+        local rowLayout = Instance.new("UIListLayout")
+        rowLayout.FillDirection = Enum.FillDirection.Horizontal
+        rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        rowLayout.Padding = UDim.new(0, 10)
+        rowLayout.Parent = row
+
+        local pad = Instance.new("UIPadding")
+        pad.PaddingLeft = UDim.new(0, 15)
+        pad.Parent = row
+
         local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(0.5, 0, 1, 0)
+        lbl.Size = UDim2.new(0.5, -15, 1, 0)
         lbl.BackgroundColor3 = COLOR_BG
         lbl.BorderSizePixel = 0
         lbl.Text = labelText
@@ -282,11 +302,9 @@ function AimlockFactory.new(): AimlockUI
     predBox.TextSize = 13
     predBox.ClearTextOnFocus = false
     predBox.Parent = predCont
-    applyDecimalLogic(predBox, "0.000", 5)
+    enforceDecimalBox(predBox, "0.000", 3, 5)
 
-    createDivider(4)
-
-    local smoothRow, smoothCont = createRow("Smoothness", "Smoothness", 5)
+    local smoothRow, smoothCont = createRow("Smoothness", "Smoothness", 4)
     smoothRow.Parent = contentArea
 
     local smoothBox = Instance.new("TextBox")
@@ -294,13 +312,13 @@ function AimlockFactory.new(): AimlockUI
     smoothBox.BackgroundColor3 = COLOR_BOX_BG
     smoothBox.BackgroundTransparency = 1
     smoothBox.BorderSizePixel = 0
-    smoothBox.Text = "0.500"
+    smoothBox.Text = "0.50"
     smoothBox.TextColor3 = COLOR_WHITE
     smoothBox.Font = FONT_MAIN
     smoothBox.TextSize = 13
     smoothBox.ClearTextOnFocus = false
     smoothBox.Parent = smoothCont
-    applyDecimalLogic(smoothBox, "0.500", 5)
+    enforceDecimalBox(smoothBox, "0.50", 2, 4)
 
     -- LOGIC
     maid:GiveTask(toggleBg.MouseButton1Click:Connect(function()
