@@ -93,7 +93,7 @@ function AimlockFactory.new(): AimlockUI
     -- HEADER AREA (Left Side)
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(0, 260, 0, 45)
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundColor3 = COLOR_BG
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -103,25 +103,25 @@ function AimlockFactory.new(): AimlockUI
     headerLayout.FillDirection = Enum.FillDirection.Horizontal
     headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    headerLayout.Padding = UDim.new(0, 8)
+    headerLayout.Padding = UDim.new(0, 15)
     headerLayout.Parent = header
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(0, 75, 0, 30)
+    title.Size = UDim2.new(0, 80, 0, 30)
     title.BackgroundColor3 = COLOR_BG
     title.BorderSizePixel = 0
     title.Text = "Aimlock"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
-    title.TextSize = 16
+    title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.LayoutOrder = 1
     title.Parent = header
 
     local connectorContainer = Instance.new("Frame")
     connectorContainer.Name = "ConnectorContainer"
-    connectorContainer.Size = UDim2.new(0, 85, 0, 30)
+    connectorContainer.Size = UDim2.new(0, 90, 0, 30)
     connectorContainer.BackgroundColor3 = COLOR_BG
     connectorContainer.BorderSizePixel = 0
     connectorContainer.LayoutOrder = 2
@@ -129,8 +129,8 @@ function AimlockFactory.new(): AimlockUI
 
     local connectorLine = Instance.new("Frame")
     connectorLine.Name = "Line"
-    connectorLine.Size = UDim2.new(1, -16, 0, 2)
-    connectorLine.Position = UDim2.new(0, 8, 0.5, -1)
+    connectorLine.Size = UDim2.new(1, -20, 0, 2)
+    connectorLine.Position = UDim2.new(0, 10, 0.5, -1)
     connectorLine.BackgroundColor3 = COLOR_TOGGLE_OFF
     connectorLine.BorderSizePixel = 0
     connectorLine.Parent = connectorContainer
@@ -154,7 +154,7 @@ function AimlockFactory.new(): AimlockUI
     toggleKnob.Position = UDim2.new(0, 3, 0.5, -8)
     toggleKnob.BackgroundColor3 = COLOR_WHITE
     toggleKnob.BorderSizePixel = 0
-    toggleKnob.Parent = toggleKnob
+    toggleKnob.Parent = toggleBg
 
     local knobCorner = Instance.new("UICorner")
     knobCorner.CornerRadius = UDim.new(1, 0)
@@ -162,20 +162,20 @@ function AimlockFactory.new(): AimlockUI
 
     local arrowBtn = Instance.new("TextButton")
     arrowBtn.Name = "ArrowBtn"
-    arrowBtn.Size = UDim2.new(0, 32, 0, 32)
+    arrowBtn.Size = UDim2.new(0, 30, 0, 35)
     arrowBtn.BackgroundColor3 = COLOR_BG
     arrowBtn.BorderSizePixel = 0
     arrowBtn.Text = ">"
     arrowBtn.TextColor3 = COLOR_ARROW_CLOSED
     arrowBtn.Font = FONT_MAIN
-    arrowBtn.TextSize = 22
+    arrowBtn.TextSize = 20
     arrowBtn.LayoutOrder = 4
     arrowBtn.Parent = header
 
     -- SUBFRAME AREA (Right Side)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, -270, 0, 0)
+    subFrame.Size = UDim2.new(1, -280, 0, 0)
     subFrame.BackgroundColor3 = COLOR_BG
     subFrame.BorderSizePixel = 0
     subFrame.AutomaticSize = Enum.AutomaticSize.Y
@@ -207,18 +207,13 @@ function AimlockFactory.new(): AimlockUI
 
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Padding = UDim.new(0, 8)
+    contentLayout.Padding = UDim.new(0, 15)
     contentLayout.Parent = contentArea
-    
-    local contentPadding = Instance.new("UIPadding")
-    contentPadding.PaddingTop = UDim.new(0, 8)
-    contentPadding.PaddingBottom = UDim.new(0, 8)
-    contentPadding.Parent = contentArea
 
     local function createDivider(order: number)
         local div = Instance.new("Frame")
-        div.Size = UDim2.new(1, 15, 0, 2)
-        div.Position = UDim2.new(0, -15, 0, 0)
+        div.Size = UDim2.new(1, 0, 0, 2)
+        div.Position = UDim2.new(0, 0, 0, 0)
         div.BackgroundColor3 = COLOR_RED_DARK
         div.BorderSizePixel = 0
         div.LayoutOrder = order
@@ -228,7 +223,7 @@ function AimlockFactory.new(): AimlockUI
     local function createRow(name: string, labelText: string, layoutOrder: number): (Frame, Frame)
         local row = Instance.new("Frame")
         row.Name = name .. "Row"
-        row.Size = UDim2.new(1, 0, 0, 34)
+        row.Size = UDim2.new(1, 0, 0, 40)
         row.BackgroundColor3 = COLOR_BG
         row.BorderSizePixel = 0
         row.LayoutOrder = layoutOrder
@@ -251,13 +246,13 @@ function AimlockFactory.new(): AimlockUI
         lbl.Text = labelText
         lbl.TextColor3 = COLOR_WHITE
         lbl.Font = FONT_MAIN
-        lbl.TextSize = 14
+        lbl.TextSize = 16
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = row
 
         local inputCont = Instance.new("Frame")
-        inputCont.Size = UDim2.new(0, 90, 0, 28)
-        inputCont.Position = UDim2.new(1, -15, 0.5, 0)
+        inputCont.Size = UDim2.new(0, 120, 0, 32)
+        inputCont.Position = UDim2.new(1, 0, 0.5, 0)
         inputCont.AnchorPoint = Vector2.new(1, 0.5)
         inputCont.BackgroundColor3 = COLOR_BOX_BG
         inputCont.BorderSizePixel = 0
@@ -287,16 +282,10 @@ function AimlockFactory.new(): AimlockUI
     keyBtn.Text = "NONE"
     keyBtn.TextColor3 = COLOR_RED_DARK
     keyBtn.Font = FONT_MAIN
-    keyBtn.TextSize = 14
+    keyBtn.TextSize = 16
     keyBtn.Parent = keyCont
 
-    local divRow = Instance.new("Frame")
-    divRow.Name = "HorizontalDivider"
-    divRow.Size = UDim2.new(1, 0, 0, 2)
-    divRow.BackgroundColor3 = COLOR_RED_DARK
-    divRow.BorderSizePixel = 0
-    divRow.LayoutOrder = 2
-    divRow.Parent = contentArea
+    createDivider(2)
 
     local predRow, predCont = createRow("Predict", "Predict", 3)
     predRow.Parent = contentArea
@@ -309,7 +298,7 @@ function AimlockFactory.new(): AimlockUI
     predBox.Text = "0.000"
     predBox.TextColor3 = COLOR_WHITE
     predBox.Font = FONT_MAIN
-    predBox.TextSize = 14
+    predBox.TextSize = 16
     predBox.ClearTextOnFocus = false
     predBox.Parent = predCont
     enforceDecimalBox(predBox, "0.000", 3, 5)
@@ -325,7 +314,7 @@ function AimlockFactory.new(): AimlockUI
     smoothBox.Text = "0.500"
     smoothBox.TextColor3 = COLOR_WHITE
     smoothBox.Font = FONT_MAIN
-    smoothBox.TextSize = 14
+    smoothBox.TextSize = 16
     smoothBox.ClearTextOnFocus = false
     smoothBox.Parent = smoothCont
     enforceDecimalBox(smoothBox, "0.500", 3, 5)
