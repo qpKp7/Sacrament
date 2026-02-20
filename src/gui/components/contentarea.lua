@@ -43,16 +43,23 @@ function ContentAreaModule.new(): ContentArea
         currentModuleMaid:DoCleaning()
         
         local modulePath = "gui/modules/" .. string.lower(tabName)
-        local success, moduleFactory = pcall(function()
+        local success, result = pcall(function()
             return Import(modulePath)
         end)
         
-        if success and type(moduleFactory) == "table" and type(moduleFactory.new) == "function" then
-            local moduleInstance = moduleFactory.new()
-            if moduleInstance and moduleInstance.Instance then
+        if success and type(result) == "table" and type(result.new) == "function" then
+            local successCreate, moduleInstance = pcall(function()
+                return result.new()
+            end)
+
+            if successCreate and moduleInstance and moduleInstance.Instance then
                 moduleInstance.Instance.Parent = content
                 currentModuleMaid:GiveTask(moduleInstance)
+            else
+                warn(string.format("[Sacrament] Erro ao instanciar módulo %s: %s", tabName, tostring(moduleInstance)))
             end
+        else
+            warn(string.format("[Sacrament] Módulo não encontrado ou erro de sintaxe (%s): %s", tabName, tostring(result)))
         end
     end
 
