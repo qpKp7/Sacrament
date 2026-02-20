@@ -1,13 +1,15 @@
 {
-  "name": "sacrament",
+  "name": "Sacrament",
   "tree": {
     "$className": "DataModel",
+
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
       "Sacrament": {
         "$path": "src"
       }
     },
+
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {
