@@ -1,32 +1,32 @@
---!strict
+local tickTime = tostring(math.floor(tick()))
+local initUrl = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua?t=" .. tickTime
 
-local App = {}
+local success, code = pcall(game.HttpGet, game, initUrl, true)
+if not success then return warn("Falha no HttpGet do init.lua") end
 
-export type Adapter = {
-    mountGui: (gui: ScreenGui) -> (),
-    connectInputBegan: (cb: (InputObject, boolean) -> ()) -> RBXScriptConnection,
-    getViewportSize: () -> Vector2,
+local fn, compileErr = loadstring(code, "@init.lua")
+if not fn then return warn("Falha de compilação no init.lua: " .. tostring(compileErr)) end
+
+local App = fn()
+
+local adapter = {
+    mountGui = function(gui) 
+        gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") 
+    end,
+    connectInputBegan = function(callback) 
+        game:GetService("UserInputService").InputBegan:Connect(callback) 
+    end,
+    getViewportSize = function() 
+        return workspace.CurrentCamera.ViewportSize 
+    end
 }
 
-function App.start(adapter: Adapter)
-    print("App starting with remote adapter!")
-    -- Aqui vai sua lógica real de UI, state, navigation, etc.
-    -- Exemplo mínimo:
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "SacramentRoot"
-    adapter.mountGui(gui)
+local startSuccess, startErr = pcall(function()
+    App.start(adapter)
+end)
 
-    local frame = Instance.new("Frame", gui)
-    frame.Size = UDim2.new(0.5, 0, 0.5, 0)
-    frame.Position = UDim2.new(0.25, 0, 0.25, 0)
-    frame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-
-    adapter.connectInputBegan(function(input, gp)
-        if gp then return end
-        if input.KeyCode == Enum.KeyCode.Q then
-            print("Q pressed!")
-        end
-    end)
+if not startSuccess then
+    warn("Erro ao rodar App.start(): " .. tostring(startErr))
+else
+    print("App.start() executado com sucesso.")
 end
-
-return App
