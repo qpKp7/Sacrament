@@ -1,6 +1,7 @@
 --!strict
-local Signal = require(script.Parent.Parent.utils.signal)
-local Constants = require(script.Parent.Parent.config.constants)
+local Import = (_G :: any).SacramentImport
+local Signal = Import("utils/signal")
+local Constants = Import("config/constants")
 
 local UIState = {
     IsVisible = true,
