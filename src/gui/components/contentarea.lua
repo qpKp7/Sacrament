@@ -1,7 +1,6 @@
-
 --!strict
-local Constants = require(script.Parent.Parent.Parent.config.Constants)
-local Colors = require(script.Parent.Parent.Parent.themes.Colors)
+local Constants = require(script.Parent.Parent.Parent.config.constants)
+local Colors = require(script.Parent.Parent.Parent.themes.colors)
 
 export type ContentArea = {
     Instance: Frame,
