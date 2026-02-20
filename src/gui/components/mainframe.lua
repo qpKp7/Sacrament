@@ -1,10 +1,11 @@
 --!strict
 local UserInputService = game:GetService("UserInputService")
-local Constants = require(script.Parent.Parent.Parent.config.constants)
-local Colors = require(script.Parent.Parent.Parent.themes.colors)
-local Maid = require(script.Parent.Parent.Parent.utils.maid)
-local SidebarModule = require(script.Parent.sidebar)
-local ContentAreaModule = require(script.Parent.contentarea)
+local Import = (_G :: any).SacramentImport
+local Constants = Import("config/constants")
+local Colors = Import("themes/colors")
+local Maid = Import("utils/maid")
+local SidebarModule = Import("gui/components/sidebar")
+local ContentAreaModule = Import("gui/components/contentarea")
 
 export type MainFrame = {
     Instance: Frame,
