@@ -1,6 +1,7 @@
 --!strict
-local Constants = require(script.Parent.Parent.Parent.config.constants)
-local Colors = require(script.Parent.Parent.Parent.themes.colors)
+local Import = (_G :: any).SacramentImport
+local Constants = Import("config/constants")
+local Colors = Import("themes/colors")
 
 export type ContentArea = {
     Instance: Frame,
