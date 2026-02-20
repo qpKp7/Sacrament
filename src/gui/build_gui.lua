@@ -3,6 +3,8 @@
 local UIState = require(script.Parent.Parent.state.ui_state)
 local Tokens = require(script.Parent.Parent.themes.tokens)
 
+local TabIds = require(script.Parent.Parent.navigation.tab_ids)
+
 local MainWindow = require(script.Parent.layout.main_window)
 local Sidebar = require(script.Parent.layout.sidebar)
 local ContentRoot = require(script.Parent.layout.content_root)
@@ -32,8 +34,6 @@ export type UIRefs = {
 	tabsById: { [TabId]: Frame },
 }
 
-local TAB_ORDER: { TabId } = { "COMBAT", "PLAYER", "VISUAL", "MISC", "INFO" }
-
 local BuildGui = {}
 
 function BuildGui.build(config: Config): UIRefs
@@ -45,10 +45,11 @@ function BuildGui.build(config: Config): UIRefs
 	local mainWindow = MainWindow.create(Tokens)
 	mainWindow.mainFrame.Parent = screenGui
 
-	local sidebar = Sidebar.create(Tokens, config.GroupId, TAB_ORDER)
+	local sidebar = Sidebar.create(Tokens, config.GroupId, TabIds.Order)
 	sidebar.frame.Parent = mainWindow.mainFrame
 
 	local content = ContentRoot.create(Tokens)
+	content.verticalDivider.Parent = mainWindow.mainFrame
 	content.root.Parent = mainWindow.mainFrame
 
 	local tabsById: { [TabId]: Frame } = {}
