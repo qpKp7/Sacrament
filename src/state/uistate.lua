@@ -1,6 +1,6 @@
 --!strict
-local Signal = require(script.Parent.Parent.utils.Signal)
-local Constants = require(script.Parent.Parent.config.Constants)
+local Signal = require(script.Parent.Parent.utils.signal)
+local Constants = require(script.Parent.Parent.config.constants)
 
 local UIState = {
     IsVisible = false,
