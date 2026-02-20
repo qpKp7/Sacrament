@@ -9,7 +9,7 @@ export type InfoModule = {
 
 local InfoModuleFactory = {}
 
-local function createTextLabel(name: string, text: string, size: number, fontFace: Font, hexColorNoHash: string): TextLabel
+local function createTextLabel(name: string, text: string, size: number, font: Enum.Font, hexColorNoHash: string): TextLabel
     local lbl = Instance.new("TextLabel")
     lbl.Name = name
     lbl.Size = UDim2.new(1, 0, 0, size + 15)
@@ -17,7 +17,7 @@ local function createTextLabel(name: string, text: string, size: number, fontFac
     lbl.RichText = true
     lbl.Text = text
     lbl.TextColor3 = Color3.fromHex(hexColorNoHash)
-    lbl.FontFace = fontFace
+    lbl.Font = font
     lbl.TextSize = size
     lbl.TextWrapped = true
     lbl.TextXAlignment = Enum.TextXAlignment.Center
@@ -74,9 +74,6 @@ function InfoModuleFactory.new(): InfoModule
     local footerColorHex = "3D0000"
     local highlightRich = "#" .. highlightColorHex
 
-    local mainFont = Font.fromName("Garamond", Enum.FontWeight.Regular, Enum.FontStyle.Italic)
-    local footerFont = Font.fromName("GrenzeGotisch", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
-
     local lines = {
         "This exploit was forged to rise above all players.",
         string.format("Those who use <font color=\"%s\">Sacrament</font> are not more cheaters, they are <font color=\"%s\">gods</font>.", highlightRich, highlightRich),
@@ -84,7 +81,7 @@ function InfoModuleFactory.new(): InfoModule
     }
 
     for i, txt in ipairs(lines) do
-        local lbl = createTextLabel("Line"..i, txt, 20, mainFont, mainColorHex)
+        local lbl = createTextLabel("Line"..i, txt, 20, Enum.Font.Garamond, mainColorHex)
         lbl.LayoutOrder = i
         lbl.Parent = mainLayout
     end
@@ -96,7 +93,7 @@ function InfoModuleFactory.new(): InfoModule
     spacer.Parent = mainLayout
 
     local invokeText = string.format("You do not inject Sacrament,\nYou <font color=\"%s\">invoke</font> it.", highlightRich)
-    local invokeLbl = createTextLabel("Invoke", invokeText, 26, mainFont, mainColorHex)
+    local invokeLbl = createTextLabel("Invoke", invokeText, 26, Enum.Font.Garamond, mainColorHex)
     invokeLbl.LayoutOrder = 5
     invokeLbl.Parent = mainLayout
 
@@ -107,7 +104,7 @@ function InfoModuleFactory.new(): InfoModule
     footerContainer.BackgroundTransparency = 1
     footerContainer.Parent = container
 
-    local footer = createTextLabel("Footer", "Created by @cardstolen", 32, footerFont, footerColorHex)
+    local footer = createTextLabel("Footer", "Created by @cardstolen", 32, Enum.Font.GrenzeGotisch, footerColorHex)
     footer.Size = UDim2.fromScale(1, 1)
     footer.Parent = footerContainer
 
