@@ -1,9 +1,9 @@
 --!strict
-local Constants = require(script.Parent.Parent.Parent.config.Constants)
-local Colors = require(script.Parent.Parent.Parent.themes.Colors)
-local UIState = require(script.Parent.Parent.Parent.state.UIState)
-local Maid = require(script.Parent.Parent.Parent.utils.Maid)
-local TabButtonModule = require(script.Parent.TabButton)
+local Constants = require(script.Parent.Parent.Parent.config.constants)
+local Colors = require(script.Parent.Parent.Parent.themes.colors)
+local UIState = require(script.Parent.Parent.Parent.state.uistate)
+local Maid = require(script.Parent.Parent.Parent.utils.maid)
+local TabButtonModule = require(script.Parent.tabbutton)
 
 export type Sidebar = {
     Instance: Frame,
