@@ -1,32 +1,49 @@
-local tickTime = tostring(math.floor(tick()))
-local initUrl = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua?t=" .. tickTime
+--!strict
+-- Arquivo: src/app/init.lua
 
-local success, code = pcall(game.HttpGet, game, initUrl, true)
-if not success then return warn("Falha no HttpGet do init.lua") end
+local App = {}
 
-local fn, compileErr = loadstring(code, "@init.lua")
-if not fn then return warn("Falha de compilação no init.lua: " .. tostring(compileErr)) end
+function App.start(adapter)
+    -- 1. Cria a Root GUI
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "SacramentRoot"
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
 
-local App = fn()
+    -- 2. Cria o Frame Cinza de Teste
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.fromOffset(300, 200)
+    mainFrame.Position = UDim2.fromScale(0.5, 0.5)
+    mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = screenGui
 
-local adapter = {
-    mountGui = function(gui) 
-        gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui") 
-    end,
-    connectInputBegan = function(callback) 
-        game:GetService("UserInputService").InputBegan:Connect(callback) 
-    end,
-    getViewportSize = function() 
-        return workspace.CurrentCamera.ViewportSize 
-    end
-}
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.fromScale(1, 1)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "Sacrament V5.0\n\nAperte [Q] para testar"
+    textLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextSize = 16
+    textLabel.Parent = mainFrame
 
-local startSuccess, startErr = pcall(function()
-    App.start(adapter)
-end)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = mainFrame
 
-if not startSuccess then
-    warn("Erro ao rodar App.start(): " .. tostring(startErr))
-else
-    print("App.start() executado com sucesso.")
+    -- 3. Monta a GUI usando o Adapter
+    adapter.mountGui(screenGui)
+
+    -- 4. Conecta os Inputs
+    adapter.connectInputBegan(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == Enum.KeyCode.Q then
+            print("[Sacrament] Input detectado: A tecla Q foi pressionada!")
+        end
+    end)
 end
+
+return App
