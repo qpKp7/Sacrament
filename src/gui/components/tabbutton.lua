@@ -1,8 +1,9 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-local Constants = require(script.Parent.Parent.Parent.config.constants)
-local Colors = require(script.Parent.Parent.Parent.themes.colors)
-local Maid = require(script.Parent.Parent.Parent.utils.maid)
+local Import = (_G :: any).SacramentImport
+local Constants = Import("config/constants")
+local Colors = Import("themes/colors")
+local Maid = Import("utils/maid")
 
 export type TabButton = {
     Instance: TextButton,
