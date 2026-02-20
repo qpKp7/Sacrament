@@ -1,42 +1,42 @@
 --!strict
 
+export type Adapter = {
+	mountGui: (screenGui: ScreenGui) -> (),
+	connectInputBegan: (fn: (input: InputObject, gameProcessed: boolean) -> ()) -> RBXScriptConnection,
+	getViewportSize: (() -> Vector2)?,
+}
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
-local ROOT_NAME = "SacramentGui"
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 
-local Bootstrapper = {}
-
-function Bootstrapper.start()
-	local player = Players.LocalPlayer
-	local playerGui = player:WaitForChild("PlayerGui")
-
-	local root = ReplicatedStorage:WaitForChild(ROOT_NAME)
-
-	local Store = require(root.state.store)
-	local UiState = require(root.state.ui_state)
-	local TabIds = require(root.navigation.tab_ids)
-
-	local BuildGui = require(root.gui.build_gui)
-	local TabRouter = require(root.navigation.tab_router)
-
-	local ToggleController = require(root.input.toggle_controller)
-	local DragController = require(root.input.drag_controller)
-	local ClickController = require(root.input.click_controller)
-
-	local store = Store.new(UiState.initial(TabIds.Default))
-
-	local refs = BuildGui.create()
-	refs.ScreenGui.Parent = playerGui
-
-	TabRouter.bind(store, refs.Tabs, refs.TabButtons)
-	ToggleController.bind(store, refs.ScreenGui)
-	DragController.bind(refs.DragHandle, refs.MainFrame)
-	ClickController.bindTabs(refs.TabButtons, function(tabId: string)
-		store:setState({ activeTab = tabId })
-	end)
-
-	return refs
+if playerGui:GetAttribute("SacramentBootstrapped") == true then
+	return
 end
+playerGui:SetAttribute("SacramentBootstrapped", true)
 
-return Bootstrapper
+local root = ReplicatedStorage:WaitForChild("Sacrament")
+
+local adapter: Adapter = {
+	mountGui = function(screenGui: ScreenGui)
+		screenGui.Parent = playerGui
+	end,
+
+	connectInputBegan = function(fn: (input: InputObject, gameProcessed: boolean) -> ())
+		return UserInputService.InputBegan:Connect(fn)
+	end,
+
+	getViewportSize = function(): Vector2
+		local cam = workspace.CurrentCamera
+		if cam then
+			return cam.ViewportSize
+		end
+		return Vector2.new(0, 0)
+	end,
+}
+
+local App = require(root:WaitForChild("config"):WaitForChild("app"))
+;(App :: any).start(adapter)
