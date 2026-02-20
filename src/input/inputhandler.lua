@@ -1,8 +1,9 @@
 --!strict
 local UserInputService = game:GetService("UserInputService")
-local UIState = require(script.Parent.Parent.state.uistate)
-local Constants = require(script.Parent.Parent.config.constants)
-local Maid = require(script.Parent.Parent.utils.maid)
+local Import = (_G :: any).SacramentImport
+local UIState = Import("state/uistate")
+local Constants = Import("config/constants")
+local Maid = Import("utils/maid")
 
 local InputHandler = {}
 local handlerMaid = Maid.new()
