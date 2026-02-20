@@ -1,14 +1,9 @@
 --!strict
 local Sacrament = {}
 
-export type Adapter = {
-    mountGui: (gui: ScreenGui) -> (),
-    connectInputBegan: (callback: (InputObject, boolean) -> ()) -> RBXScriptConnection,
-    getViewportSize: () -> Vector2
-}
-
 function Sacrament:Init()
-    local cacheBuster = tostring(math.floor(os.clock() * 1000))
+    -- Uso de os.time() garante uma semente de cache diferente a cada segundo
+    local cacheBuster = tostring(os.time())
     local url = string.format("https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua?cb=%s", cacheBuster)
     
     local success, response = pcall(function()
@@ -16,48 +11,33 @@ function Sacrament:Init()
     end)
     
     if not success or type(response) ~= "string" then
+        warn("Sacrament: Falha ao carregar app/init.lua")
         return
     end
     
     local loadFn = loadstring(response)
     if type(loadFn) ~= "function" then
+        warn("Sacrament: Erro de sintaxe no servidor remoto")
         return
     end
     
     local App = loadFn()
     
-    local adapter: Adapter = {
+    -- Adapter para abstrair dependências de ambiente
+    local adapter = {
         mountGui = function(gui: ScreenGui)
             local coreSuccess, CoreGui = pcall(function()
                 return game:GetService("CoreGui")
             end)
-            
-            if coreSuccess and CoreGui then
-                gui.Parent = CoreGui
-            else
-                local Players = game:GetService("Players")
-                local player = Players.LocalPlayer
-                if player then
-                    gui.Parent = player:WaitForChild("PlayerGui")
-                end
-            end
+            gui.Parent = (coreSuccess and CoreGui) or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
         end,
-        connectInputBegan = function(callback: (InputObject, boolean) -> ()): RBXScriptConnection
-            local UserInputService = game:GetService("UserInputService")
-            return UserInputService.InputBegan:Connect(callback)
-        end,
-        getViewportSize = function(): Vector2
-            local camera = game:GetService("Workspace").CurrentCamera
-            return camera and camera.ViewportSize or Vector2.new(1920, 1080)
+        connectInputBegan = function(callback)
+            return game:GetService("UserInputService").InputBegan:Connect(callback)
         end
     }
     
-    if type(App) == "table" then
-        if type(App.start) == "function" then
-            App.start(adapter)
-        elseif type(App.Start) == "function" then
-            App.Start(adapter)
-        end
+    if type(App) == "table" and type(App.Start) == "function" then
+        App.Start(adapter)
     end
 end
 
