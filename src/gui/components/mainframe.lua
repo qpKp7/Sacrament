@@ -1,10 +1,10 @@
 --!strict
 local UserInputService = game:GetService("UserInputService")
-local Constants = require(script.Parent.Parent.Parent.config.Constants)
-local Colors = require(script.Parent.Parent.Parent.themes.Colors)
-local Maid = require(script.Parent.Parent.Parent.utils.Maid)
-local SidebarModule = require(script.Parent.Sidebar)
-local ContentAreaModule = require(script.Parent.ContentArea)
+local Constants = require(script.Parent.Parent.Parent.config.constants)
+local Colors = require(script.Parent.Parent.Parent.themes.colors)
+local Maid = require(script.Parent.Parent.Parent.utils.maid)
+local SidebarModule = require(script.Parent.sidebar)
+local ContentAreaModule = require(script.Parent.contentarea)
 
 export type MainFrame = {
     Instance: Frame,
