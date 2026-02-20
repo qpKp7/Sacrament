@@ -16,7 +16,7 @@ function CombatModuleFactory.new(): CombatModule
     local container = Instance.new("Frame")
     container.Name = "CombatContainer"
     container.Size = UDim2.fromScale(1, 1)
-    container.BackgroundColor3 = Color3.fromHex("0B0A0A")
+    container.BackgroundColor3 = Color3.fromHex("0F0F0F")
     container.BorderSizePixel = 0
     container.ClipsDescendants = true
 
@@ -26,13 +26,13 @@ function CombatModuleFactory.new(): CombatModule
 
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromHex("2E1111")),
-        ColorSequenceKeypoint.new(1, Color3.fromHex("0B0A0A"))
+        ColorSequenceKeypoint.new(0, Color3.fromHex("1A1A1A")),
+        ColorSequenceKeypoint.new(1, Color3.fromHex("0F0F0F"))
     })
     gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.4),
+        NumberSequenceKeypoint.new(0, 0.2),
         NumberSequenceKeypoint.new(0.5, 0),
-        NumberSequenceKeypoint.new(1, 0.4)
+        NumberSequenceKeypoint.new(1, 0.2)
     })
     gradient.Rotation = 90
     gradient.Parent = container
