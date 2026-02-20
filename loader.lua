@@ -8,7 +8,7 @@ export type Adapter = {
 }
 
 function Sacrament:Init()
-    local cacheBuster = tostring(math.floor(os.clock() * 1000))
+    local cacheBuster = tostring(os.time())
     local url = string.format("https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua?cb=%s", cacheBuster)
     
     local success, response = pcall(function()
