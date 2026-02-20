@@ -1,5 +1,4 @@
 --!strict
-local Players = game:GetService("Players")
 local UIState = require(script.Parent.Parent.state.uistate)
 local Maid = require(script.Parent.Parent.utils.maid)
 local MainFrameModule = require(script.Parent.components.mainframe)
@@ -22,7 +21,7 @@ function UIManager.Init(adapter: any?)
     if adapter and adapter.mountGui then
         adapter.mountGui(screenGui)
     else
-        local player = Players.LocalPlayer
+        local player = game:GetService("Players").LocalPlayer
         if player then
             screenGui.Parent = player:WaitForChild("PlayerGui")
         end
