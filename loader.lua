@@ -14,28 +14,35 @@ function Sacrament:Init()
     end
 
     local cacheBuster = tostring(os.time())
-    local url = string.format("https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua?cb=%s", cacheBuster)
-    
-    local success, response = pcall(function()
-        return (game :: any):HttpGet(url, true)
-    end)
-    
-    if not success or type(response) ~= "string" then
-        warn("[Sacrament] Falha ao executar HttpGet na URL fonte.")
-        return
+    local baseUrl = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/"
+    local moduleCache = {}
+
+    (_G :: any).SacramentImport = function(path: string): any
+        if moduleCache[path] then
+            return moduleCache[path]
+        end
+
+        local url = baseUrl .. path .. ".lua?cb=" .. cacheBuster
+        local success, response = pcall(function()
+            return (game :: any):HttpGet(url, true)
+        end)
+
+        if not success or type(response) ~= "string" then
+            error("[Sacrament] Falha de rede ao carregar módulo: " .. path)
+        end
+
+        local loadFn = loadstring(response)
+        if type(loadFn) ~= "function" then
+            error("[Sacrament] Erro de sintaxe no módulo remoto: " .. path)
+        end
+
+        local result = loadFn()
+        moduleCache[path] = result
+        return result
     end
-    
-    local loadFn = loadstring(response)
-    if type(loadFn) ~= "function" then
-        warn("[Sacrament] Falha ao compilar o código remoto (loadstring retornou nil ou inválido).")
-        return
-    end
-    
-    local App = loadFn()
-    if type(App) ~= "table" then
-        warn("[Sacrament] O módulo remoto não retornou uma tabela válida.")
-        return
-    end
+
+    local Import = (_G :: any).SacramentImport
+    local App = Import("app/init")
 
     local adapter: Adapter = {
         mountGui = function(gui: ScreenGui)
@@ -72,12 +79,12 @@ function Sacrament:Init()
         elseif type(App.Start) == "function" then
             App.Start(adapter)
         else
-            error("Método Start/start não encontrado em App.")
+            error("Método Start não encontrado em App.")
         end
     end)
 
     if not startSuccess then
-        warn("[Sacrament] Erro durante a inicialização (App.start): " .. tostring(startError))
+        warn("[Sacrament] Erro durante a inicialização: " .. tostring(startError))
         return
     end
 
