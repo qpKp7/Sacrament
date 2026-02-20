@@ -1,0 +1,24 @@
+{
+  "name": "SacramentGuiRepo",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "SacramentGui": {
+        "$className": "Folder",
+        "$path": "src"
+      },
+      "SacramentGui_Bootstrapper": {
+        "$className": "ModuleScript",
+        "$path": "bootstrapper.lua"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "SacramentGui_Loader": {
+          "$className": "LocalScript",
+          "$path": "loader.lua"
+        }
+      }
+    }
+  }
+}
