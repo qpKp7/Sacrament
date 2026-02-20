@@ -24,8 +24,7 @@ function UIManager.Init(adapter: any?)
     else
         local player = Players.LocalPlayer
         if player then
-            local playerGui = player:WaitForChild("PlayerGui")
-            screenGui.Parent = playerGui
+            screenGui.Parent = player:WaitForChild("PlayerGui")
         end
     end
 
