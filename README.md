@@ -1,17 +1,13 @@
-# Sacrament Framework
-
-Lightweight utility library for advanced input handling, camera manipulation and visual feedback in Luau environments.
-
-## Features
-- Smooth camera interpolation utilities
-- Flexible input binding system
-- Visual indicators (highlights, overlays)
-- Asynchronous asset loading helpers
-
 # Sacrament
 
 ## Quick Start
 
 ```lua
-local Sacrament = loadstring(game:HttpGet("[https://raw.githubusercontent.com/qpKp7/Sacrament/main/loader.lua](https://raw.githubusercontent.com/qpKp7/Sacrament/main/loader.lua)", true))()
-Sacrament:Init()
+local url = "[https://raw.githubusercontent.com/qpKp7/Sacrament/main/loader.lua?cb=](https://raw.githubusercontent.com/qpKp7/Sacrament/main/loader.lua?cb=)" .. tostring(os.time())
+local success, response = pcall(function() return game:HttpGet(url, true) end)
+if success and type(response) == "string" then
+    local loader = loadstring(response)
+    if type(loader) == "function" then
+        loader():Init()
+    end
+end
