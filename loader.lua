@@ -1,86 +1,50 @@
---!strict
+-- Adicionamos um timestamp para burlar o cache do GitHub
+local tickTime = tostring(math.floor(tick()))
+local url = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/loader.lua?t=" .. tickTime
 
--- Darkcode Runtime Loader v5.0
--- Carrega dinamicamente o módulo principal via rede (raw GitHub)
--- Expõe Sacrament com :Init() para compatibilidade com README
--- 100% teórico / offline-test friendly
+print("[1] Iniciando HttpGet...")
+local success, result = pcall(game.HttpGet, game, url, true)
 
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-
-export type Adapter = {
-	mountGui: (gui: ScreenGui) -> (),
-	connectInputBegan: (callback: (input: InputObject, gameProcessed: boolean) -> ()) -> RBXScriptConnection,
-	getViewportSize: () -> Vector2,
-	-- extensível no futuro: getMouse, getCamera, etc.
-}
-
-local REMOTE_INIT_URL = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/app/init.lua"
-
-local Sacrament = {}
-Sacrament.__index = Sacrament
-
-local function createMinimalAdapter(): Adapter
-	local player = Players.LocalPlayer
-	local playerGui: PlayerGui = player:WaitForChild("PlayerGui") :: PlayerGui
-
-	return {
-		mountGui = function(gui: ScreenGui)
-			gui.Parent = playerGui
-			-- futuro: ResetOnSpawn = false, etc. se desejado
-		end,
-
-		connectInputBegan = function(callback)
-			return UserInputService.InputBegan:Connect(callback)
-		end,
-
-		getViewportSize = function(): Vector2
-			local cam = workspace.CurrentCamera
-			return if cam then cam.ViewportSize else Vector2.zero
-		end,
-	}
+if not success then
+    warn("[Erro] Falha na requisição HTTP: " .. tostring(result))
+    return
 end
 
-function Sacrament.new()
-	local self = setmetatable({}, Sacrament)
-	self._booted = false
-	self._initModule = nil
-	return self
+-- Verifica se o GitHub retornou uma página HTML (Erro 404)
+if result:match("^<!DOCTYPE html>") or result:match("^<html>") then
+    warn("[Erro] O link retornou uma página HTML. O arquivo não existe ou o repositório está privado.")
+    return
 end
 
-function Sacrament:Init()
-	if self._booted then
-		warn("[Sacrament] Já inicializado. Chamada ignorada.")
-		return
-	end
+print("[2] HttpGet OK. Tamanho do arquivo: " .. #result .. " bytes.")
 
-	self._booted = true
-
-	local success, result = pcall(function()
-		local code = game:HttpGet(REMOTE_INIT_URL, true)
-		local fn, err = loadstring(code, "Sacrament@init.lua")
-		if not fn then
-			error("Falha ao compilar init.lua remoto: " .. tostring(err))
-		end
-		self._initModule = fn() -- executa e obtém o módulo exportado
-	end)
-
-	if not success then
-		warn("[Sacrament] Falha crítica no bootstrap remoto:\n" .. tostring(result))
-		-- fallback opcional: carregar versão local estática se existir
-		return
-	end
-
-	if typeof(self._initModule) ~= "table" or typeof(self._initModule.start) ~= "function" then
-		error("[Sacrament] Módulo remoto não exportou tabela com método .start(adapter)")
-	end
-
-	local adapter = createMinimalAdapter()
-	self._initModule.start(adapter)
-
-	print("[Sacrament] Bootstrap remoto concluído com sucesso.")
+-- Capturamos o segundo retorno do loadstring, que é a mensagem de erro de compilação
+local loaderFn, compileErr = loadstring(result, "@Sacrament_Loader")
+if type(loaderFn) ~= "function" then
+    warn("[Erro] O loadstring retornou nil. Erro de sintaxe no loader.lua:\n" .. tostring(compileErr))
+    return
 end
 
--- API de compatibilidade com README
-return Sacrament.new()
+print("[3] Loadstring compilou com sucesso. Executando...")
+local execSuccess, Sacrament = pcall(loaderFn)
+
+if not execSuccess then
+    warn("[Erro] Falha ao executar o corpo do loader.lua: " .. tostring(Sacrament))
+    return
+end
+
+if type(Sacrament) ~= "table" or type(Sacrament.Init) ~= "function" then
+    warn("[Erro] O loader.lua executou, mas não retornou uma tabela com o método :Init(). Retornou: " .. typeof(Sacrament))
+    return
+end
+
+print("[4] Tabela Sacrament e :Init() encontrados. Inicializando...")
+local initSuccess, initErr = pcall(function()
+    Sacrament:Init()
+end)
+
+if not initSuccess then
+    warn("[Erro] O script explodiu dentro de Sacrament:Init():\n" .. tostring(initErr))
+else
+    print("[5] Sucesso Total! A GUI deve estar na tela.")
+end
