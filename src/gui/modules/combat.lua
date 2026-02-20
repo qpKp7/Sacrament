@@ -16,26 +16,13 @@ function CombatModuleFactory.new(): CombatModule
     local container = Instance.new("Frame")
     container.Name = "CombatContainer"
     container.Size = UDim2.fromScale(1, 1)
-    container.BackgroundColor3 = Color3.fromHex("0F0F0F")
+    container.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
     container.BorderSizePixel = 0
     container.ClipsDescendants = true
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 18)
     corner.Parent = container
-
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromHex("1A1A1A")),
-        ColorSequenceKeypoint.new(1, Color3.fromHex("0F0F0F"))
-    })
-    gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(0.5, 0),
-        NumberSequenceKeypoint.new(1, 0.2)
-    })
-    gradient.Rotation = 90
-    gradient.Parent = container
 
     local scroll = Instance.new("ScrollingFrame")
     scroll.Name = "ScrollContent"
@@ -51,7 +38,7 @@ function CombatModuleFactory.new(): CombatModule
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 15)
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.Parent = scroll
 
     local padding = Instance.new("UIPadding")
