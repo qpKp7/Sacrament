@@ -20,12 +20,12 @@ function GlowBarFactory.new(): GlowBar
 
     local container = Instance.new("Frame")
     container.Name = "GlowBarContainer"
-    container.Size = UDim2.fromOffset(35, 30)
+    container.Size = UDim2.fromOffset(40, 30)
     container.BackgroundTransparency = 1
 
     local line = Instance.new("Frame")
     line.Name = "Line"
-    line.Size = UDim2.new(1, -10, 0, 2)
+    line.Size = UDim2.new(1, 0, 0, 2)
     line.Position = UDim2.fromScale(0.5, 0.5)
     line.AnchorPoint = Vector2.new(0.5, 0.5)
     line.BackgroundColor3 = COLOR_OFF
