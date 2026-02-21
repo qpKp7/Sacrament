@@ -27,7 +27,7 @@ function AimlockFactory.new(): AimlockUI
 
     local container = Instance.new("Frame")
     container.Name = "AimlockContainer"
-    container.Size = UDim2.fromScale(1, 0)
+    container.Size = UDim2.new(1, 0, 0, 0)
     container.BackgroundColor3 = COLOR_BG
     container.BorderSizePixel = 0
     container.AutomaticSize = Enum.AutomaticSize.Y
@@ -37,10 +37,9 @@ function AimlockFactory.new(): AimlockUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER AREA
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(0, 280, 0, 90)
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundColor3 = COLOR_BG
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -50,7 +49,7 @@ function AimlockFactory.new(): AimlockUI
     headerLayout.FillDirection = Enum.FillDirection.Horizontal
     headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    headerLayout.Padding = UDim.new(0, 10) -- Padding fixo de 10px entre elementos
+    headerLayout.Padding = UDim.new(0, 12)
     headerLayout.Parent = header
 
     local headerPadding = Instance.new("UIPadding")
@@ -59,7 +58,7 @@ function AimlockFactory.new(): AimlockUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(70, 30) -- Largura ajustada para o texto
+    title.Size = UDim2.fromOffset(65, 30)
     title.BackgroundTransparency = 1
     title.Text = "Aimlock"
     title.TextColor3 = COLOR_WHITE
@@ -79,10 +78,9 @@ function AimlockFactory.new(): AimlockUI
     toggleBtn.Instance.Parent = header
     maid:GiveTask(toggleBtn)
 
-    -- Container para a seta para garantir espaçamento simétrico antes da sidebar
     local arrowWrapper = Instance.new("Frame")
     arrowWrapper.Name = "ArrowWrapper"
-    arrowWrapper.Size = UDim2.fromOffset(40, 50) -- Espaço reservado para a seta
+    arrowWrapper.Size = UDim2.fromOffset(74, 50)
     arrowWrapper.BackgroundTransparency = 1
     arrowWrapper.LayoutOrder = 4
     arrowWrapper.Parent = header
@@ -93,7 +91,6 @@ function AimlockFactory.new(): AimlockUI
     arrow.Instance.Parent = arrowWrapper
     maid:GiveTask(arrow)
 
-    -- SUBFRAME AREA
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, -280, 0, 0)
@@ -103,6 +100,11 @@ function AimlockFactory.new(): AimlockUI
     subFrame.Visible = false
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
+
+    local subFrameLayout = Instance.new("UIListLayout")
+    subFrameLayout.FillDirection = Enum.FillDirection.Horizontal
+    subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    subFrameLayout.Parent = subFrame
 
     local vLine = Sidebar.createVertical()
     vLine.Instance.Parent = subFrame
@@ -125,7 +127,6 @@ function AimlockFactory.new(): AimlockUI
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentArea
 
-    -- Seções
     local keySec = KeybindSection.new(1)
     keySec.Instance.Parent = contentArea
     maid:GiveTask(keySec)
@@ -142,7 +143,6 @@ function AimlockFactory.new(): AimlockUI
     smoothSec.Instance.Parent = contentArea
     maid:GiveTask(smoothSec)
 
-    -- Bindings
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
     end))
@@ -152,10 +152,15 @@ function AimlockFactory.new(): AimlockUI
     end))
 
     maid:GiveTask(container)
-    return {
-        Instance = container,
-        Destroy = function() maid:Destroy() end
-    }
+    
+    local self = {}
+    self.Instance = container
+
+    function self:Destroy()
+        maid:Destroy()
+    end
+
+    return self
 end
 
 return AimlockFactory
