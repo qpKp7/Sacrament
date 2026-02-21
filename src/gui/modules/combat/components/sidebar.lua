@@ -31,6 +31,7 @@ function SidebarFactory.createHorizontal(order: number): Sidebar
     local line = Instance.new("Frame")
     line.Name = "HorizontalSeparator"
     line.Size = UDim2.new(1, 0, 0, 2)
+    line.Position = UDim2.fromScale(0, 0)
     line.BackgroundColor3 = SIDEBAR_COLOR
     line.BorderSizePixel = 0
     line.LayoutOrder = order
