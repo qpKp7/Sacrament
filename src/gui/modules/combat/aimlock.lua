@@ -18,7 +18,6 @@ export type AimlockUI = {
 
 local AimlockFactory = {}
 
-local COLOR_BG = Color3.fromRGB(14, 14, 14)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local FONT_MAIN = Enum.Font.GothamBold
 
@@ -28,7 +27,7 @@ function AimlockFactory.new(): AimlockUI
     local container = Instance.new("Frame")
     container.Name = "AimlockContainer"
     container.Size = UDim2.new(1, 0, 0, 0)
-    container.BackgroundColor3 = COLOR_BG
+    container.BackgroundTransparency = 1
     container.BorderSizePixel = 0
     container.AutomaticSize = Enum.AutomaticSize.Y
 
@@ -40,7 +39,7 @@ function AimlockFactory.new(): AimlockUI
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 50)
-    header.BackgroundColor3 = COLOR_BG
+    header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
     header.Parent = container
@@ -94,7 +93,7 @@ function AimlockFactory.new(): AimlockUI
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, -280, 0, 0)
-    subFrame.BackgroundColor3 = COLOR_BG
+    subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.AutomaticSize = Enum.AutomaticSize.Y
     subFrame.Visible = false
