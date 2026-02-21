@@ -27,7 +27,7 @@ function AimlockFactory.new(): AimlockUI
 
     local container = Instance.new("Frame")
     container.Name = "AimlockContainer"
-    container.Size = UDim2.new(1, 0, 0, 0)
+    container.Size = UDim2.fromScale(1, 0)
     container.BackgroundColor3 = COLOR_BG
     container.BorderSizePixel = 0
     container.AutomaticSize = Enum.AutomaticSize.Y
@@ -37,6 +37,7 @@ function AimlockFactory.new(): AimlockUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
+    -- HEADER AREA
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 90)
@@ -49,20 +50,17 @@ function AimlockFactory.new(): AimlockUI
     headerLayout.FillDirection = Enum.FillDirection.Horizontal
     headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    headerLayout.Padding = UDim.new(0, 15)
+    headerLayout.Padding = UDim.new(0, 10) -- Padding fixo de 10px entre elementos
     headerLayout.Parent = header
 
     local headerPadding = Instance.new("UIPadding")
     headerPadding.PaddingLeft = UDim.new(0, 20)
-    headerPadding.PaddingTop = UDim.new(0, 20)
-    headerPadding.PaddingBottom = UDim.new(0, 20)
     headerPadding.Parent = header
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(0, 80, 0, 30)
-    title.BackgroundColor3 = COLOR_BG
-    title.BorderSizePixel = 0
+    title.Size = UDim2.fromOffset(70, 30) -- Largura ajustada para o texto
+    title.BackgroundTransparency = 1
     title.Text = "Aimlock"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
@@ -81,11 +79,21 @@ function AimlockFactory.new(): AimlockUI
     toggleBtn.Instance.Parent = header
     maid:GiveTask(toggleBtn)
 
+    -- Container para a seta para garantir espaçamento simétrico antes da sidebar
+    local arrowWrapper = Instance.new("Frame")
+    arrowWrapper.Name = "ArrowWrapper"
+    arrowWrapper.Size = UDim2.fromOffset(40, 50) -- Espaço reservado para a seta
+    arrowWrapper.BackgroundTransparency = 1
+    arrowWrapper.LayoutOrder = 4
+    arrowWrapper.Parent = header
+
     local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 4
-    arrow.Instance.Parent = header
+    arrow.Instance.Position = UDim2.fromScale(0.5, 0.5)
+    arrow.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    arrow.Instance.Parent = arrowWrapper
     maid:GiveTask(arrow)
 
+    -- SUBFRAME AREA
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, -280, 0, 0)
@@ -96,23 +104,15 @@ function AimlockFactory.new(): AimlockUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    local subFrameLayout = Instance.new("UIListLayout")
-    subFrameLayout.FillDirection = Enum.FillDirection.Horizontal
-    subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    subFrameLayout.Parent = subFrame
-
     local vLine = Sidebar.createVertical()
-    vLine.Instance.LayoutOrder = 1
     vLine.Instance.Parent = subFrame
     maid:GiveTask(vLine)
 
     local contentArea = Instance.new("Frame")
     contentArea.Name = "ContentArea"
     contentArea.Size = UDim2.new(1, -2, 0, 0)
-    contentArea.BackgroundColor3 = COLOR_BG
-    contentArea.BorderSizePixel = 0
+    contentArea.BackgroundTransparency = 1
     contentArea.AutomaticSize = Enum.AutomaticSize.Y
-    contentArea.LayoutOrder = 2
     contentArea.Parent = subFrame
 
     local contentLayout = Instance.new("UIListLayout")
@@ -125,6 +125,7 @@ function AimlockFactory.new(): AimlockUI
     contentPadding.PaddingBottom = UDim.new(0, 20)
     contentPadding.Parent = contentArea
 
+    -- Seções
     local keySec = KeybindSection.new(1)
     keySec.Instance.Parent = contentArea
     maid:GiveTask(keySec)
@@ -141,6 +142,7 @@ function AimlockFactory.new(): AimlockUI
     smoothSec.Instance.Parent = contentArea
     maid:GiveTask(smoothSec)
 
+    -- Bindings
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
     end))
@@ -150,15 +152,10 @@ function AimlockFactory.new(): AimlockUI
     end))
 
     maid:GiveTask(container)
-
-    local self = {}
-    self.Instance = container
-
-    function self:Destroy()
-        maid:Destroy()
-    end
-
-    return self
+    return {
+        Instance = container,
+        Destroy = function() maid:Destroy() end
+    }
 end
 
 return AimlockFactory
