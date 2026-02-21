@@ -11,8 +11,6 @@ local KeybindSection = Import("gui/modules/combat/sections/keybind")
 local PredictSection = Import("gui/modules/combat/sections/predict")
 local SmoothSection = Import("gui/modules/combat/sections/smooth")
 local AimPartSection = Import("gui/modules/combat/sections/aimpart")
-local WallCheckSection = Import("gui/modules/combat/sections/wallcheck")
-local KnockCheckSection = Import("gui/modules/combat/sections/knockcheck")
 
 export type AimlockUI = {
     Instance: Frame,
@@ -179,14 +177,6 @@ function AimlockFactory.new(): AimlockUI
     local aimPartSec = AimPartSection.new(3)
     aimPartSec.Instance.Parent = inputsContainer
     maid:GiveTask(aimPartSec)
-
-    local wallCheckSec = WallCheckSection.new(4)
-    wallCheckSec.Instance.Parent = inputsContainer
-    maid:GiveTask(wallCheckSec)
-
-    local knockCheckSec = KnockCheckSection.new(5)
-    knockCheckSec.Instance.Parent = inputsContainer
-    maid:GiveTask(knockCheckSec)
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
