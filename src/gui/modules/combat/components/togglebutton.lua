@@ -26,7 +26,7 @@ function ToggleButtonFactory.new(): ToggleButton
 
     local button = Instance.new("TextButton")
     button.Name = "ToggleButton"
-    button.Size = UDim2.fromOffset(42, 22)
+    button.Size = UDim2.fromOffset(50, 26)
     button.BackgroundColor3 = COLOR_BG_OFF
     button.Text = ""
     button.AutoButtonColor = false
@@ -38,8 +38,8 @@ function ToggleButtonFactory.new(): ToggleButton
 
     local knob = Instance.new("Frame")
     knob.Name = "Knob"
-    knob.Size = UDim2.fromOffset(16, 16)
-    knob.Position = UDim2.new(0, 3, 0.5, -8)
+    knob.Size = UDim2.fromOffset(20, 20)
+    knob.Position = UDim2.new(0, 3, 0.5, -10)
     knob.BackgroundColor3 = COLOR_KNOB
     knob.BorderSizePixel = 0
     knob.ZIndex = 3
@@ -50,7 +50,7 @@ function ToggleButtonFactory.new(): ToggleButton
     knobCorner.Parent = knob
 
     local function updateVisuals(state: boolean)
-        local targetPos = state and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+        local targetPos = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)
         local targetColor = state and COLOR_BG_ON or COLOR_BG_OFF
         
         local tweenPos = TweenService:Create(knob, tInfo, {Position = targetPos})
