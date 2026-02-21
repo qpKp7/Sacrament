@@ -14,7 +14,7 @@ local AimlockFactory = {}
 local COLOR_BG = Color3.fromRGB(14, 14, 14)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local COLOR_RED_DARK = Color3.fromHex("680303")
-local COLOR_RED_LIGHT = Color3.fromHex("FF3333") -- Cor usada para a sidebar ativa/glow
+local COLOR_RED_LIGHT = Color3.fromHex("FF3333")
 local COLOR_TOGGLE_OFF = Color3.fromHex("444444")
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
@@ -103,13 +103,8 @@ function AimlockFactory.new(): AimlockUI
     headerLayout.FillDirection = Enum.FillDirection.Horizontal
     headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    headerLayout.Padding = UDim.new(0, 8) -- Padding reduzido para 8px
+    headerLayout.Padding = UDim.new(0, 15)
     headerLayout.Parent = header
-    
-    -- Padding adicional no header para simetria da seta
-    local headerPadding = Instance.new("UIPadding")
-    headerPadding.PaddingRight = UDim.new(0, 8) -- Adiciona 8px após a seta
-    headerPadding.Parent = header
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
@@ -165,17 +160,25 @@ function AimlockFactory.new(): AimlockUI
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = toggleKnob
 
+    local arrowContainer = Instance.new("Frame")
+    arrowContainer.Name = "ArrowContainer"
+    arrowContainer.Size = UDim2.new(0, 23, 1, 0)
+    arrowContainer.BackgroundTransparency = 1
+    arrowContainer.LayoutOrder = 4
+    arrowContainer.Parent = header
+
     local arrowBtn = Instance.new("TextButton")
     arrowBtn.Name = "ArrowBtn"
     arrowBtn.Size = UDim2.new(0, 30, 0, 35)
-    arrowBtn.BackgroundColor3 = COLOR_BG
+    arrowBtn.Position = UDim2.new(0, -11, 0.5, 0)
+    arrowBtn.AnchorPoint = Vector2.new(0, 0.5)
+    arrowBtn.BackgroundTransparency = 1
     arrowBtn.BorderSizePixel = 0
     arrowBtn.Text = ">"
     arrowBtn.TextColor3 = COLOR_ARROW_CLOSED
     arrowBtn.Font = FONT_MAIN
     arrowBtn.TextSize = 20
-    arrowBtn.LayoutOrder = 4
-    arrowBtn.Parent = header
+    arrowBtn.Parent = arrowContainer
 
     -- SUBFRAME AREA (Right Side)
     local subFrame = Instance.new("Frame")
@@ -193,11 +196,10 @@ function AimlockFactory.new(): AimlockUI
     subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
     subFrameLayout.Parent = subFrame
 
-    -- SIDEBAR VERTICAL (Cor alterada para COLOR_RED_LIGHT)
     local verticalSeparator = Instance.new("Frame")
     verticalSeparator.Name = "VerticalSeparator"
     verticalSeparator.Size = UDim2.new(0, 2, 1, 0)
-    verticalSeparator.BackgroundColor3 = COLOR_RED_LIGHT -- Usando a cor clara
+    verticalSeparator.BackgroundColor3 = COLOR_RED_DARK
     verticalSeparator.BorderSizePixel = 0
     verticalSeparator.LayoutOrder = 1
     verticalSeparator.Parent = subFrame
@@ -216,12 +218,11 @@ function AimlockFactory.new(): AimlockUI
     contentLayout.Padding = UDim.new(0, 15)
     contentLayout.Parent = contentArea
 
-    -- DIVISOR HORIZONTAL (Cor alterada para COLOR_RED_LIGHT)
     local function createDivider(order: number)
         local div = Instance.new("Frame")
         div.Size = UDim2.new(1, 0, 0, 2)
         div.Position = UDim2.new(0, 0, 0, 0)
-        div.BackgroundColor3 = COLOR_RED_LIGHT -- Usando a cor clara
+        div.BackgroundColor3 = COLOR_RED_DARK
         div.BorderSizePixel = 0
         div.LayoutOrder = order
         div.Parent = contentArea
@@ -339,13 +340,11 @@ function AimlockFactory.new(): AimlockUI
         playTween(connectorLine, tInfo, {BackgroundColor3 = targetLineColor}, maid)
     end))
 
-    -- ANIMAÇÃO DA GLOW ARROW (Rotação e Cor)
     maid:GiveTask(arrowBtn.MouseButton1Click:Connect(function()
         isExpanded = not isExpanded
         subFrame.Visible = isExpanded
         
         local targetRot = isExpanded and 90 or 0
-        -- Usa COLOR_RED_LIGHT quando expandido para combinar com a sidebar
         local targetColor = isExpanded and COLOR_RED_LIGHT or COLOR_ARROW_CLOSED
         
         playTween(arrowBtn, tInfo, {Rotation = targetRot, TextColor3 = targetColor}, maid)
