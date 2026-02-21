@@ -60,11 +60,11 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     rowLayout.FillDirection = Enum.FillDirection.Horizontal
     rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    rowLayout.Padding = UDim.new(0, 10)
     rowLayout.Parent = row
 
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 20)
+    pad.PaddingRight = UDim.new(0, 20)
     pad.Parent = row
 
     local lbl = Instance.new("TextLabel")
@@ -80,7 +80,7 @@ function PredictFactory.new(layoutOrder: number): PredictSection
 
     local inputCont = Instance.new("Frame")
     inputCont.Size = UDim2.new(0, 120, 0, 32)
-    inputCont.Position = UDim2.new(1, -25, 0.5, 0)
+    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
     inputCont.BorderSizePixel = 0
