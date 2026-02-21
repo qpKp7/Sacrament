@@ -37,10 +37,9 @@ function AimlockFactory.new(): AimlockUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER AREA (Left Side)
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(0, 280, 0, 50)
+    header.Size = UDim2.new(0, 280, 0, 90)
     header.BackgroundColor3 = COLOR_BG
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -52,6 +51,12 @@ function AimlockFactory.new(): AimlockUI
     headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     headerLayout.Padding = UDim.new(0, 15)
     headerLayout.Parent = header
+
+    local headerPadding = Instance.new("UIPadding")
+    headerPadding.PaddingLeft = UDim.new(0, 20)
+    headerPadding.PaddingTop = UDim.new(0, 20)
+    headerPadding.PaddingBottom = UDim.new(0, 20)
+    headerPadding.Parent = header
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
@@ -81,7 +86,6 @@ function AimlockFactory.new(): AimlockUI
     arrow.Instance.Parent = header
     maid:GiveTask(arrow)
 
-    -- SUBFRAME AREA (Right Side)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, -280, 0, 0)
@@ -92,25 +96,34 @@ function AimlockFactory.new(): AimlockUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
+    local subFrameLayout = Instance.new("UIListLayout")
+    subFrameLayout.FillDirection = Enum.FillDirection.Horizontal
+    subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    subFrameLayout.Parent = subFrame
+
     local vLine = Sidebar.createVertical()
-    vLine.Instance.Position = UDim2.new(0, 0, 0, 0)
-    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+    vLine.Instance.LayoutOrder = 1
     vLine.Instance.Parent = subFrame
     maid:GiveTask(vLine)
 
     local contentArea = Instance.new("Frame")
     contentArea.Name = "ContentArea"
     contentArea.Size = UDim2.new(1, -2, 0, 0)
-    contentArea.Position = UDim2.new(0, 2, 0, 0)
     contentArea.BackgroundColor3 = COLOR_BG
     contentArea.BorderSizePixel = 0
     contentArea.AutomaticSize = Enum.AutomaticSize.Y
+    contentArea.LayoutOrder = 2
     contentArea.Parent = subFrame
 
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Padding = UDim.new(0, 15)
     contentLayout.Parent = contentArea
+
+    local contentPadding = Instance.new("UIPadding")
+    contentPadding.PaddingTop = UDim.new(0, 20)
+    contentPadding.PaddingBottom = UDim.new(0, 20)
+    contentPadding.Parent = contentArea
 
     local keySec = KeybindSection.new(1)
     keySec.Instance.Parent = contentArea
@@ -128,7 +141,6 @@ function AimlockFactory.new(): AimlockUI
     smoothSec.Instance.Parent = contentArea
     maid:GiveTask(smoothSec)
 
-    -- LOGIC BINDINGS
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
     end))
