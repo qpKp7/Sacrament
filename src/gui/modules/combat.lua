@@ -29,7 +29,7 @@ function CombatModuleFactory.new(): CombatModule
     scroll.Size = UDim2.fromScale(1, 1)
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 0
+    scroll.ScrollBarThickness = 2
     scroll.ScrollBarImageColor3 = Color3.fromHex("680303")
     scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -40,13 +40,6 @@ function CombatModuleFactory.new(): CombatModule
     layout.Padding = UDim.new(0, 15)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     layout.Parent = scroll
-
-    local padding = Instance.new("UIPadding")
-    padding.PaddingTop = UDim.new(0, 20)
-    padding.PaddingBottom = UDim.new(0, 20)
-    padding.PaddingLeft = UDim.new(0, 20)
-    padding.PaddingRight = UDim.new(0, 20)
-    padding.Parent = scroll
 
     local aimlock = AimlockModule.new()
     aimlock.Instance.LayoutOrder = 1
