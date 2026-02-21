@@ -9,6 +9,7 @@ export type SmoothnessSection = {
 
 local SmoothnessFactory = {}
 
+local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
 local COLOR_BOX_BORDER = Color3.fromHex("333333")
@@ -72,9 +73,9 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
     lbl.BackgroundTransparency = 1
     lbl.BorderSizePixel = 0
     lbl.Text = "Smoothness"
-    lbl.TextColor3 = COLOR_WHITE
+    lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 16
+    lbl.TextSize = 14
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
