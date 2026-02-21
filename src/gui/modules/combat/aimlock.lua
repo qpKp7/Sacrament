@@ -160,17 +160,25 @@ function AimlockFactory.new(): AimlockUI
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = toggleKnob
 
+    local arrowContainer = Instance.new("Frame")
+    arrowContainer.Name = "ArrowContainer"
+    arrowContainer.Size = UDim2.new(0, 23, 1, 0)
+    arrowContainer.BackgroundTransparency = 1
+    arrowContainer.LayoutOrder = 4
+    arrowContainer.Parent = header
+
     local arrowBtn = Instance.new("TextButton")
     arrowBtn.Name = "ArrowBtn"
     arrowBtn.Size = UDim2.new(0, 30, 0, 35)
-    arrowBtn.BackgroundColor3 = COLOR_BG
+    arrowBtn.Position = UDim2.new(0, -11, 0.5, 0)
+    arrowBtn.AnchorPoint = Vector2.new(0, 0.5)
+    arrowBtn.BackgroundTransparency = 1
     arrowBtn.BorderSizePixel = 0
     arrowBtn.Text = ">"
     arrowBtn.TextColor3 = COLOR_ARROW_CLOSED
     arrowBtn.Font = FONT_MAIN
     arrowBtn.TextSize = 20
-    arrowBtn.LayoutOrder = 4
-    arrowBtn.Parent = header
+    arrowBtn.Parent = arrowContainer
 
     -- SUBFRAME AREA (Right Side)
     local subFrame = Instance.new("Frame")
