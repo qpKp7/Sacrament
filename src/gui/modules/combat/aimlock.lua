@@ -92,23 +92,19 @@ function AimlockFactory.new(): AimlockUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    local subFrameLayout = Instance.new("UIListLayout")
-    subFrameLayout.FillDirection = Enum.FillDirection.Horizontal
-    subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    subFrameLayout.Parent = subFrame
-
     local vLine = Sidebar.createVertical()
-    vLine.Instance.LayoutOrder = 1
+    vLine.Instance.Position = UDim2.new(0, 0, 0, 0)
+    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
     vLine.Instance.Parent = subFrame
     maid:GiveTask(vLine)
 
     local contentArea = Instance.new("Frame")
     contentArea.Name = "ContentArea"
     contentArea.Size = UDim2.new(1, -2, 0, 0)
+    contentArea.Position = UDim2.new(0, 2, 0, 0)
     contentArea.BackgroundColor3 = COLOR_BG
     contentArea.BorderSizePixel = 0
     contentArea.AutomaticSize = Enum.AutomaticSize.Y
-    contentArea.LayoutOrder = 2
     contentArea.Parent = subFrame
 
     local contentLayout = Instance.new("UIListLayout")
