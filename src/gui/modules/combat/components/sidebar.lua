@@ -14,7 +14,7 @@ local SIDEBAR_COLOR = Colors.Divider
 function SidebarFactory.createVertical(): Sidebar
     local line = Instance.new("Frame")
     line.Name = "VerticalSeparator"
-    line.Size = UDim2.new(0, 2, 1, 0)
+    line.Size = UDim2.new(0, 10, 1, 0)
     line.Position = UDim2.new(0, 0, 0, 0)
     line.BackgroundColor3 = SIDEBAR_COLOR
     line.BorderSizePixel = 0
