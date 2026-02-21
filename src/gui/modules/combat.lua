@@ -29,8 +29,7 @@ function CombatModuleFactory.new(): CombatModule
     scroll.Size = UDim2.fromScale(1, 1)
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 2
-    scroll.ScrollBarImageColor3 = Color3.fromHex("680303")
+    scroll.ScrollBarThickness = 0
     scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     scroll.Parent = container
