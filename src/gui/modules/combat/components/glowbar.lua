@@ -20,7 +20,7 @@ function GlowBarFactory.new(): GlowBar
 
     local container = Instance.new("Frame")
     container.Name = "GlowBarContainer"
-    container.Size = UDim2.fromOffset(40, 30)
+    container.Size = UDim2.fromOffset(60, 30)
     container.BackgroundTransparency = 1
 
     local line = Instance.new("Frame")
