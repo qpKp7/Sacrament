@@ -2,12 +2,12 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
-export type SmoothnessSection = {
+export type SmoothSection = {
     Instance: Frame,
-    Destroy: (self: SmoothnessSection) -> ()
+    Destroy: (self: SmoothSection) -> ()
 }
 
-local SmoothnessFactory = {}
+local SmoothFactory = {}
 
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
@@ -47,11 +47,11 @@ local function enforceDecimalBox(box: TextBox, default: string, decimals: number
     end)
 end
 
-function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
+function SmoothFactory.new(layoutOrder: number): SmoothSection
     local maid = Maid.new()
 
     local row = Instance.new("Frame")
-    row.Name = "SmoothnessRow"
+    row.Name = "SmoothRow"
     row.Size = UDim2.new(1, 0, 0, 40)
     row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
@@ -72,7 +72,7 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
     lbl.Size = UDim2.new(0.5, 0, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.BorderSizePixel = 0
-    lbl.Text = "Smoothness"
+    lbl.Text = "Smooth"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
     lbl.TextSize = 14
@@ -122,4 +122,4 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
     return self
 end
 
-return SmoothnessFactory
+return SmoothFactory
