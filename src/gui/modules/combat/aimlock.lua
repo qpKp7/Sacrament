@@ -88,7 +88,7 @@ function AimlockFactory.new(): AimlockUI
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(70, 50)
+    glowWrapper.Size = UDim2.fromOffset(65, 50)
     glowWrapper.Position = UDim2.fromOffset(105, 0)
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
