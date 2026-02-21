@@ -10,6 +10,9 @@ local Sidebar = Import("gui/modules/combat/components/sidebar")
 local KeybindSection = Import("gui/modules/combat/sections/keybind")
 local PredictSection = Import("gui/modules/combat/sections/predict")
 local SmoothnessSection = Import("gui/modules/combat/sections/smoothness")
+local AimPartSection = Import("gui/modules/combat/sections/aimpart")
+local WallCheckSection = Import("gui/modules/combat/sections/wallcheck")
+local KnockCheckSection = Import("gui/modules/combat/sections/knockcheck")
 
 export type AimlockUI = {
     Instance: Frame,
@@ -109,11 +112,6 @@ function AimlockFactory.new(): AimlockUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    local subFrameLayout = Instance.new("UIListLayout")
-    subFrameLayout.FillDirection = Enum.FillDirection.Horizontal
-    subFrameLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    subFrameLayout.Parent = subFrame
-
     local vLine = Sidebar.createVertical()
     vLine.Instance.Parent = subFrame
     maid:GiveTask(vLine)
@@ -121,19 +119,15 @@ function AimlockFactory.new(): AimlockUI
     local contentArea = Instance.new("Frame")
     contentArea.Name = "ContentArea"
     contentArea.Size = UDim2.new(1, -2, 0, 0)
+    contentArea.Position = UDim2.fromOffset(2, 0)
     contentArea.BackgroundTransparency = 1
     contentArea.AutomaticSize = Enum.AutomaticSize.Y
     contentArea.Parent = subFrame
 
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Padding = UDim.new(0, 15)
+    contentLayout.Padding = UDim.new(0, 0)
     contentLayout.Parent = contentArea
-
-    local contentPadding = Instance.new("UIPadding")
-    contentPadding.PaddingTop = UDim.new(0, 20)
-    contentPadding.PaddingBottom = UDim.new(0, 20)
-    contentPadding.Parent = contentArea
 
     local keySec = KeybindSection.new(1)
     keySec.Instance.Parent = contentArea
@@ -143,13 +137,44 @@ function AimlockFactory.new(): AimlockUI
     hLine.Instance.Parent = contentArea
     maid:GiveTask(hLine)
 
-    local predSec = PredictSection.new(3)
-    predSec.Instance.Parent = contentArea
+    local inputsContainer = Instance.new("Frame")
+    inputsContainer.Name = "InputsContainer"
+    inputsContainer.Size = UDim2.new(1, 0, 0, 0)
+    inputsContainer.BackgroundTransparency = 1
+    inputsContainer.AutomaticSize = Enum.AutomaticSize.Y
+    inputsContainer.LayoutOrder = 3
+    inputsContainer.Parent = contentArea
+
+    local inputsLayout = Instance.new("UIListLayout")
+    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    inputsLayout.Padding = UDim.new(0, 10)
+    inputsLayout.Parent = inputsContainer
+
+    local inputsPadding = Instance.new("UIPadding")
+    inputsPadding.PaddingTop = UDim.new(0, 15)
+    inputsPadding.PaddingBottom = UDim.new(0, 15)
+    inputsPadding.PaddingRight = UDim.new(0, 25)
+    inputsPadding.Parent = inputsContainer
+
+    local predSec = PredictSection.new(1)
+    predSec.Instance.Parent = inputsContainer
     maid:GiveTask(predSec)
 
-    local smoothSec = SmoothnessSection.new(4)
-    smoothSec.Instance.Parent = contentArea
+    local smoothSec = SmoothnessSection.new(2)
+    smoothSec.Instance.Parent = inputsContainer
     maid:GiveTask(smoothSec)
+
+    local aimPartSec = AimPartSection.new(3)
+    aimPartSec.Instance.Parent = inputsContainer
+    maid:GiveTask(aimPartSec)
+
+    local wallCheckSec = WallCheckSection.new(4)
+    wallCheckSec.Instance.Parent = inputsContainer
+    maid:GiveTask(wallCheckSec)
+
+    local knockCheckSec = KnockCheckSection.new(5)
+    knockCheckSec.Instance.Parent = inputsContainer
+    maid:GiveTask(knockCheckSec)
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
