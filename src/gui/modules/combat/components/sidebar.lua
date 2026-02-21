@@ -1,5 +1,6 @@
 --!strict
 local Import = (_G :: any).SacramentImport
+local Colors = Import("themes/colors")
 
 export type Sidebar = {
     Instance: Frame,
@@ -8,7 +9,7 @@ export type Sidebar = {
 
 local SidebarFactory = {}
 
-local SIDEBAR_COLOR = Color3.fromHex("680303")
+local SIDEBAR_COLOR = Colors.Divider
 
 function SidebarFactory.createVertical(): Sidebar
     local line = Instance.new("Frame")
