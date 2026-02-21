@@ -80,7 +80,7 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
 
     local inputCont = Instance.new("Frame")
     inputCont.Size = UDim2.new(0, 120, 0, 32)
-    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
+    inputCont.Position = UDim2.new(1, -25, 0.5, 0)
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
     inputCont.BorderSizePixel = 0
