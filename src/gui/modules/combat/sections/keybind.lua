@@ -10,6 +10,7 @@ export type KeybindSection = {
 
 local KeybindFactory = {}
 
+local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local COLOR_RED_DARK = Color3.fromHex("680303")
 local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
@@ -53,9 +54,9 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     lbl.BackgroundTransparency = 1
     lbl.BorderSizePixel = 0
     lbl.Text = "KEY"
-    lbl.TextColor3 = COLOR_WHITE
+    lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 16
+    lbl.TextSize = 14
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
