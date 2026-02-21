@@ -2,12 +2,12 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
-export type PredictSection = {
+export type SmoothnessSection = {
     Instance: Frame,
-    Destroy: (self: PredictSection) -> ()
+    Destroy: (self: SmoothnessSection) -> ()
 }
 
-local PredictFactory = {}
+local SmoothnessFactory = {}
 
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
@@ -46,11 +46,11 @@ local function enforceDecimalBox(box: TextBox, default: string, decimals: number
     end)
 end
 
-function PredictFactory.new(layoutOrder: number): PredictSection
+function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
     local maid = Maid.new()
 
     local row = Instance.new("Frame")
-    row.Name = "PredictRow"
+    row.Name = "SmoothnessRow"
     row.Size = UDim2.new(1, 0, 0, 40)
     row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
@@ -71,7 +71,7 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     lbl.Size = UDim2.new(0.5, 0, 1, 0)
     lbl.BackgroundTransparency = 1
     lbl.BorderSizePixel = 0
-    lbl.Text = "Predict"
+    lbl.Text = "Smoothness"
     lbl.TextColor3 = COLOR_WHITE
     lbl.Font = FONT_MAIN
     lbl.TextSize = 16
@@ -96,18 +96,18 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     inputStroke.Parent = inputCont
 
-    local predBox = Instance.new("TextBox")
-    predBox.Size = UDim2.fromScale(1, 1)
-    predBox.BackgroundColor3 = COLOR_BOX_BG
-    predBox.BackgroundTransparency = 1
-    predBox.BorderSizePixel = 0
-    predBox.Text = "0.000"
-    predBox.TextColor3 = COLOR_WHITE
-    predBox.Font = FONT_MAIN
-    predBox.TextSize = 16
-    predBox.ClearTextOnFocus = false
-    predBox.Parent = inputCont
-    enforceDecimalBox(predBox, "0.000", 3, 5)
+    local smoothBox = Instance.new("TextBox")
+    smoothBox.Size = UDim2.fromScale(1, 1)
+    smoothBox.BackgroundColor3 = COLOR_BOX_BG
+    smoothBox.BackgroundTransparency = 1
+    smoothBox.BorderSizePixel = 0
+    smoothBox.Text = "0.500"
+    smoothBox.TextColor3 = COLOR_WHITE
+    smoothBox.Font = FONT_MAIN
+    smoothBox.TextSize = 16
+    smoothBox.ClearTextOnFocus = false
+    smoothBox.Parent = inputCont
+    enforceDecimalBox(smoothBox, "0.500", 3, 5)
 
     maid:GiveTask(row)
 
@@ -121,4 +121,4 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     return self
 end
 
-return PredictFactory
+return SmoothnessFactory
