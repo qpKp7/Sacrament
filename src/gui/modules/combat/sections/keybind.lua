@@ -10,7 +10,6 @@ export type KeybindSection = {
 
 local KeybindFactory = {}
 
-local COLOR_BG = Color3.fromRGB(14, 14, 14)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local COLOR_RED_DARK = Color3.fromHex("680303")
 local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
@@ -34,7 +33,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     local row = Instance.new("Frame")
     row.Name = "KeyRow"
     row.Size = UDim2.new(1, 0, 0, 40)
-    row.BackgroundColor3 = COLOR_BG
+    row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
     row.LayoutOrder = layoutOrder
 
@@ -51,7 +50,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
 
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(0.5, 0, 1, 0)
-    lbl.BackgroundColor3 = COLOR_BG
+    lbl.BackgroundTransparency = 1
     lbl.BorderSizePixel = 0
     lbl.Text = "KEY"
     lbl.TextColor3 = COLOR_WHITE
