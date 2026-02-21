@@ -26,19 +26,19 @@ function ArrowFactory.new(): Arrow
 
     local container = Instance.new("Frame")
     container.Name = "ArrowContainer"
-    container.Size = UDim2.fromOffset(23, 50)
+    container.Size = UDim2.fromOffset(20, 50)
     container.BackgroundTransparency = 1
 
     local button = Instance.new("TextButton")
     button.Name = "ArrowBtn"
-    button.Size = UDim2.fromOffset(30, 35)
-    button.Position = UDim2.new(0, -11, 0.5, 0)
-    button.AnchorPoint = Vector2.new(0, 0.5)
+    button.Size = UDim2.fromOffset(30, 30)
+    button.Position = UDim2.fromScale(0.5, 0.5)
+    button.AnchorPoint = Vector2.new(0.5, 0.5)
     button.BackgroundTransparency = 1
     button.Text = ">"
     button.TextColor3 = COLOR_CLOSED
     button.Font = FONT_MAIN
-    button.TextSize = 20
+    button.TextSize = 18
     button.ZIndex = 2
     button.Parent = container
 
