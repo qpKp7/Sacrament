@@ -133,6 +133,7 @@ function AimlockFactory.new(): AimlockUI
     local contentPadding = Instance.new("UIPadding")
     contentPadding.PaddingTop = UDim.new(0, 20)
     contentPadding.PaddingBottom = UDim.new(0, 20)
+    contentPadding.PaddingRight = UDim.new(0, 20)
     contentPadding.Parent = contentArea
 
     local keySec = KeybindSection.new(1)
