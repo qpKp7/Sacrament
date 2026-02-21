@@ -27,7 +27,7 @@ function AimlockFactory.new(): AimlockUI
     local container = Instance.new("Frame")
     container.Name = "AimlockContainer"
     container.Size = UDim2.new(1, 0, 0, 0)
-    container.BackgroundTransparency = 1
+    container.BackgroundTransparency = 1 
     container.BorderSizePixel = 0
     container.AutomaticSize = Enum.AutomaticSize.Y
 
@@ -44,51 +44,60 @@ function AimlockFactory.new(): AimlockUI
     header.LayoutOrder = 1
     header.Parent = container
 
-    local headerLayout = Instance.new("UIListLayout")
-    headerLayout.FillDirection = Enum.FillDirection.Horizontal
-    headerLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    headerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    headerLayout.Padding = UDim.new(0, 12)
-    headerLayout.Parent = header
-
-    local headerPadding = Instance.new("UIPadding")
-    headerPadding.PaddingLeft = UDim.new(0, 20)
-    headerPadding.Parent = header
-
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(65, 30)
+    title.Size = UDim2.fromOffset(70, 50)
+    title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Aimlock"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
     title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.LayoutOrder = 1
     title.Parent = header
 
-    local glowBar = GlowBar.new()
-    glowBar.Instance.LayoutOrder = 2
-    glowBar.Instance.Parent = header
-    maid:GiveTask(glowBar)
+    local controls = Instance.new("Frame")
+    controls.Name = "Controls"
+    controls.Size = UDim2.fromOffset(105, 50)
+    controls.Position = UDim2.fromScale(1, 0)
+    controls.AnchorPoint = Vector2.new(1, 0)
+    controls.BackgroundTransparency = 1
+    controls.Parent = header
+
+    local ctrlLayout = Instance.new("UIListLayout")
+    ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
+    ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ctrlLayout.Padding = UDim.new(0, 15)
+    ctrlLayout.Parent = controls
+
+    local ctrlPadding = Instance.new("UIPadding")
+    ctrlPadding.PaddingRight = UDim.new(0, 20)
+    ctrlPadding.Parent = controls
 
     local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 3
-    toggleBtn.Instance.Parent = header
+    toggleBtn.Instance.LayoutOrder = 1
+    toggleBtn.Instance.Parent = controls
     maid:GiveTask(toggleBtn)
 
-    local arrowWrapper = Instance.new("Frame")
-    arrowWrapper.Name = "ArrowWrapper"
-    arrowWrapper.Size = UDim2.fromOffset(74, 50)
-    arrowWrapper.BackgroundTransparency = 1
-    arrowWrapper.LayoutOrder = 4
-    arrowWrapper.Parent = header
-
     local arrow = Arrow.new()
-    arrow.Instance.Position = UDim2.fromScale(0.5, 0.5)
-    arrow.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    arrow.Instance.Parent = arrowWrapper
+    arrow.Instance.LayoutOrder = 2
+    arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
+
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.Size = UDim2.new(1, -195, 1, 0)
+    glowWrapper.Position = UDim2.fromOffset(90, 0)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Parent = header
+
+    local glowBar = GlowBar.new()
+    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowBar.Instance.Parent = glowWrapper
+    maid:GiveTask(glowBar)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
