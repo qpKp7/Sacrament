@@ -191,7 +191,7 @@ function AimlockFactory.new(): AimlockUI
     local verticalSeparator = Instance.new("Frame")
     verticalSeparator.Name = "VerticalSeparator"
     verticalSeparator.Size = UDim2.new(0, 2, 1, 0)
-    verticalSeparator.BackgroundColor3 = COLOR_RED_LIGHT
+    verticalSeparator.BackgroundColor3 = COLOR_RED_DARK
     verticalSeparator.BorderSizePixel = 0
     verticalSeparator.LayoutOrder = 1
     verticalSeparator.Parent = subFrame
@@ -214,7 +214,7 @@ function AimlockFactory.new(): AimlockUI
         local div = Instance.new("Frame")
         div.Size = UDim2.new(1, 0, 0, 2)
         div.Position = UDim2.new(0, 0, 0, 0)
-        div.BackgroundColor3 = COLOR_RED_LIGHT
+        div.BackgroundColor3 = COLOR_RED_DARK
         div.BorderSizePixel = 0
         div.LayoutOrder = order
         div.Parent = contentArea
