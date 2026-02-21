@@ -9,7 +9,6 @@ export type SmoothnessSection = {
 
 local SmoothnessFactory = {}
 
-local COLOR_BG = Color3.fromRGB(14, 14, 14)
 local COLOR_WHITE = Color3.fromHex("FFFFFF")
 local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
 local COLOR_BOX_BORDER = Color3.fromHex("333333")
@@ -53,7 +52,7 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
     local row = Instance.new("Frame")
     row.Name = "SmoothnessRow"
     row.Size = UDim2.new(1, 0, 0, 40)
-    row.BackgroundColor3 = COLOR_BG
+    row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
     row.LayoutOrder = layoutOrder
 
@@ -70,7 +69,7 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
 
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(0.5, 0, 1, 0)
-    lbl.BackgroundColor3 = COLOR_BG
+    lbl.BackgroundTransparency = 1
     lbl.BorderSizePixel = 0
     lbl.Text = "Smoothness"
     lbl.TextColor3 = COLOR_WHITE
@@ -102,13 +101,13 @@ function SmoothnessFactory.new(layoutOrder: number): SmoothnessSection
     smoothBox.BackgroundColor3 = COLOR_BOX_BG
     smoothBox.BackgroundTransparency = 1
     smoothBox.BorderSizePixel = 0
-    smoothBox.Text = "0.500"
+    smoothBox.Text = "0.50"
     smoothBox.TextColor3 = COLOR_WHITE
     smoothBox.Font = FONT_MAIN
     smoothBox.TextSize = 16
     smoothBox.ClearTextOnFocus = false
     smoothBox.Parent = inputCont
-    enforceDecimalBox(smoothBox, "0.500", 3, 5)
+    enforceDecimalBox(smoothBox, "0.50", 2, 4)
 
     maid:GiveTask(row)
 
