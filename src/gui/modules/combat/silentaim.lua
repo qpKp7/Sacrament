@@ -62,48 +62,31 @@ function SilentAimFactory.new(): SilentAimUI
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
-    local glowWrapper = overlay:FindFirstChild("GlowWrapper")
-if not glowWrapper then
-	glowWrapper = Instance.new("Frame")
-	glowWrapper.Name = "GlowWrapper"
-	glowWrapper.BackgroundTransparency = 1
-	glowWrapper.ZIndex = overlay.ZIndex
-	glowWrapper.Parent = overlay
-end
+    -- GlowWrapper desacoplado do container 'controls' para posicionamento absoluto
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.Size = UDim2.fromOffset(25, 32) -- Tamanho encurtado para evitar sobreposição lateral
+    -- Posição 140px é o centro exato entre o fim do Title (105px) e o início do Controls (175px)
+    glowWrapper.Position = UDim2.new(0, 140, 0.5, 0)
+    glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Parent = header
 
-glowWrapper.Size = UDim2.fromOffset(8, 32)
+    local glowBar = GlowBar.new()
+    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowBar.Instance.Position = UDim2.new(0.5, 0, 0.5, 0)
+    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+    glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
+    glowBar.Instance.Parent = glowWrapper
 
-local controlsWidth = 0
-local controls = header:FindFirstChild("Controls")
-if controls and controls:IsA("Frame") then
-	controlsWidth = controls.AbsoluteSize.X
-end
-
-glowWrapper.AnchorPoint = Vector2.new(1, 0.5)
-glowWrapper.Position = UDim2.new(1, -(controlsWidth + 12), 0.5, 0)
-
-local glowBar = glowWrapper:FindFirstChild("GlowBarRoot")
-if not glowBar then
-	local gb = GlowBar.new()
-	gb.Instance.Name = "GlowBarRoot"
-	gb.Instance.Parent = glowWrapper
-	maid:GiveTask(gb)
-	glowBar = gb.Instance
-end
-
-glowBar.AnchorPoint = Vector2.new(0.5, 0.5)
-glowBar.Position = UDim2.new(0.5, 0, 0.5, 0)
-glowBar.AutomaticSize = Enum.AutomaticSize.None
-glowBar.Size = UDim2.new(1, 0, 1, 0)
-
-do
-	local c1 = glowBar:FindFirstChildWhichIsA("UISizeConstraint", true)
-	if c1 then c1:Destroy() end
-	local c2 = glowBar:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
-	if c2 then c2:Destroy() end
-end
-
-maid:GiveTask(glowBar)
+    -- Limpeza de constraints para permitir redimensionamento manual preciso
+    do
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
+    end
+    maid:GiveTask(glowBar)
 
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
