@@ -21,7 +21,7 @@ export type AimlockUI = {
 
 local AimlockFactory = {}
 
-local COLOR_WHITE = Color3.fromHex("FFFFFF")
+local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local COLOR_SCROLL = Color3.fromHex("680303")
 local FONT_MAIN = Enum.Font.GothamBold
 
