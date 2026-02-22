@@ -14,6 +14,7 @@ local CombatModuleFactory = {}
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
 
+    -- Container principal estático (não-arrastável)
     local container = Instance.new("Frame")
     container.Name = "CombatContainer"
     container.Size = UDim2.fromScale(1, 1)
@@ -25,31 +26,63 @@ function CombatModuleFactory.new(): CombatModule
     corner.CornerRadius = UDim.new(0, 18)
     corner.Parent = container
 
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Name = "ScrollContent"
-    scroll.Size = UDim2.fromScale(1, 1)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 0
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.Parent = container
+    -- Painel Esquerdo: Área fixa para os headers (toggles) empilhados
+    local leftPanel = Instance.new("Frame")
+    leftPanel.Name = "LeftPanel"
+    leftPanel.Size = UDim2.new(0, 280, 1, 0)
+    leftPanel.BackgroundTransparency = 1
+    leftPanel.BorderSizePixel = 0
+    leftPanel.Parent = container
 
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 15)
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    layout.Parent = scroll
+    local leftLayout = Instance.new("UIListLayout")
+    leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    leftLayout.Padding = UDim.new(0, 0)
+    leftLayout.Parent = leftPanel
 
+    -- Painel Direito: Área fixa para os subframes (renderizam a partir do topo)
+    local rightPanel = Instance.new("Frame")
+    rightPanel.Name = "RightPanel"
+    rightPanel.Size = UDim2.new(1, -280, 1, 0)
+    rightPanel.Position = UDim2.fromOffset(280, 0)
+    rightPanel.BackgroundTransparency = 1
+    rightPanel.BorderSizePixel = 0
+    rightPanel.Parent = container
+
+    -- Extração e Montagem do Aimlock
     local aimlock = AimlockModule.new()
-    aimlock.Instance.LayoutOrder = 1
-    aimlock.Instance.Parent = scroll
     maid:GiveTask(aimlock)
+    
+    local aimHeader = aimlock.Instance:FindFirstChild("Header")
+    if aimHeader then
+        aimHeader.LayoutOrder = 1
+        aimHeader.Parent = leftPanel
+    end
+    
+    local aimSub = aimlock.Instance:FindFirstChild("SubFrame")
+    if aimSub then
+        aimSub.AutomaticSize = Enum.AutomaticSize.None
+        aimSub.Size = UDim2.fromScale(1, 1)
+        aimSub.Position = UDim2.fromOffset(0, 0)
+        aimSub.Parent = rightPanel
+    end
 
+    -- Extração e Montagem do Silent Aim
     local silentAim = SilentAimModule.new()
-    silentAim.Instance.LayoutOrder = 2
-    silentAim.Instance.Parent = scroll
     maid:GiveTask(silentAim)
+
+    local silentHeader = silentAim.Instance:FindFirstChild("Header")
+    if silentHeader then
+        silentHeader.LayoutOrder = 2
+        silentHeader.Parent = leftPanel
+    end
+    
+    local silentSub = silentAim.Instance:FindFirstChild("SubFrame")
+    if silentSub then
+        silentSub.AutomaticSize = Enum.AutomaticSize.None
+        silentSub.Size = UDim2.fromScale(1, 1)
+        silentSub.Position = UDim2.fromOffset(0, 0)
+        silentSub.Parent = rightPanel
+    end
 
     maid:GiveTask(container)
 
