@@ -83,6 +83,8 @@ function CombatModuleFactory.new(): CombatModule
             end))
 
             maid:GiveTask(subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+                local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                
                 if subFrame.Visible then
                     if openSubframe and openSubframe ~= subFrame then
                         openSubframe.Visible = false
@@ -90,7 +92,6 @@ function CombatModuleFactory.new(): CombatModule
                     openSubframe = subFrame
                     
                     btn.Text = "v"
-                    local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
                     local tweenBtn = TweenService:Create(btn, tweenInfo, {TextColor3 = COLOR_ARROW_OPEN})
                     local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {Transparency = 0.4})
                     
@@ -109,7 +110,6 @@ function CombatModuleFactory.new(): CombatModule
                     end
                     
                     btn.Text = ">"
-                    local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
                     local tweenBtn = TweenService:Create(btn, tweenInfo, {TextColor3 = COLOR_ARROW_CLOSED})
                     local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {Transparency = 1})
                     
