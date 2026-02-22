@@ -27,11 +27,12 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 10)
+    layout.Padding = UDim.new(0, 5)
     layout.Parent = container
 
-    -- Slider corrigido para usar a assinatura: title, min, max, default
-    local slider = Slider.new("FOV Limit", 0, 500, 150)
+    -- O quinto argumento "1" foi restaurado. A falta deste parâmetro (step/decimals) 
+    -- quebrava a matemática interna do seu slider.lua original, impedindo o arraste.
+    local slider = Slider.new("FOV Limit", 0, 500, 150, 1)
     slider.Instance.LayoutOrder = 1
     slider.Instance.Parent = container
     maid:GiveTask(slider)
@@ -67,7 +68,6 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     lbl.Parent = toggleRow
 
     local toggleCont = Instance.new("Frame")
-    toggleCont.Name = "ToggleContainer"
     toggleCont.Size = UDim2.new(0, 120, 0, 32)
     toggleCont.Position = UDim2.new(1, 0, 0.5, 0)
     toggleCont.AnchorPoint = Vector2.new(1, 0.5)
