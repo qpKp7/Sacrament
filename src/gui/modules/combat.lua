@@ -13,7 +13,8 @@ export type CombatModule = {
 local CombatModuleFactory = {}
 
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
-local COLOR_ARROW_OPEN = Color3.fromHex("FF3333")
+local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
+local COLOR_GLOW = Color3.fromHex("FF3333")
 
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
@@ -56,10 +57,9 @@ function CombatModuleFactory.new(): CombatModule
         local controls = header:FindFirstChild("Controls")
         
         if controls then
-            -- Substitui o botão da seta original para erradicar o bug interno de estado ("<")
             for _, desc in ipairs(controls:GetDescendants()) do
                 if desc:IsA("TextButton") and (desc.Text == "v" or desc.Text == ">" or desc.Text == "<" or desc.Text == "V" or desc.Text == "^") then
-                    arrowBtn = desc:Clone()
+                    arrowBtn = desc:Clone() :: TextButton
                     arrowBtn.Parent = desc.Parent
                     desc:Destroy()
                     break
@@ -68,46 +68,59 @@ function CombatModuleFactory.new(): CombatModule
         end
 
         if arrowBtn then
-            -- Estado inicial rigoroso
-            arrowBtn.Text = ">"
-            arrowBtn.TextColor3 = COLOR_ARROW_CLOSED
+            local btn = arrowBtn :: TextButton
+            btn.Text = ">"
+            btn.TextColor3 = COLOR_ARROW_CLOSED
 
-            maid:GiveTask(arrowBtn.MouseButton1Click:Connect(function()
+            local glowStroke = Instance.new("UIStroke")
+            glowStroke.Color = COLOR_GLOW
+            glowStroke.Thickness = 1.5
+            glowStroke.Transparency = 1
+            glowStroke.Parent = btn
+
+            maid:GiveTask(btn.MouseButton1Click:Connect(function()
                 subFrame.Visible = not subFrame.Visible
             end))
 
             maid:GiveTask(subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
                 if subFrame.Visible then
-                    -- Fecha outro subframe aberto automaticamente
                     if openSubframe and openSubframe ~= subFrame then
                         openSubframe.Visible = false
                     end
                     openSubframe = subFrame
                     
-                    arrowBtn.Text = "v"
+                    btn.Text = "v"
                     local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                    local tween = TweenService:Create(arrowBtn, tweenInfo, {TextColor3 = COLOR_ARROW_OPEN})
-                    tween:Play()
+                    local tweenBtn = TweenService:Create(btn, tweenInfo, {TextColor3 = COLOR_ARROW_OPEN})
+                    local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {Transparency = 0.4})
+                    
+                    tweenBtn:Play()
+                    tweenStroke:Play()
                     
                     local conn: RBXScriptConnection
-                    conn = tween.Completed:Connect(function()
+                    conn = tweenBtn.Completed:Connect(function()
                         conn:Disconnect()
-                        tween:Destroy()
+                        tweenBtn:Destroy()
+                        tweenStroke:Destroy()
                     end)
                 else
                     if openSubframe == subFrame then
                         openSubframe = nil
                     end
                     
-                    arrowBtn.Text = ">"
+                    btn.Text = ">"
                     local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                    local tween = TweenService:Create(arrowBtn, tweenInfo, {TextColor3 = COLOR_ARROW_CLOSED})
-                    tween:Play()
+                    local tweenBtn = TweenService:Create(btn, tweenInfo, {TextColor3 = COLOR_ARROW_CLOSED})
+                    local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {Transparency = 1})
+                    
+                    tweenBtn:Play()
+                    tweenStroke:Play()
                     
                     local conn: RBXScriptConnection
-                    conn = tween.Completed:Connect(function()
+                    conn = tweenBtn.Completed:Connect(function()
                         conn:Disconnect()
-                        tween:Destroy()
+                        tweenBtn:Destroy()
+                        tweenStroke:Destroy()
                     end)
                 end
             end))
