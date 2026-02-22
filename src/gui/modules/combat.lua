@@ -14,7 +14,6 @@ local CombatModuleFactory = {}
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
 
-    -- Container principal estático (não-arrastável)
     local container = Instance.new("Frame")
     container.Name = "CombatContainer"
     container.Size = UDim2.fromScale(1, 1)
@@ -26,7 +25,6 @@ function CombatModuleFactory.new(): CombatModule
     corner.CornerRadius = UDim.new(0, 18)
     corner.Parent = container
 
-    -- Painel Esquerdo: Área fixa para os headers (toggles) empilhados
     local leftPanel = Instance.new("Frame")
     leftPanel.Name = "LeftPanel"
     leftPanel.Size = UDim2.new(0, 280, 1, 0)
@@ -39,7 +37,6 @@ function CombatModuleFactory.new(): CombatModule
     leftLayout.Padding = UDim.new(0, 0)
     leftLayout.Parent = leftPanel
 
-    -- Painel Direito: Área fixa para os subframes (renderizam a partir do topo)
     local rightPanel = Instance.new("Frame")
     rightPanel.Name = "RightPanel"
     rightPanel.Size = UDim2.new(1, -280, 1, 0)
@@ -48,40 +45,79 @@ function CombatModuleFactory.new(): CombatModule
     rightPanel.BorderSizePixel = 0
     rightPanel.Parent = container
 
-    -- Extração e Montagem do Aimlock
+    local openSubframe: Frame? = nil
+    local openHeader: Frame? = nil
+
+    local function updateArrowText(header: Frame, text: string)
+        local controls = header:FindFirstChild("Controls")
+        if controls then
+            for _, desc in ipairs(controls:GetDescendants()) do
+                if desc:IsA("TextButton") and (desc.Text == "v" or desc.Text == ">" or desc.Text == "V") then
+                    desc.Text = text
+                    break
+                end
+            end
+        end
+    end
+
+    local function setupMutex(header: Frame, subFrame: Frame)
+        maid:GiveTask(subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            if subFrame.Visible then
+                if openSubframe and openSubframe ~= subFrame then
+                    local prevSub = openSubframe
+                    local prevHeader = openHeader
+                    
+                    prevSub.Visible = false
+                    if prevHeader then
+                        updateArrowText(prevHeader, ">")
+                    end
+                end
+                
+                openSubframe = subFrame
+                openHeader = header
+                updateArrowText(header, "v")
+            else
+                if openSubframe == subFrame then
+                    openSubframe = nil
+                    openHeader = nil
+                    updateArrowText(header, ">")
+                end
+            end
+        end))
+    end
+
     local aimlock = AimlockModule.new()
     maid:GiveTask(aimlock)
     
     local aimHeader = aimlock.Instance:FindFirstChild("Header")
-    if aimHeader then
+    local aimSub = aimlock.Instance:FindFirstChild("SubFrame")
+    if aimHeader and aimSub then
         aimHeader.LayoutOrder = 1
         aimHeader.Parent = leftPanel
-    end
-    
-    local aimSub = aimlock.Instance:FindFirstChild("SubFrame")
-    if aimSub then
+        
         aimSub.AutomaticSize = Enum.AutomaticSize.None
         aimSub.Size = UDim2.fromScale(1, 1)
         aimSub.Position = UDim2.fromOffset(0, 0)
         aimSub.Parent = rightPanel
+        
+        setupMutex(aimHeader :: Frame, aimSub :: Frame)
     end
 
-    -- Extração e Montagem do Silent Aim
     local silentAim = SilentAimModule.new()
     maid:GiveTask(silentAim)
 
     local silentHeader = silentAim.Instance:FindFirstChild("Header")
-    if silentHeader then
+    local silentSub = silentAim.Instance:FindFirstChild("SubFrame")
+    if silentHeader and silentSub then
         silentHeader.LayoutOrder = 2
         silentHeader.Parent = leftPanel
-    end
-    
-    local silentSub = silentAim.Instance:FindFirstChild("SubFrame")
-    if silentSub then
+        
         silentSub.AutomaticSize = Enum.AutomaticSize.None
         silentSub.Size = UDim2.fromScale(1, 1)
         silentSub.Position = UDim2.fromOffset(0, 0)
         silentSub.Parent = rightPanel
+        
+        setupMutex(silentHeader :: Frame, silentSub :: Frame)
     end
 
     maid:GiveTask(container)
