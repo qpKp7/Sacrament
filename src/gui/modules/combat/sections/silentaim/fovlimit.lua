@@ -30,7 +30,8 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     layout.Padding = UDim.new(0, 5)
     layout.Parent = container
 
-    local slider = Slider.new("FOV Limit", 0, 500, 150, 1)
+    -- Slider configurado para incremento de 1
+    local slider = Slider.new("FOV Limit", 0, 500, 150)
     slider.Instance.LayoutOrder = 1
     slider.Instance.Parent = container
     maid:GiveTask(slider)
@@ -65,7 +66,9 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toggleRow
 
+    -- Container de toggle com alinhamento simétrico
     local toggleCont = Instance.new("Frame")
+    toggleCont.Name = "ToggleContainer"
     toggleCont.Size = UDim2.new(0, 120, 0, 32)
     toggleCont.Position = UDim2.new(1, 0, 0.5, 0)
     toggleCont.AnchorPoint = Vector2.new(1, 0.5)
