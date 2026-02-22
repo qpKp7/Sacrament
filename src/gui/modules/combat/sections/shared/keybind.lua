@@ -33,7 +33,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
 
     local row = Instance.new("Frame")
     row.Name = "KeyRow"
-    row.Size = UDim2.new(1, 0, 0, 40)
+    row.Size = UDim2.new(1, 0, 0, 55)
     row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
     row.LayoutOrder = layoutOrder
