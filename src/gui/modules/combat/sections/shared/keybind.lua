@@ -33,7 +33,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
 
     local row = Instance.new("Frame")
     row.Name = "KeyRow"
-    row.Size = UDim2.new(1, 0, 0, 55)
+    row.Size = UDim2.new(1, 0, 0, 40)
     row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
     row.LayoutOrder = layoutOrder
@@ -61,7 +61,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     lbl.Parent = row
 
     local inputCont = Instance.new("Frame")
-    inputCont.Size = UDim2.new(0, 140, 0, 32)
+    inputCont.Size = UDim2.new(0, 120, 0, 32)
     inputCont.Position = UDim2.new(1, 0, 0.5, 0)
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
