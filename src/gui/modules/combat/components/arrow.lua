@@ -13,7 +13,7 @@ export type Arrow = {
 local ArrowFactory = {}
 
 local COLOR_CLOSED = Color3.fromHex("CCCCCC")
-local COLOR_OPEN = Color3.fromHex("680303")
+local COLOR_OPEN = Color3.fromHex("C80000")
 local FONT_MAIN = Enum.Font.GothamBold
 
 function ArrowFactory.new(): Arrow
