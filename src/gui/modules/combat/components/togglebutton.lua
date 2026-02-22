@@ -13,7 +13,7 @@ export type ToggleButton = {
 local ToggleButtonFactory = {}
 
 local COLOR_BG_OFF = Color3.fromHex("444444")
-local COLOR_BG_ON = Color3.fromHex("FF3333")
+local COLOR_BG_ON = Color3.fromHex("960000")
 local COLOR_KNOB = Color3.fromHex("FFFFFF")
 
 function ToggleButtonFactory.new(): ToggleButton
