@@ -27,10 +27,10 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 5)
+    layout.Padding = UDim.new(0, 10)
     layout.Parent = container
 
-    -- Slider configurado para incremento de 1
+    -- Slider corrigido para usar a assinatura: title, min, max, default
     local slider = Slider.new("FOV Limit", 0, 500, 150)
     slider.Instance.LayoutOrder = 1
     slider.Instance.Parent = container
@@ -66,7 +66,6 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toggleRow
 
-    -- Container de toggle com alinhamento simétrico
     local toggleCont = Instance.new("Frame")
     toggleCont.Name = "ToggleContainer"
     toggleCont.Size = UDim2.new(0, 120, 0, 32)
