@@ -12,7 +12,7 @@ export type GlowBar = {
 local GlowBarFactory = {}
 
 local COLOR_OFF = Color3.fromHex("444444")
-local COLOR_ON = Color3.fromHex("FF3333")
+local COLOR_ON = Color3.fromHex("960000")
 
 function GlowBarFactory.new(): GlowBar
     local maid = Maid.new()
