@@ -46,7 +46,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
 
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 20)
-    pad.PaddingRight = UDim.new(0, 25)
+    pad.PaddingRight = UDim.new(0, 50)
     pad.Parent = row
 
     local lbl = Instance.new("TextLabel")
