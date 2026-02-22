@@ -52,7 +52,7 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(85, 50) -- Aumentado para 105 para acomodar "Silent Aim" sem overflow
+    title.Size = UDim2.fromOffset(85, 50)
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
@@ -61,6 +61,20 @@ function SilentAimFactory.new(): SilentAimUI
     title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
+
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.Size = UDim2.fromOffset(40, 50)
+    glowWrapper.Position = UDim2.new(0, 140, 0.5, 0)
+    glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Parent = header
+
+    local glowBar = GlowBar.new()
+    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
+    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowBar.Instance.Parent = glowWrapper
+    maid:GiveTask(glowBar)
 
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
@@ -91,19 +105,6 @@ function SilentAimFactory.new(): SilentAimUI
     arrow.Instance.LayoutOrder = 2
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
-
-    local glowWrapper = Instance.new("Frame")
-    glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(20, 50) -- Reduzido para 20px para máxima simetria e encurtamento lateral
-    glowWrapper.Position = UDim2.fromOffset(140, 0) -- Posicionado centralmente entre texto e controles
-    glowWrapper.BackgroundTransparency = 1
-    glowWrapper.Parent = header
-
-    local glowBar = GlowBar.new()
-    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0) -- Posição ritualística mantida]
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Parent = glowWrapper
-    maid:GiveTask(glowBar)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
