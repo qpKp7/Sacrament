@@ -25,14 +25,11 @@ export type SilentAimUI = {
 local SilentAimFactory = {}
 
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
+local COLOR_SCROLL = Color3.fromHex("680303")
 local FONT_MAIN = Enum.Font.GothamBold
 
 function SilentAimFactory.new(): SilentAimUI
 	local maid = Maid.new()
-
-	--------------------------------------------------
-	-- CONTAINER (ORIGINAL - INTACT)
-	--------------------------------------------------
 
 	local container = Instance.new("Frame")
 	container.Name = "SilentAimContainer"
@@ -45,10 +42,6 @@ function SilentAimFactory.new(): SilentAimUI
 	containerLayout.FillDirection = Enum.FillDirection.Horizontal
 	containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	containerLayout.Parent = container
-
-	--------------------------------------------------
-	-- HEADER (100% ORIGINAL)
-	--------------------------------------------------
 
 	local header = Instance.new("Frame")
 	header.Name = "Header"
@@ -113,16 +106,12 @@ function SilentAimFactory.new(): SilentAimUI
 	glowBar.Instance.Parent = glowWrapper
 	maid:GiveTask(glowBar)
 
-	--------------------------------------------------
-	-- SUBFRAME (STRUCTURE FIXED, VISUAL INTACT)
-	--------------------------------------------------
-
 	local subFrame = Instance.new("Frame")
 	subFrame.Name = "SubFrame"
 	subFrame.Size = UDim2.new(1, -280, 1, 0)
 	subFrame.BackgroundTransparency = 1
 	subFrame.BorderSizePixel = 0
-	subFrame.AutomaticSize = Enum.AutomaticSize.None
+	subFrame.AutomaticSize = Enum.AutomaticSize.Y
 	subFrame.Visible = false
 	subFrame.LayoutOrder = 2
 	subFrame.Parent = container
@@ -133,83 +122,86 @@ function SilentAimFactory.new(): SilentAimUI
 	vLine.Instance.Parent = subFrame
 	maid:GiveTask(vLine)
 
-	--------------------------------------------------
-	-- FIXED TOP (KEY + HLINE)
-	--------------------------------------------------
-
-	local fixedTop = Instance.new("Frame")
-	fixedTop.Name = "FixedTop"
-	fixedTop.Size = UDim2.new(1, -2, 0, 0)
-	fixedTop.Position = UDim2.fromOffset(2, 0)
-	fixedTop.BackgroundTransparency = 1
-	fixedTop.AutomaticSize = Enum.AutomaticSize.Y
-	fixedTop.Parent = subFrame
-
-	local fixedLayout = Instance.new("UIListLayout")
-	fixedLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	fixedLayout.Parent = fixedTop
-
-	local keySec = KeybindSection.new(1)
-	keySec.Instance.Parent = fixedTop
-	maid:GiveTask(keySec)
-
-	local hLine = Sidebar.createHorizontal(2)
-	hLine.Instance.Parent = fixedTop
-	maid:GiveTask(hLine)
-
-	--------------------------------------------------
-	-- SCROLL AREA (ONLY BELOW LINE)
-	--------------------------------------------------
-
 	local scroll = Instance.new("ScrollingFrame")
-	scroll.Name = "InputsScroll"
-	scroll.Position = UDim2.new(0, 2, 0, 0)
+	scroll.Name = "SubContentScroll"
+	scroll.Size = UDim2.new(1, -2, 1, 0)
+	scroll.Position = UDim2.fromOffset(2, 0)
 	scroll.BackgroundTransparency = 1
 	scroll.BorderSizePixel = 0
-	scroll.ScrollBarThickness = 0
+	scroll.ScrollBarThickness = 5
+	scroll.ScrollBarImageColor3 = COLOR_SCROLL
 	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.AutomaticSize = Enum.AutomaticSize.Y
 	scroll.Parent = subFrame
+
+	local scrollConstraint = Instance.new("UISizeConstraint")
+	scrollConstraint.MaxSize = Vector2.new(math.huge, 350)
+	scrollConstraint.Parent = scroll
 
 	local scrollLayout = Instance.new("UIListLayout")
 	scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	scrollLayout.Padding = UDim.new(0, 15)
+	scrollLayout.Padding = UDim.new(0, 0)
 	scrollLayout.Parent = scroll
 
-	local scrollPadding = Instance.new("UIPadding")
-	scrollPadding.PaddingTop = UDim.new(0, 20)
-	scrollPadding.PaddingBottom = UDim.new(0, 20)
-	scrollPadding.PaddingRight = UDim.new(0, 25)
-	scrollPadding.Parent = scroll
+	local keySec = KeybindSection.new(1)
+	keySec.Instance.Parent = scroll
+	maid:GiveTask(keySec)
 
-	local sections = {
-		PredictSection.new(1),
-		HitChanceSection.new(2),
-		FovLimitSection.new(3),
-		AimPartSection.new(4),
-		MarkStyleSection.new(5),
-		WallCheckSection.new(6),
-		KnockCheckSection.new(7),
-		LockAfterMarkSection.new(8),
-	}
+	local hLine = Sidebar.createHorizontal(2)
+	hLine.Instance.Parent = scroll
+	maid:GiveTask(hLine)
 
-	for _, section in ipairs(sections) do
-		section.Instance.Parent = scroll
-		maid:GiveTask(section)
-	end
+	local inputsContainer = Instance.new("Frame")
+	inputsContainer.Name = "InputsContainer"
+	inputsContainer.Size = UDim2.new(1, 0, 0, 0)
+	inputsContainer.BackgroundTransparency = 1
+	inputsContainer.AutomaticSize = Enum.AutomaticSize.Y
+	inputsContainer.LayoutOrder = 3
+	inputsContainer.Parent = scroll
 
-	local function updateLayout()
-		scroll.Position = UDim2.new(0, 2, 0, fixedTop.AbsoluteSize.Y)
-		scroll.Size = UDim2.new(1, -2, 1, -fixedTop.AbsoluteSize.Y)
-		scroll.CanvasSize = UDim2.fromOffset(0, scrollLayout.AbsoluteContentSize.Y)
-	end
+	local inputsLayout = Instance.new("UIListLayout")
+	inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	inputsLayout.Padding = UDim.new(0, 15)
+	inputsLayout.Parent = inputsContainer
 
-	fixedTop:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
-	scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateLayout)
+	local inputsPadding = Instance.new("UIPadding")
+	inputsPadding.PaddingTop = UDim.new(0, 20)
+	inputsPadding.PaddingBottom = UDim.new(0, 20)
+	inputsPadding.PaddingRight = UDim.new(0, 25)
+	inputsPadding.Parent = inputsContainer
 
-	updateLayout()
+	local predSec = PredictSection.new(1)
+	predSec.Instance.Parent = inputsContainer
+	maid:GiveTask(predSec)
 
-	--------------------------------------------------
+	local hitChanceSec = HitChanceSection.new(2)
+	hitChanceSec.Instance.Parent = inputsContainer
+	maid:GiveTask(hitChanceSec)
+
+	local fovLimitSec = FovLimitSection.new(3)
+	fovLimitSec.Instance.Parent = inputsContainer
+	maid:GiveTask(fovLimitSec)
+
+	local aimPartSec = AimPartSection.new(4)
+	aimPartSec.Instance.Parent = inputsContainer
+	maid:GiveTask(aimPartSec)
+
+	local markStyleSec = MarkStyleSection.new(5)
+	markStyleSec.Instance.Parent = inputsContainer
+	maid:GiveTask(markStyleSec)
+
+	local wallCheckSec = WallCheckSection.new(6)
+	wallCheckSec.Instance.Parent = inputsContainer
+	maid:GiveTask(wallCheckSec)
+
+	local knockCheckSec = KnockCheckSection.new(7)
+	knockCheckSec.Instance.Parent = inputsContainer
+	maid:GiveTask(knockCheckSec)
+
+	local lockAfterMarkSec = LockAfterMarkSection.new(8)
+	lockAfterMarkSec.Instance.Parent = inputsContainer
+	maid:GiveTask(lockAfterMarkSec)
 
 	maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
 		glowBar:SetState(state)
