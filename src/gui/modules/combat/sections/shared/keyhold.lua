@@ -12,9 +12,7 @@ export type KeyHoldSection = {
 local KeyHoldFactory = {}
 
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
-local COLOR_SUB = Color3.fromRGB(150, 150, 150)
 local FONT_MAIN = Enum.Font.GothamBold
-local FONT_SUB = Enum.Font.Gotham
 
 function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     local maid = Maid.new()
@@ -22,7 +20,7 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
 
     local row = Instance.new("Frame")
     row.Name = "KeyHoldRow"
-    row.Size = UDim2.new(1, 0, 0, 45)
+    row.Size = UDim2.new(1, 0, 0, 40)
     row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
     row.LayoutOrder = layoutOrder
@@ -38,21 +36,8 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     pad.PaddingRight = UDim.new(0, 25)
     pad.Parent = row
 
-    local textCont = Instance.new("Frame")
-    textCont.Size = UDim2.new(1, -45, 1, 0)
-    textCont.BackgroundTransparency = 1
-    textCont.BorderSizePixel = 0
-    textCont.Parent = row
-
-    local textLayout = Instance.new("UIListLayout")
-    textLayout.FillDirection = Enum.FillDirection.Vertical
-    textLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    textLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    textLayout.Padding = UDim.new(0, 2)
-    textLayout.Parent = textCont
-
     local lblTitle = Instance.new("TextLabel")
-    lblTitle.Size = UDim2.new(1, 0, 0, 14)
+    lblTitle.Size = UDim2.new(0.5, 0, 1, 0)
     lblTitle.BackgroundTransparency = 1
     lblTitle.BorderSizePixel = 0
     lblTitle.Text = "Key Hold"
@@ -60,21 +45,12 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     lblTitle.Font = FONT_MAIN
     lblTitle.TextSize = 14
     lblTitle.TextXAlignment = Enum.TextXAlignment.Left
-    lblTitle.Parent = textCont
-
-    local lblSub = Instance.new("TextLabel")
-    lblSub.Size = UDim2.new(1, 0, 0, 11)
-    lblSub.BackgroundTransparency = 1
-    lblSub.BorderSizePixel = 0
-    lblSub.Text = "Only activate while holding key (no persistent lock)"
-    lblSub.TextColor3 = COLOR_SUB
-    lblSub.Font = FONT_SUB
-    lblSub.TextSize = 11
-    lblSub.TextXAlignment = Enum.TextXAlignment.Left
-    lblSub.Parent = textCont
+    lblTitle.Parent = row
 
     local toggleCont = Instance.new("Frame")
-    toggleCont.Size = UDim2.new(0, 40, 0, 32)
+    toggleCont.Size = UDim2.new(0, 120, 0, 32)
+    toggleCont.Position = UDim2.new(1, 0, 0.5, 0)
+    toggleCont.AnchorPoint = Vector2.new(1, 0.5)
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
