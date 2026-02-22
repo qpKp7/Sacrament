@@ -48,7 +48,9 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     lblTitle.Parent = row
 
     local toggleCont = Instance.new("Frame")
-    toggleCont.Size = UDim2.new(0, 40, 0, 32)
+    toggleCont.Size = UDim2.new(0, 120, 0, 32)
+    toggleCont.Position = UDim2.new(1, 0, 0.5, 0)
+    toggleCont.AnchorPoint = Vector2.new(1, 0.5)
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
