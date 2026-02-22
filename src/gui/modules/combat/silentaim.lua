@@ -11,9 +11,9 @@ local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
 local PredictSection = Import("gui/modules/combat/sections/shared/predict")
 local HitChanceSection = Import("gui/modules/combat/sections/silentaim/hitchance")
+local MarkStyleSection = Import("gui/modules/combat/sections/silentaim/markstyle")
 local FovLimitSection = Import("gui/modules/combat/sections/silentaim/fovlimit")
 local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
-local MarkStyleSection = Import("gui/modules/combat/sections/silentaim/markstyle")
 local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
 
@@ -174,17 +174,17 @@ function SilentAimFactory.new(): SilentAimUI
     hitChanceSec.Instance.Parent = inputsScroll
     maid:GiveTask(hitChanceSec)
 
-    local fovLimitSec = FovLimitSection.new(4)
+    local markStyleSec = MarkStyleSection.new(4)
+    markStyleSec.Instance.Parent = inputsScroll
+    maid:GiveTask(markStyleSec)
+
+    local fovLimitSec = FovLimitSection.new(5)
     fovLimitSec.Instance.Parent = inputsScroll
     maid:GiveTask(fovLimitSec)
 
-    local aimPartSec = AimPartSection.new(5)
+    local aimPartSec = AimPartSection.new(6)
     aimPartSec.Instance.Parent = inputsScroll
     maid:GiveTask(aimPartSec)
-
-    local markStyleSec = MarkStyleSection.new(6)
-    markStyleSec.Instance.Parent = inputsScroll
-    maid:GiveTask(markStyleSec)
 
     local wallCheckSec = WallCheckSection.new(7)
     wallCheckSec.Instance.Parent = inputsScroll
