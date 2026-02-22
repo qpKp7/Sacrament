@@ -8,6 +8,7 @@ local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
 
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
+local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
 local PredictSection = Import("gui/modules/combat/sections/shared/predict")
 local HitChanceSection = Import("gui/modules/combat/sections/silentaim/hitchance")
 local FovLimitSection = Import("gui/modules/combat/sections/silentaim/fovlimit")
@@ -15,7 +16,6 @@ local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
 local MarkStyleSection = Import("gui/modules/combat/sections/silentaim/markstyle")
 local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
-local LockAfterMarkSection = Import("gui/modules/combat/sections/silentaim/lockaftermark")
 
 export type SilentAimUI = {
     Instance: Frame,
@@ -162,37 +162,37 @@ function SilentAimFactory.new(): SilentAimUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    local predSec = PredictSection.new(1)
+    local keyHoldSec = KeyHoldSection.new(1)
+    keyHoldSec.Instance.Parent = inputsScroll
+    maid:GiveTask(keyHoldSec)
+
+    local predSec = PredictSection.new(2)
     predSec.Instance.Parent = inputsScroll
     maid:GiveTask(predSec)
 
-    local hitChanceSec = HitChanceSection.new(2)
+    local hitChanceSec = HitChanceSection.new(3)
     hitChanceSec.Instance.Parent = inputsScroll
     maid:GiveTask(hitChanceSec)
 
-    local fovLimitSec = FovLimitSection.new(3)
+    local fovLimitSec = FovLimitSection.new(4)
     fovLimitSec.Instance.Parent = inputsScroll
     maid:GiveTask(fovLimitSec)
 
-    local aimPartSec = AimPartSection.new(4)
+    local aimPartSec = AimPartSection.new(5)
     aimPartSec.Instance.Parent = inputsScroll
     maid:GiveTask(aimPartSec)
 
-    local markStyleSec = MarkStyleSection.new(5)
+    local markStyleSec = MarkStyleSection.new(6)
     markStyleSec.Instance.Parent = inputsScroll
     maid:GiveTask(markStyleSec)
 
-    local wallCheckSec = WallCheckSection.new(6)
+    local wallCheckSec = WallCheckSection.new(7)
     wallCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(wallCheckSec)
 
-    local knockCheckSec = KnockCheckSection.new(7)
+    local knockCheckSec = KnockCheckSection.new(8)
     knockCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(knockCheckSec)
-
-    local lockAfterMarkSec = LockAfterMarkSection.new(8)
-    lockAfterMarkSec.Instance.Parent = inputsScroll
-    maid:GiveTask(lockAfterMarkSec)
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
