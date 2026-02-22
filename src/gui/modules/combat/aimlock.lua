@@ -7,12 +7,12 @@ local Arrow = Import("gui/modules/combat/components/arrow")
 local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
 
-local KeybindSection = Import("gui/modules/combat/sections/keybind")
-local PredictSection = Import("gui/modules/combat/sections/predict")
-local SmoothSection = Import("gui/modules/combat/sections/smooth")
-local AimPartSection = Import("gui/modules/combat/sections/aimpart")
-local WallCheckSection = Import("gui/modules/combat/sections/wallcheck")
-local KnockCheckSection = Import("gui/modules/combat/sections/knockcheck")
+local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
+local PredictSection = Import("gui/modules/combat/sections/shared/predict")
+local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
+local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
+local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
+local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
 
 export type AimlockUI = {
     Instance: Frame,
