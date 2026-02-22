@@ -102,13 +102,13 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     predBox.BackgroundColor3 = COLOR_BOX_BG
     predBox.BackgroundTransparency = 1
     predBox.BorderSizePixel = 0
-    predBox.Text = "0.000"
+    predBox.Text = "0.135"
     predBox.TextColor3 = COLOR_WHITE
     predBox.Font = FONT_MAIN
     predBox.TextSize = 16
     predBox.ClearTextOnFocus = false
     predBox.Parent = inputCont
-    enforceDecimalBox(predBox, "0.000", 3, 5)
+    enforceDecimalBox(predBox, "0.135", 3, 5)
 
     maid:GiveTask(row)
 
