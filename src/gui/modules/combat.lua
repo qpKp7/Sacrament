@@ -2,6 +2,7 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 local AimlockModule = Import("gui/modules/combat/aimlock")
+local SilentAimModule = Import("gui/modules/combat/silentaim")
 
 export type CombatModule = {
     Instance: Frame,
@@ -44,6 +45,11 @@ function CombatModuleFactory.new(): CombatModule
     aimlock.Instance.LayoutOrder = 1
     aimlock.Instance.Parent = scroll
     maid:GiveTask(aimlock)
+
+    local silentAim = SilentAimModule.new()
+    silentAim.Instance.LayoutOrder = 2
+    silentAim.Instance.Parent = scroll
+    maid:GiveTask(silentAim)
 
     maid:GiveTask(container)
 
