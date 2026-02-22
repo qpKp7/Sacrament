@@ -65,7 +65,7 @@ function PredictFactory.new(layoutOrder: number): PredictSection
 
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 20)
-    pad.PaddingRight = UDim.new(0, 20)
+    pad.PaddingRight = UDim.new(0, 25)
     pad.Parent = row
 
     local lbl = Instance.new("TextLabel")
