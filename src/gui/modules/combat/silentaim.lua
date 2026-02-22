@@ -94,8 +94,8 @@ function SilentAimFactory.new(): SilentAimUI
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(25, 50)
-    glowWrapper.Position = UDim2.fromOffset(145, 0)
+    glowWrapper.Size = UDim2.fromOffset(20, 50)
+    glowWrapper.Position = UDim2.fromOffset(140, 0)
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
