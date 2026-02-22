@@ -62,10 +62,14 @@ function SilentAimFactory.new(): SilentAimUI
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
+    -- Correção de precisão máxima para centralização da GlowBar
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
+    -- Tamanho mantido em 30px para ser curto o suficiente.
     glowWrapper.Size = UDim2.fromOffset(30, 50)
-    glowWrapper.Position = UDim2.new(0, 150, 0.5, 0)
+    -- Posição ajustada para 140px. Este é o centro matemático exato do espaço vazio 
+    -- entre o final do título (105px) e o início dos controles (175px).
+    glowWrapper.Position = UDim2.new(0, 140, 0.5, 0)
     glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
