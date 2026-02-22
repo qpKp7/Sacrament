@@ -108,7 +108,7 @@ function SilentAimFactory.new(): SilentAimUI
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, -280, 1, 0)
+    subFrame.Size = UDim2.new(1, -280, 0, 0)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.AutomaticSize = Enum.AutomaticSize.Y
@@ -124,7 +124,7 @@ function SilentAimFactory.new(): SilentAimUI
 
     local scroll = Instance.new("ScrollingFrame")
     scroll.Name = "SubContentScroll"
-    scroll.Size = UDim2.new(1, -2, 1, 0)
+    scroll.Size = UDim2.new(1, -2, 0, 0)
     scroll.Position = UDim2.fromOffset(2, 0)
     scroll.BackgroundTransparency = 1
     scroll.BorderSizePixel = 0
