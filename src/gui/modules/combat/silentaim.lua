@@ -18,8 +18,8 @@ local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
 
 export type SilentAimUI = {
-    Instance: Frame,
-    Destroy: (self: SilentAimUI) -> ()
+	Instance: Frame,
+	Destroy: (self: SilentAimUI) -> ()
 }
 
 local SilentAimFactory = {}
@@ -28,186 +28,180 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
 function SilentAimFactory.new(): SilentAimUI
-    local maid = Maid.new()
+	local maid = Maid.new()
 
-    local container = Instance.new("Frame")
-    container.Name = "SilentAimContainer"
-    container.Size = UDim2.new(1, 0, 0, 0)
-    container.BackgroundTransparency = 1 
-    container.BorderSizePixel = 0
-    container.AutomaticSize = Enum.AutomaticSize.Y
+	local container = Instance.new("Frame")
+	container.Name = "SilentAimContainer"
+	container.Size = UDim2.new(1, 0, 0, 0)
+	container.BackgroundTransparency = 1
+	container.BorderSizePixel = 0
+	container.AutomaticSize = Enum.AutomaticSize.Y
 
-    local containerLayout = Instance.new("UIListLayout")
-    containerLayout.FillDirection = Enum.FillDirection.Horizontal
-    containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    containerLayout.Parent = container
+	local containerLayout = Instance.new("UIListLayout")
+	containerLayout.FillDirection = Enum.FillDirection.Horizontal
+	containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	containerLayout.Parent = container
 
-    local header = Instance.new("Frame")
-    header.Name = "Header"
-    header.Size = UDim2.new(0, 280, 0, 50)
-    header.BackgroundTransparency = 1
-    header.BorderSizePixel = 0
-    header.LayoutOrder = 1
-    header.Parent = container
+	-- HEADER
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(0, 280, 0, 50)
+	header.BackgroundTransparency = 1
+	header.BorderSizePixel = 0
+	header.LayoutOrder = 1
+	header.Parent = container
 
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.Size = UDim2.fromOffset(85, 50)
-    title.Position = UDim2.fromOffset(20, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "Silent Aim"
-    title.TextColor3 = COLOR_WHITE
-    title.Font = FONT_MAIN
-    title.TextSize = 18
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = header
+	local title = Instance.new("TextLabel")
+	title.Name = "Title"
+	title.Size = UDim2.fromOffset(85, 50)
+	title.Position = UDim2.fromOffset(20, 0)
+	title.BackgroundTransparency = 1
+	title.Text = "Silent Aim"
+	title.TextColor3 = COLOR_WHITE
+	title.Font = FONT_MAIN
+	title.TextSize = 18
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Parent = header
 
-    local controls = Instance.new("Frame")
-    controls.Name = "Controls"
-    controls.Size = UDim2.fromOffset(105, 50)
-    controls.Position = UDim2.fromScale(1, 0)
-    controls.AnchorPoint = Vector2.new(1, 0)
-    controls.BackgroundTransparency = 1
-    controls.Parent = header
+	local controls = Instance.new("Frame")
+	controls.Name = "Controls"
+	controls.Size = UDim2.fromOffset(140, 50)
+	controls.Position = UDim2.fromScale(1, 0)
+	controls.AnchorPoint = Vector2.new(1, 0)
+	controls.BackgroundTransparency = 1
+	controls.Parent = header
 
-    local ctrlLayout = Instance.new("UIListLayout")
-    ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
-    ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ctrlLayout.Padding = UDim.new(0, 15)
-    ctrlLayout.Parent = controls
+	local ctrlLayout = Instance.new("UIListLayout")
+	ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
+	ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	ctrlLayout.Padding = UDim.new(0, 10)
+	ctrlLayout.Parent = controls
 
-    local ctrlPadding = Instance.new("UIPadding")
-    ctrlPadding.PaddingRight = UDim.new(0, 20)
-    ctrlPadding.Parent = controls
+	local ctrlPadding = Instance.new("UIPadding")
+	ctrlPadding.PaddingRight = UDim.new(0, 20)
+	ctrlPadding.Parent = controls
 
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
-    toggleBtn.Instance.Parent = controls
-    maid:GiveTask(toggleBtn)
+	local toggleBtn = ToggleButton.new()
+	toggleBtn.Instance.LayoutOrder = 1
+	toggleBtn.Instance.Parent = controls
+	maid:GiveTask(toggleBtn)
 
-    local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
-    arrow.Instance.Parent = controls
-    maid:GiveTask(arrow)
+	local glowBar = GlowBar.new()
+	glowBar.Instance.LayoutOrder = 2
+	glowBar.Instance.Parent = controls
+	maid:GiveTask(glowBar)
 
-    local glowWrapper = Instance.new("Frame")
-    glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(5, 50)
-    glowWrapper.Position = UDim2.fromOffset(100, 0)
-    glowWrapper.BackgroundTransparency = 1
-    glowWrapper.Parent = header
+	local arrow = Arrow.new()
+	arrow.Instance.LayoutOrder = 3
+	arrow.Instance.Parent = controls
+	maid:GiveTask(arrow)
 
-    local glowBar = GlowBar.new()
-    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Parent = glowWrapper
-    maid:GiveTask(glowBar)
+	-- SUBFRAME
+	local subFrame = Instance.new("Frame")
+	subFrame.Name = "SubFrame"
+	subFrame.Size = UDim2.fromScale(1, 1)
+	subFrame.BackgroundTransparency = 1
+	subFrame.BorderSizePixel = 0
+	subFrame.Visible = false
+	subFrame.LayoutOrder = 2
+	subFrame.Parent = container
 
-    local subFrame = Instance.new("Frame")
-    subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.fromScale(1, 1)
-    subFrame.BackgroundTransparency = 1
-    subFrame.BorderSizePixel = 0
-    subFrame.Visible = false
-    subFrame.LayoutOrder = 2
-    subFrame.Parent = container
+	local vLine = Sidebar.createVertical()
+	vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+	vLine.Instance.Position = UDim2.fromScale(0, 0)
+	vLine.Instance.Parent = subFrame
+	maid:GiveTask(vLine)
 
-    local vLine = Sidebar.createVertical()
-    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
-    vLine.Instance.Position = UDim2.fromScale(0, 0)
-    vLine.Instance.Parent = subFrame
-    maid:GiveTask(vLine)
+	local rightContent = Instance.new("Frame")
+	rightContent.Name = "RightContent"
+	rightContent.Size = UDim2.new(1, -2, 1, 0)
+	rightContent.Position = UDim2.fromOffset(2, 0)
+	rightContent.BackgroundTransparency = 1
+	rightContent.BorderSizePixel = 0
+	rightContent.Parent = subFrame
 
-    local rightContent = Instance.new("Frame")
-    rightContent.Name = "RightContent"
-    rightContent.Size = UDim2.new(1, -2, 1, 0)
-    rightContent.Position = UDim2.fromOffset(2, 0)
-    rightContent.BackgroundTransparency = 1
-    rightContent.BorderSizePixel = 0
-    rightContent.Parent = subFrame
+	local rightLayout = Instance.new("UIListLayout")
+	rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	rightLayout.Parent = rightContent
 
-    local rightLayout = Instance.new("UIListLayout")
-    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    rightLayout.Parent = rightContent
+	local keySec = KeybindSection.new(1)
+	keySec.Instance.Parent = rightContent
+	maid:GiveTask(keySec)
 
-    local keySec = KeybindSection.new(1)
-    keySec.Instance.Parent = rightContent
-    maid:GiveTask(keySec)
+	local hLine = Sidebar.createHorizontal(2)
+	hLine.Instance.Parent = rightContent
+	maid:GiveTask(hLine)
 
-    local hLine = Sidebar.createHorizontal(2)
-    hLine.Instance.Parent = rightContent
-    maid:GiveTask(hLine)
+	local inputsScroll = Instance.new("ScrollingFrame")
+	inputsScroll.Name = "InputsScroll"
+	inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+	inputsScroll.BackgroundTransparency = 1
+	inputsScroll.BorderSizePixel = 0
+	inputsScroll.ScrollBarThickness = 0
+	inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	inputsScroll.LayoutOrder = 3
+	inputsScroll.Parent = rightContent
 
-    local inputsScroll = Instance.new("ScrollingFrame")
-    inputsScroll.Name = "InputsScroll"
-    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
-    inputsScroll.BackgroundTransparency = 1
-    inputsScroll.BorderSizePixel = 0
-    inputsScroll.ScrollBarThickness = 0
-    inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    inputsScroll.LayoutOrder = 3
-    inputsScroll.Parent = rightContent
+	local inputsLayout = Instance.new("UIListLayout")
+	inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	inputsLayout.Padding = UDim.new(0, 15)
+	inputsLayout.Parent = inputsScroll
 
-    local inputsLayout = Instance.new("UIListLayout")
-    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    inputsLayout.Padding = UDim.new(0, 15)
-    inputsLayout.Parent = inputsScroll
+	local inputsPadding = Instance.new("UIPadding")
+	inputsPadding.PaddingTop = UDim.new(0, 20)
+	inputsPadding.PaddingBottom = UDim.new(0, 20)
+	inputsPadding.PaddingRight = UDim.new(0, 25)
+	inputsPadding.Parent = inputsScroll
 
-    local inputsPadding = Instance.new("UIPadding")
-    inputsPadding.PaddingTop = UDim.new(0, 20)
-    inputsPadding.PaddingBottom = UDim.new(0, 20)
-    inputsPadding.PaddingRight = UDim.new(0, 25)
-    inputsPadding.Parent = inputsScroll
+	local keyHoldSec = KeyHoldSection.new(1)
+	keyHoldSec.Instance.Parent = inputsScroll
+	maid:GiveTask(keyHoldSec)
 
-    local keyHoldSec = KeyHoldSection.new(1)
-    keyHoldSec.Instance.Parent = inputsScroll
-    maid:GiveTask(keyHoldSec)
+	local predSec = PredictSection.new(2)
+	predSec.Instance.Parent = inputsScroll
+	maid:GiveTask(predSec)
 
-    local predSec = PredictSection.new(2)
-    predSec.Instance.Parent = inputsScroll
-    maid:GiveTask(predSec)
+	local hitChanceSec = HitChanceSection.new(3)
+	hitChanceSec.Instance.Parent = inputsScroll
+	maid:GiveTask(hitChanceSec)
 
-    local hitChanceSec = HitChanceSection.new(3)
-    hitChanceSec.Instance.Parent = inputsScroll
-    maid:GiveTask(hitChanceSec)
+	local markStyleSec = MarkStyleSection.new(4)
+	markStyleSec.Instance.Parent = inputsScroll
+	maid:GiveTask(markStyleSec)
 
-    local markStyleSec = MarkStyleSection.new(4)
-    markStyleSec.Instance.Parent = inputsScroll
-    maid:GiveTask(markStyleSec)
+	local fovLimitSec = FovLimitSection.new(5)
+	fovLimitSec.Instance.Parent = inputsScroll
+	maid:GiveTask(fovLimitSec)
 
-    local fovLimitSec = FovLimitSection.new(5)
-    fovLimitSec.Instance.Parent = inputsScroll
-    maid:GiveTask(fovLimitSec)
+	local aimPartSec = AimPartSection.new(6)
+	aimPartSec.Instance.Parent = inputsScroll
+	maid:GiveTask(aimPartSec)
 
-    local aimPartSec = AimPartSection.new(6)
-    aimPartSec.Instance.Parent = inputsScroll
-    maid:GiveTask(aimPartSec)
+	local wallCheckSec = WallCheckSection.new(7)
+	wallCheckSec.Instance.Parent = inputsScroll
+	maid:GiveTask(wallCheckSec)
 
-    local wallCheckSec = WallCheckSection.new(7)
-    wallCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(wallCheckSec)
+	local knockCheckSec = KnockCheckSection.new(8)
+	knockCheckSec.Instance.Parent = inputsScroll
+	maid:GiveTask(knockCheckSec)
 
-    local knockCheckSec = KnockCheckSection.new(8)
-    knockCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(knockCheckSec)
+	maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
+		glowBar:SetState(state)
+	end))
 
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
-        glowBar:SetState(state)
-    end))
+	maid:GiveTask(container)
 
-    maid:GiveTask(container)
-    
-    local self = {}
-    self.Instance = container
+	local self = {}
+	self.Instance = container
 
-    function self:Destroy()
-        maid:Destroy()
-    end
+	function self:Destroy()
+		maid:Destroy()
+	end
 
-    return self
+	return self
 end
 
 return SilentAimFactory
