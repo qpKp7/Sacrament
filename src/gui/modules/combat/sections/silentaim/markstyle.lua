@@ -19,7 +19,7 @@ local FONT_MAIN = Enum.Font.GothamBold
 function MarkStyleFactory.new(layoutOrder: number): MarkStyleSection
     local maid = Maid.new()
     local isDropdownOpen = false
-    local options = {"None", "Highlight", "TorsoDot", "BodyOutline", "HeadDot", "FullBox"}
+    local options = {"Highlight", "TorsoDot", "BodyOutline"} -- Opções filtradas conforme solicitado PADRÃO DE FORMATAÇÃO E QUALIDADE:]
 
     local row = Instance.new("Frame")
     row.Name = "MarkStyleRow"
