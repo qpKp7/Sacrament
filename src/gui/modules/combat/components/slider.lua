@@ -15,7 +15,7 @@ export type Slider = {
 local SliderFactory = {}
 
 local COLOR_BG = Color3.fromHex("1A1A1A")
-local COLOR_FILL = Color3.fromHex("FF3333")
+local COLOR_FILL = Color3.fromHex("960000")
 local COLOR_TEXT = Color3.fromHex("FFFFFF")
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
