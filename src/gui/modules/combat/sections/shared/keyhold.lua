@@ -47,13 +47,13 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     lblTitle.TextXAlignment = Enum.TextXAlignment.Left
     lblTitle.Parent = row
 
+    -- O container agora ocupa os 50% restantes da tela, empurrando o botão para a borda direita
     local toggleCont = Instance.new("Frame")
-    toggleCont.Size = UDim2.new(0, 40, 0, 32)
-    toggleCont.Position = UDim2.new(1, 0, 0.5, 0)
-    toggleCont.AnchorPoint = Vector2.new(1, 0.5)
+    toggleCont.Size = UDim2.new(0.5, 0, 1, 0)
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
+    -- O botão é ancorado exatamente no final do container
     local toggle = ToggleButton.new()
     toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
     toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
