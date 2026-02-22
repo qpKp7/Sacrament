@@ -71,10 +71,11 @@ function CombatModuleFactory.new(): CombatModule
             local btn = arrowBtn :: TextButton
             btn.Text = ">"
             btn.TextColor3 = COLOR_ARROW_CLOSED
+            btn.Rotation = 0
 
             local glowStroke = Instance.new("UIStroke")
             glowStroke.Color = COLOR_GLOW
-            glowStroke.Thickness = 1.5
+            glowStroke.Thickness = 1
             glowStroke.Transparency = 1
             glowStroke.Parent = btn
 
@@ -92,8 +93,15 @@ function CombatModuleFactory.new(): CombatModule
                     openSubframe = subFrame
                     
                     btn.Text = "v"
-                    local tweenBtn = TweenService:Create(btn, tweenInfo, {TextColor3 = COLOR_ARROW_OPEN})
-                    local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {Transparency = 0.4})
+                    btn.Rotation = -90 
+                    
+                    local tweenBtn = TweenService:Create(btn, tweenInfo, {
+                        TextColor3 = COLOR_ARROW_OPEN,
+                        Rotation = 0
+                    })
+                    local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {
+                        Transparency = 0.5
+                    })
                     
                     tweenBtn:Play()
                     tweenStroke:Play()
@@ -110,8 +118,15 @@ function CombatModuleFactory.new(): CombatModule
                     end
                     
                     btn.Text = ">"
-                    local tweenBtn = TweenService:Create(btn, tweenInfo, {TextColor3 = COLOR_ARROW_CLOSED})
-                    local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {Transparency = 1})
+                    btn.Rotation = 90
+                    
+                    local tweenBtn = TweenService:Create(btn, tweenInfo, {
+                        TextColor3 = COLOR_ARROW_CLOSED,
+                        Rotation = 0
+                    })
+                    local tweenStroke = TweenService:Create(glowStroke, tweenInfo, {
+                        Transparency = 1
+                    })
                     
                     tweenBtn:Play()
                     tweenStroke:Play()
