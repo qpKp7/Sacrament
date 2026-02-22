@@ -37,7 +37,7 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     pad.Parent = row
 
     local lblTitle = Instance.new("TextLabel")
-    lblTitle.Size = UDim2.new(1, -40, 1, 0)
+    lblTitle.Size = UDim2.new(0.5, 0, 1, 0)
     lblTitle.BackgroundTransparency = 1
     lblTitle.BorderSizePixel = 0
     lblTitle.Text = "Key Hold"
@@ -48,6 +48,7 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     lblTitle.Parent = row
 
     local toggleCont = Instance.new("Frame")
+    toggleCont.Name = "ToggleContainer"
     toggleCont.Size = UDim2.new(0, 120, 0, 32)
     toggleCont.Position = UDim2.new(1, 0, 0.5, 0)
     toggleCont.AnchorPoint = Vector2.new(1, 0.5)
