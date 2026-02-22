@@ -43,6 +43,7 @@ function SilentAimFactory.new(): SilentAimUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
+    -- Início do Cabeçalho (Estrutura idêntica ao Aimlock)
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 50)
@@ -53,7 +54,7 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(100, 50)
+    title.Size = UDim2.fromOffset(90, 50) -- Largura ajustada para "Silent Aim"
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
@@ -105,6 +106,7 @@ function SilentAimFactory.new(): SilentAimUI
     glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
     glowBar.Instance.Parent = glowWrapper
     maid:GiveTask(glowBar)
+    -- Fim do Cabeçalho
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
