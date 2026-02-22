@@ -94,15 +94,12 @@ function SilentAimFactory.new(): SilentAimUI
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(65, 50)
-    -- Ajuste do offset X de 105 para 125
-    -- Isso garante que a barra não sobreponha a palavra "Aim" e fique simétrica entre o texto e o ToggleButton
-    glowWrapper.Position = UDim2.fromOffset(125, 0) 
+    glowWrapper.Size = UDim2.fromOffset(45, 50)
+    glowWrapper.Position = UDim2.fromOffset(135, 0) 
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
-    -- Posição fixa conforme memória do usuário: (0.5, 1, 0.5, 0)]
     glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
     glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
     glowBar.Instance.Parent = glowWrapper
