@@ -98,7 +98,7 @@ function AimlockFactory.new(): AimlockUI
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
-    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
     glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
     glowBar.Instance.Parent = glowWrapper
     maid:GiveTask(glowBar)
