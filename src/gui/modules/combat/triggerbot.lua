@@ -6,6 +6,7 @@ local ToggleButton = Import("gui/modules/combat/components/togglebutton")
 local Arrow = Import("gui/modules/combat/components/arrow")
 local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
+
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 
 export type TriggerBotUI = {
@@ -25,12 +26,21 @@ function TriggerBotFactory.new(): TriggerBotUI
     container.Name = "TriggerBotContainer"
     container.Size = UDim2.new(1, 0, 0, 0)
     container.BackgroundTransparency = 1 
+    container.BorderSizePixel = 0
     container.AutomaticSize = Enum.AutomaticSize.Y
+
+    local containerLayout = Instance.new("UIListLayout")
+    containerLayout.FillDirection = Enum.FillDirection.Vertical
+    containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    containerLayout.Parent = container
 
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 50)
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundTransparency = 1
+    header.BorderSizePixel = 0
+    header.LayoutOrder = 1
+    header.ClipsDescendants = true
     header.Parent = container
 
     local title = Instance.new("TextLabel")
@@ -59,7 +69,7 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
     ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder -- [CORREÇÃO: Ordem explícita de layout]
     ctrlLayout.Padding = UDim.new(0, 15)
     ctrlLayout.Parent = controls
 
@@ -68,12 +78,12 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlPadding.Parent = controls
 
     local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
+    toggleBtn.Instance.LayoutOrder = 1 -- [CORREÇÃO: Forçando Toggle para vir PRIMEIRO]
     toggleBtn.Instance.Parent = controls
     maid:GiveTask(toggleBtn)
 
     local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
+    arrow.Instance.LayoutOrder = 2 -- [CORREÇÃO: Forçando Arrow para vir DEPOIS do Toggle]
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
 
@@ -84,30 +94,56 @@ function TriggerBotFactory.new(): TriggerBotUI
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
+    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
     glowBar.Instance.Size = UDim2.fromScale(1, 1)
     glowBar.Instance.Parent = glowWrapper
+
+    do
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
+    end
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
-        local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X - header.AbsolutePosition.X) + 5
-        local endX = (controls.AbsolutePosition.X - header.AbsolutePosition.X) - 5
+
+        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftAbsolute = controls.AbsolutePosition.X
+
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
+
         local width = math.max(0, endX - startX)
+
         glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
         glowWrapper.Size = UDim2.fromOffset(width, 32)
     end
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    
     task.defer(updateGlowBar)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, 0, 0, 100)
+    subFrame.Size = UDim2.new(1, 0, 0, 75)
     subFrame.BackgroundTransparency = 1
+    subFrame.BorderSizePixel = 0
+    subFrame.Visible = false
+    subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
     local vLine = Sidebar.createVertical()
+    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+    vLine.Instance.Position = UDim2.fromScale(0, 0)
     vLine.Instance.Parent = subFrame
     maid:GiveTask(vLine)
 
@@ -116,8 +152,9 @@ function TriggerBotFactory.new(): TriggerBotUI
     rightContent.Size = UDim2.new(1, -2, 1, 0)
     rightContent.Position = UDim2.fromOffset(2, 0)
     rightContent.BackgroundTransparency = 1
+    rightContent.BorderSizePixel = 0
     rightContent.Parent = subFrame
-    
+
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
@@ -126,12 +163,38 @@ function TriggerBotFactory.new(): TriggerBotUI
     keySec.Instance.Parent = rightContent
     maid:GiveTask(keySec)
 
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state) 
-        glowBar:SetState(state) 
+    local hLine = Sidebar.createHorizontal(2)
+    hLine.Instance.Parent = rightContent
+    maid:GiveTask(hLine)
+
+    local inputsScroll = Instance.new("ScrollingFrame")
+    inputsScroll.Name = "InputsScroll"
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+    inputsScroll.BackgroundTransparency = 1
+    inputsScroll.BorderSizePixel = 0
+    inputsScroll.ScrollBarThickness = 0
+    inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    inputsScroll.LayoutOrder = 3
+    inputsScroll.Parent = rightContent
+
+    local inputsLayout = Instance.new("UIListLayout")
+    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    inputsLayout.Padding = UDim.new(0, 15)
+    inputsLayout.Parent = inputsScroll
+
+    local inputsPadding = Instance.new("UIPadding")
+    inputsPadding.PaddingTop = UDim.new(0, 20)
+    inputsPadding.PaddingBottom = UDim.new(0, 20)
+    inputsPadding.PaddingRight = UDim.new(0, 25)
+    inputsPadding.Parent = inputsScroll
+
+    maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
+        glowBar:SetState(state)
     end))
 
     maid:GiveTask(container)
-
+    
     local self = {}
     self.Instance = container
 
