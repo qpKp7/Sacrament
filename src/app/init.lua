@@ -1,59 +1,87 @@
 --!strict
---[[
-    SACRAMENT GUI - Loader Estabilizado
-    Corrige erros de resolução de path e garante retorno de módulo.
-]]
+local App = {}
+App.__index = App
 
-local Sacrament = {}
+export type AppConfig = {
+    Name: string,
+    Version: string,
+    Debug: boolean
+}
 
-local function setupImportSystem()
-    local source = script.Parent -- Assume que o loader está em src/
+export type SacramentApp = {
+    Config: AppConfig,
+    Modules: { [string]: any },
+    IsInitialized: boolean,
+    Start: (self: SacramentApp) -> (),
+    InitModules: (self: SacramentApp) -> ()
+}
+
+local function GetSourcePath(): Instance?
+    local success, result = pcall(function()
+        return script.Parent
+    end)
+    return if success then result else nil
+end
+
+function App.new(config: AppConfig): SacramentApp
+    local self = setmetatable({
+        Config = config,
+        Modules = {},
+        IsInitialized = false
+    }, App)
     
-    (_G :: any).SacramentImport = function(path: string)
-        local parts = string.split(path, "/")
-        local current: any = source
-        
-        for _, part in ipairs(parts) do
-            if part == "" or part == "." then continue end
+    return (self :: any) :: SacramentApp
+end
+
+function App:InitModules()
+    local source = GetSourcePath()
+    if not source then return end
+    
+    local moduleFolder = source:FindFirstChild("modules")
+    if not moduleFolder then return end
+    
+    for _, moduleScript in moduleFolder:GetChildren() do
+        if moduleScript:IsA("ModuleScript") then
+            local success, result = pcall(function()
+                return require(moduleScript)
+            end)
             
-            local nextObj = current:FindFirstChild(part)
-            if not nextObj then
-                warn(string.format("[Sacrament] Módulo não encontrado: %s (Falha em: %s)", path, part))
-                return nil
+            if success then
+                self.Modules[moduleScript.Name] = result
             end
-            current = nextObj
         end
-        
-        if current:IsA("ModuleScript") then
-            return require(current)
-        end
-        
-        return current
     end
 end
 
-function Sacrament.Init()
-    setupImportSystem()
+function App:Start()
+    if self.IsInitialized then return end
     
-    local Import = (_G :: any).SacramentImport
-    local Maid = Import("utils/maid")
+    self:InitModules()
     
-    -- Usamos pcall para evitar que um erro em um componente (como o TextBox) 
-    -- derrube o carregamento de toda a GUI
-    task.spawn(function()
-        local success, result = pcall(function()
-            local GuiController = Import("gui/init")
-            return GuiController.new()
-        end)
-        
-        if success then
-            print("[Sacrament] Interface carregada com sucesso.")
-        else
-            warn("[Sacrament] Erro crítico no GuiController: " .. tostring(result))
+    -- Inicializacao de Sistemas Core
+    if self.Modules["Combat"] and self.Modules["Combat"].new then
+        local combatManager = self.Modules["Combat"].new()
+        self.Modules["CombatInstance"] = combatManager
+    end
+    
+    -- Inicializacao de Interface
+    local uiFolder = if GetSourcePath() then GetSourcePath():FindFirstChild("ui") else nil
+    if uiFolder then
+        local interface = uiFolder:FindFirstChild("Interface")
+        if interface and interface:IsA("ModuleScript") then
+            local mainUI = require(interface)
+            if typeof(mainUI) == "table" and mainUI.Init then
+                mainUI:Init(self)
+            end
         end
-    end)
+    end
+
+    self.IsInitialized = true
+    print("[Sacrament] App started successfully. Version: " .. self.Config.Version)
 end
 
-Sacrament.Init()
-
-return Sacrament
+return {
+    Create = function(config: AppConfig)
+        return App.new(config)
+    end
+}
