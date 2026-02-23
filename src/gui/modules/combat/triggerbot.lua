@@ -7,6 +7,7 @@ local Arrow = Import("gui/modules/combat/components/arrow")
 local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
 local Slider = Import("gui/modules/combat/components/sliderbar")
+
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 
 export type TriggerBotUI = {
@@ -17,9 +18,111 @@ export type TriggerBotUI = {
 local TriggerBotFactory = {}
 
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
-local COLOR_SUBTEXT = Color3.fromHex("828282")
+local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
-local FONT_SUB = Enum.Font.Gotham
+
+-- Helper: Cria as linhas de Toggle limpas (Wall Check / Knock Check)
+local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOrder: number): Frame
+    local row = Instance.new("Frame")
+    row.Name = title:gsub(" ", "") .. "Row"
+    row.Size = UDim2.new(1, 0, 0, 45)
+    row.BackgroundTransparency = 1
+    row.LayoutOrder = layoutOrder
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 20)
+    pad.PaddingRight = UDim.new(0, 25)
+    pad.Parent = row
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.5, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = title
+    lbl.TextColor3 = COLOR_LABEL
+    lbl.Font = FONT_MAIN
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = row
+
+    local toggle = ToggleButton.new()
+    toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
+    toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+    toggle.Instance.Parent = row
+    maid:GiveTask(toggle)
+
+    return row
+end
+
+-- Helper: Cria a linha do Delay (0.00 até 3.00)
+local function createDelayRow(maid: typeof(Maid.new()), layoutOrder: number): Frame
+    local row = Instance.new("Frame")
+    row.Name = "DelayRow"
+    row.Size = UDim2.new(1, 0, 0, 45)
+    row.BackgroundTransparency = 1
+    row.LayoutOrder = layoutOrder
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 20)
+    pad.PaddingRight = UDim.new(0, 25)
+    pad.Parent = row
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.5, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "Delay"
+    lbl.TextColor3 = COLOR_LABEL
+    lbl.Font = FONT_MAIN
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = row
+
+    local inputBg = Instance.new("Frame")
+    inputBg.Size = UDim2.new(0, 60, 0, 24)
+    inputBg.Position = UDim2.new(1, 0, 0.5, 0)
+    inputBg.AnchorPoint = Vector2.new(1, 0.5)
+    inputBg.BackgroundColor3 = Color3.fromHex("1A1A1A")
+    inputBg.Parent = row
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = inputBg
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromHex("333333")
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = inputBg
+
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.fromScale(1, 1)
+    input.BackgroundTransparency = 1
+    input.Text = "0.03"
+    input.PlaceholderText = "0.03"
+    input.TextColor3 = Color3.fromHex("FFFFFF")
+    input.Font = FONT_MAIN
+    input.TextSize = 14
+    input.Parent = inputBg
+
+    -- Sanitização restrita e formatação
+    maid:GiveTask(input:GetPropertyChangedSignal("Text"):Connect(function()
+        local text = input.Text:gsub("[^%d%.]", "")
+        if #text > 4 then text = string.sub(text, 1, 4) end
+        if input.Text ~= text then
+            input.Text = text
+        end
+    end))
+
+    maid:GiveTask(input.FocusLost:Connect(function()
+        local num = tonumber(input.Text)
+        if not num then
+            input.Text = "0.03"
+            return
+        end
+        num = math.clamp(num, 0, 3)
+        input.Text = string.format("%.2f", num)
+    end))
+
+    return row
+end
 
 function TriggerBotFactory.new(): TriggerBotUI
     local maid = Maid.new()
@@ -36,7 +139,6 @@ function TriggerBotFactory.new(): TriggerBotUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 50)
@@ -80,15 +182,17 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
 
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
-    toggleBtn.Instance.Parent = controls
-    maid:GiveTask(toggleBtn)
-
+    -- Em HorizontalAlignment.Right, o item LayoutOrder=1 fica totalmente à direita.
+    -- LayoutOrder=2 fica à esquerda dele. Portanto, visualmente: ToggleButton -> Arrow.
     local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
+    arrow.Instance.LayoutOrder = 1
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
+
+    local toggleBtn = ToggleButton.new()
+    toggleBtn.Instance.LayoutOrder = 2
+    toggleBtn.Instance.Parent = controls
+    maid:GiveTask(toggleBtn)
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
@@ -135,10 +239,9 @@ function TriggerBotFactory.new(): TriggerBotUI
     
     task.defer(updateGlowBar)
 
-    -- SUBFRAME
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, 0, 0, 260)
+    subFrame.Size = UDim2.new(1, 0, 0, 250)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.Visible = false
@@ -163,7 +266,6 @@ function TriggerBotFactory.new(): TriggerBotUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    -- 1. KEYBIND
     local keySec = KeybindSection.new(1)
     keySec.Instance.Parent = rightContent
     maid:GiveTask(keySec)
@@ -194,134 +296,23 @@ function TriggerBotFactory.new(): TriggerBotUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    -- 2. DELAY
-    local delayRow = Instance.new("Frame")
-    delayRow.Name = "DelayRow"
-    delayRow.Size = UDim2.new(1, 0, 0, 35)
-    delayRow.BackgroundTransparency = 1
-    delayRow.LayoutOrder = 1
+    -- 1. Delay
+    local delayRow = createDelayRow(maid, 1)
     delayRow.Parent = inputsScroll
 
-    local delayLbl = Instance.new("TextLabel")
-    delayLbl.Text = "Delay"
-    delayLbl.TextColor3 = COLOR_WHITE
-    delayLbl.Font = FONT_MAIN
-    delayLbl.TextSize = 14
-    delayLbl.TextXAlignment = Enum.TextXAlignment.Left
-    delayLbl.Size = UDim2.new(0.5, 0, 1, 0)
-    delayLbl.BackgroundTransparency = 1
-    delayLbl.Parent = delayRow
-
-    local delayBox = Instance.new("TextBox")
-    delayBox.Size = UDim2.fromOffset(60, 26)
-    delayBox.Position = UDim2.new(1, 0, 0.5, 0)
-    delayBox.AnchorPoint = Vector2.new(1, 0.5)
-    delayBox.BackgroundColor3 = Color3.fromHex("1A1A1A")
-    delayBox.TextColor3 = COLOR_WHITE
-    delayBox.Font = FONT_MAIN
-    delayBox.TextSize = 13
-    delayBox.Text = "0.030"
-    delayBox.PlaceholderText = "0.000"
-    delayBox.Parent = delayRow
-
-    local delayCorner = Instance.new("UICorner")
-    delayCorner.CornerRadius = UDim.new(0, 4)
-    delayCorner.Parent = delayBox
-
-    local delayStroke = Instance.new("UIStroke")
-    delayStroke.Color = Color3.fromHex("333333")
-    delayStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    delayStroke.Parent = delayBox
-
-    maid:GiveTask(delayBox.FocusLost:Connect(function()
-        local num = tonumber(delayBox.Text)
-        if num then
-            num = math.clamp(num, 0, 0.300)
-            delayBox.Text = string.format("%.3f", num)
-        else
-            delayBox.Text = "0.030"
-        end
-    end))
-
-    -- 3. HIT CHANCE
+    -- 2. Hit Chance
     local hitChanceSlider = Slider.new("Hit Chance", 0, 100, 95)
     hitChanceSlider.Instance.LayoutOrder = 2
     hitChanceSlider.Instance.Parent = inputsScroll
     maid:GiveTask(hitChanceSlider)
 
-    -- 4. WALL CHECK
-    local wallRow = Instance.new("Frame")
-    wallRow.Name = "WallCheckRow"
-    wallRow.Size = UDim2.new(1, 0, 0, 45)
-    wallRow.BackgroundTransparency = 1
-    wallRow.LayoutOrder = 3
-    wallRow.Parent = inputsScroll
+    -- 3. Wall Check
+    local wallCheckRow = createToggleRow(maid, "Wall Check", 3)
+    wallCheckRow.Parent = inputsScroll
 
-    local wallLbl = Instance.new("TextLabel")
-    wallLbl.Size = UDim2.new(1, -60, 0, 20)
-    wallLbl.Text = "Wall Check"
-    wallLbl.TextColor3 = COLOR_WHITE
-    wallLbl.Font = FONT_MAIN
-    wallLbl.TextSize = 14
-    wallLbl.TextXAlignment = Enum.TextXAlignment.Left
-    wallLbl.BackgroundTransparency = 1
-    wallLbl.Parent = wallRow
-
-    local wallSub = Instance.new("TextLabel")
-    wallSub.Size = UDim2.new(1, -60, 0, 25)
-    wallSub.Position = UDim2.new(0, 0, 0, 20)
-    wallSub.Text = "Only trigger if no obstacle between crosshair and player (clean raycast)"
-    wallSub.TextColor3 = COLOR_SUBTEXT
-    wallSub.Font = FONT_SUB
-    wallSub.TextSize = 11
-    wallSub.TextWrapped = true
-    wallSub.TextXAlignment = Enum.TextXAlignment.Left
-    wallSub.TextYAlignment = Enum.TextYAlignment.Top
-    wallSub.BackgroundTransparency = 1
-    wallSub.Parent = wallRow
-
-    local wallToggle = ToggleButton.new()
-    wallToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-    wallToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-    wallToggle.Instance.Parent = wallRow
-    maid:GiveTask(wallToggle)
-
-    -- 5. KNOCK CHECK
-    local knockRow = Instance.new("Frame")
-    knockRow.Name = "KnockCheckRow"
-    knockRow.Size = UDim2.new(1, 0, 0, 45)
-    knockRow.BackgroundTransparency = 1
-    knockRow.LayoutOrder = 4
-    knockRow.Parent = inputsScroll
-
-    local knockLbl = Instance.new("TextLabel")
-    knockLbl.Size = UDim2.new(1, -60, 0, 20)
-    knockLbl.Text = "Knock Check"
-    knockLbl.TextColor3 = COLOR_WHITE
-    knockLbl.Font = FONT_MAIN
-    knockLbl.TextSize = 14
-    knockLbl.TextXAlignment = Enum.TextXAlignment.Left
-    knockLbl.BackgroundTransparency = 1
-    knockLbl.Parent = knockRow
-
-    local knockSub = Instance.new("TextLabel")
-    knockSub.Size = UDim2.new(1, -60, 0, 25)
-    knockSub.Position = UDim2.new(0, 0, 0, 20)
-    knockSub.Text = "Ignore knocked down players"
-    knockSub.TextColor3 = COLOR_SUBTEXT
-    knockSub.Font = FONT_SUB
-    knockSub.TextSize = 11
-    knockSub.TextWrapped = true
-    knockSub.TextXAlignment = Enum.TextXAlignment.Left
-    knockSub.TextYAlignment = Enum.TextYAlignment.Top
-    knockSub.BackgroundTransparency = 1
-    knockSub.Parent = knockRow
-
-    local knockToggle = ToggleButton.new()
-    knockToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-    knockToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-    knockToggle.Instance.Parent = knockRow
-    maid:GiveTask(knockToggle)
+    -- 4. Knock Check
+    local knockCheckRow = createToggleRow(maid, "Knock Check", 4)
+    knockCheckRow.Parent = inputsScroll
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
