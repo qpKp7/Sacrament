@@ -8,8 +8,8 @@ local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
 
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
+local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
 local PredictSection = Import("gui/modules/combat/sections/shared/predict")
-local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
 local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
 local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
@@ -22,7 +22,6 @@ export type AimlockUI = {
 local AimlockFactory = {}
 
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
-local COLOR_SCROLL = Color3.fromHex("680303")
 local FONT_MAIN = Enum.Font.GothamBold
 
 function AimlockFactory.new(): AimlockUI
@@ -46,6 +45,7 @@ function AimlockFactory.new(): AimlockUI
     header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
+    header.ClipsDescendants = true
     header.Parent = container
 
     local title = Instance.new("TextLabel")
@@ -59,6 +59,29 @@ function AimlockFactory.new(): AimlockUI
     title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
+
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.Size = UDim2.fromOffset(30, 32)
+    glowWrapper.Position = UDim2.new(0, 140, 0.5, 0)
+    glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Parent = header
+
+    local glowBar = GlowBar.new()
+    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowBar.Instance.Position = UDim2.new(0.5, 0, 0.5, 0)
+    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+    glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
+    glowBar.Instance.Parent = glowWrapper
+
+    do
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
+    end
+    maid:GiveTask(glowBar)
 
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
@@ -90,25 +113,11 @@ function AimlockFactory.new(): AimlockUI
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
 
-    local glowWrapper = Instance.new("Frame")
-    glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(65, 50)
-    glowWrapper.Position = UDim2.fromOffset(105, 0)
-    glowWrapper.BackgroundTransparency = 1
-    glowWrapper.Parent = header
-
-    local glowBar = GlowBar.new()
-    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Parent = glowWrapper
-    maid:GiveTask(glowBar)
-
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, -280, 1, 0)
+    subFrame.Size = UDim2.fromScale(1, 1)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
-    subFrame.AutomaticSize = Enum.AutomaticSize.Y
     subFrame.Visible = false
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
@@ -119,81 +128,70 @@ function AimlockFactory.new(): AimlockUI
     vLine.Instance.Parent = subFrame
     maid:GiveTask(vLine)
 
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Name = "SubContentScroll"
-    scroll.Size = UDim2.new(1, -2, 1, 0)
-    scroll.Position = UDim2.fromOffset(2, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 5
-    scroll.ScrollBarImageColor3 = COLOR_SCROLL
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.AutomaticSize = Enum.AutomaticSize.Y
-    scroll.Parent = subFrame
+    local rightContent = Instance.new("Frame")
+    rightContent.Name = "RightContent"
+    rightContent.Size = UDim2.new(1, -2, 1, 0)
+    rightContent.Position = UDim2.fromOffset(2, 0)
+    rightContent.BackgroundTransparency = 1
+    rightContent.BorderSizePixel = 0
+    rightContent.Parent = subFrame
 
-    local scrollConstraint = Instance.new("UISizeConstraint")
-    scrollConstraint.MaxSize = Vector2.new(math.huge, 350)
-    scrollConstraint.Parent = scroll
-
-    local scrollLayout = Instance.new("UIListLayout")
-    scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    scrollLayout.Padding = UDim.new(0, 0)
-    scrollLayout.Parent = scroll
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Parent = rightContent
 
     local keySec = KeybindSection.new(1)
-    keySec.Instance.Parent = scroll
+    keySec.Instance.Parent = rightContent
     maid:GiveTask(keySec)
 
     local hLine = Sidebar.createHorizontal(2)
-    hLine.Instance.Parent = scroll
+    hLine.Instance.Parent = rightContent
     maid:GiveTask(hLine)
 
-    local inputsContainer = Instance.new("Frame")
-    inputsContainer.Name = "InputsContainer"
-    inputsContainer.Size = UDim2.new(1, 0, 0, 0)
-    inputsContainer.BackgroundTransparency = 1
-    inputsContainer.AutomaticSize = Enum.AutomaticSize.Y
-    inputsContainer.LayoutOrder = 3
-    inputsContainer.Parent = scroll
+    local inputsScroll = Instance.new("ScrollingFrame")
+    inputsScroll.Name = "InputsScroll"
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+    inputsScroll.BackgroundTransparency = 1
+    inputsScroll.BorderSizePixel = 0
+    inputsScroll.ScrollBarThickness = 0
+    inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    inputsScroll.LayoutOrder = 3
+    inputsScroll.Parent = rightContent
 
     local inputsLayout = Instance.new("UIListLayout")
     inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
     inputsLayout.Padding = UDim.new(0, 15)
-    inputsLayout.Parent = inputsContainer
+    inputsLayout.Parent = inputsScroll
 
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.PaddingRight = UDim.new(0, 25)
-    inputsPadding.Parent = inputsContainer
+    inputsPadding.Parent = inputsScroll
 
-    local predSec = PredictSection.new(1)
-    predSec.Instance.Parent = inputsContainer
+    local keyHoldSec = KeyHoldSection.new(1)
+    keyHoldSec.Instance.Parent = inputsScroll
+    maid:GiveTask(keyHoldSec)
+
+    local predSec = PredictSection.new(2)
+    predSec.Instance.Parent = inputsScroll
     maid:GiveTask(predSec)
 
-    local smoothSec = SmoothSection.new(2)
-    smoothSec.Instance.Parent = inputsContainer
-    maid:GiveTask(smoothSec)
-
     local aimPartSec = AimPartSection.new(3)
-    aimPartSec.Instance.Parent = inputsContainer
+    aimPartSec.Instance.Parent = inputsScroll
     maid:GiveTask(aimPartSec)
 
     local wallCheckSec = WallCheckSection.new(4)
-    wallCheckSec.Instance.Parent = inputsContainer
+    wallCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(wallCheckSec)
 
     local knockCheckSec = KnockCheckSection.new(5)
-    knockCheckSec.Instance.Parent = inputsContainer
+    knockCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(knockCheckSec)
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
-    end))
-
-    maid:GiveTask(arrow.Toggled:Connect(function(isExpanded)
-        subFrame.Visible = isExpanded
     end))
 
     maid:GiveTask(container)
