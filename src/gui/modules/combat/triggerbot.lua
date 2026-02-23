@@ -6,7 +6,7 @@ local ToggleButton = Import("gui/modules/combat/components/togglebutton")
 local Arrow = Import("gui/modules/combat/components/arrow")
 local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
-local Slider = Import("gui/modules/combat/components/sliderbar")
+local Slider = Import("gui/modules/combat/components/slider") -- [CORREÇÃO: O nome correto do arquivo é slider, não sliderbar]
 
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 
@@ -182,8 +182,8 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
 
-    -- Em HorizontalAlignment.Right, o item LayoutOrder=1 fica totalmente à direita.
-    -- LayoutOrder=2 fica à esquerda dele. Portanto, visualmente: ToggleButton -> Arrow.
+    -- Como o HorizontalAlignment é Right, LayoutOrder=1 fica totalmente à direita. LayoutOrder=2 fica à sua esquerda.
+    -- Ordem visual: ToggleButton (Esq) -> Arrow (Dir)
     local arrow = Arrow.new()
     arrow.Instance.LayoutOrder = 1
     arrow.Instance.Parent = controls
