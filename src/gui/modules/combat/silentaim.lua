@@ -53,7 +53,8 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(130, 50)
+    title.Size = UDim2.fromOffset(0, 50)
+    title.AutomaticSize = Enum.AutomaticSize.X
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
@@ -61,7 +62,6 @@ function SilentAimFactory.new(): SilentAimUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 2
     title.Parent = header
 
     local controls = Instance.new("Frame")
@@ -99,7 +99,6 @@ function SilentAimFactory.new(): SilentAimUI
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
-    glowWrapper.ZIndex = 1
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
@@ -109,29 +108,22 @@ function SilentAimFactory.new(): SilentAimUI
     glowBar.Instance.Size = UDim2.fromScale(1, 1)
     glowBar.Instance.Parent = glowWrapper
 
-    local function removeConstraints(inst: Instance)
-        if inst:IsA("UISizeConstraint") or inst:IsA("UIAspectRatioConstraint") then
-            inst:Destroy()
-        end
-        for _, desc in ipairs(inst:GetDescendants()) do
-            if desc:IsA("UISizeConstraint") or desc:IsA("UIAspectRatioConstraint") then
-                desc:Destroy()
-            end
-        end
+    do
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
     end
-    removeConstraints(glowBar.Instance)
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        local hAbsX = header.AbsolutePosition.X
-        local tAbsX = title.AbsolutePosition.X
-        local tAbsW = title.AbsoluteSize.X
-        local cAbsX = controls.AbsolutePosition.X
+        if header.AbsoluteSize.X == 0 then return end
 
-        if hAbsX == 0 or tAbsW == 0 or cAbsX == 0 then return end
+        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftAbsolute = controls.AbsolutePosition.X
 
-        local startX = (tAbsX - hAbsX) + tAbsW + 5
-        local endX = (cAbsX - hAbsX) - 5
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -244,7 +236,6 @@ function SilentAimFactory.new(): SilentAimUI
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
-        task.defer(updateGlowBar)
     end))
 
     maid:GiveTask(container)
