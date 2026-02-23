@@ -1,14 +1,14 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local root = script.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
 
-local ToggleButton = Import("gui/modules/combat/components/togglebutton")
-local Arrow = Import("gui/modules/combat/components/arrow")
-local GlowBar = Import("gui/modules/combat/components/glowbar")
-local Sidebar = Import("gui/modules/combat/components/sidebar")
-local Slider = Import("gui/modules/combat/components/slider")
+local ToggleButton = require(root.gui.modules.components.ToggleButton)
+local Arrow = require(root.gui.modules.components.Arrow)
+local GlowBar = require(root.gui.modules.components.Glowbar)
+local Sidebar = require(root.gui.modules.components.Sidebar)
+local Slider = require(root.gui.modules.components.Slider)
 
-local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
+local KeybindSection = require(root.gui.modules.combat.sections.shared.Keybind)
 
 export type TriggerBotUI = {
     Instance: Frame,
@@ -22,7 +22,7 @@ local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
 
 -- Helper: Cria as linhas de Toggle limpas (Wall Check / Knock Check)
-local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOrder: number): Frame
+local function createToggleRow(maid: any, title: string, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = title:gsub(" ", "") .. "Row"
     row.Size = UDim2.new(1, 0, 0, 45)
@@ -54,7 +54,7 @@ local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOr
 end
 
 -- Helper: Cria a linha do Delay (0.00 até 3.00)
-local function createDelayRow(maid: typeof(Maid.new()), layoutOrder: number): Frame
+local function createDelayRow(maid: any, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = "DelayRow"
     row.Size = UDim2.new(1, 0, 0, 45)
@@ -329,7 +329,7 @@ function TriggerBotFactory.new(): TriggerBotUI
         maid:Destroy()
     end
 
-    return self
+    return self :: TriggerBotUI
 end
 
 return TriggerBotFactory
