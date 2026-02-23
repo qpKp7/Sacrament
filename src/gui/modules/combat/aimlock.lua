@@ -1,252 +1,116 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Sacrament = ReplicatedStorage:WaitForChild("Sacrament")
+local Maid = require(Sacrament.src.utils.maid)
+local Components = Sacrament.src.gui.components
+local ToggleButton = require(Components.togglebutton)
 
-local ToggleButton = Import("gui/modules/combat/components/togglebutton")
-local Arrow = Import("gui/modules/combat/components/arrow")
-local GlowBar = Import("gui/modules/combat/components/glowbar")
-local Sidebar = Import("gui/modules/combat/components/sidebar")
+local Aimlock = {}
+Aimlock.__index = Aimlock
 
-local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
-local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
-local PredictSection = Import("gui/modules/combat/sections/shared/predict")
-local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
-local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
-local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
-local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
+function Aimlock.new(parent: GuiObject)
+    local self = setmetatable({}, Aimlock)
+    self._maid = Maid.new()
 
-export type AimlockUI = {
-    Instance: Frame,
-    Destroy: (self: AimlockUI) -> ()
-}
+    self.Header = self._maid:GiveTask(Instance.new("Frame"))
+    self.Header.Name = "AimlockHeader"
+    self.Header.Size = UDim2.new(1, 0, 0, 30)
+    self.Header.BackgroundTransparency = 1
+    self.Header.Parent = parent
 
-local AimlockFactory = {}
+    self.Title = self._maid:GiveTask(Instance.new("TextLabel"))
+    self.Title.Name = "Title"
+    self.Title.Text = "Aimlock"
+    self.Title.Font = Enum.Font.GothamBold
+    self.Title.TextSize = 14
+    self.Title.TextColor3 = Color3.fromRGB(210, 210, 210)
+    self.Title.BackgroundTransparency = 1
+    self.Title.Position = UDim2.new(0, 0, 0, 0)
+    self.Title.Size = UDim2.new(0, 0, 1, 0)
+    self.Title.AutomaticSize = Enum.AutomaticSize.X
+    self.Title.Parent = self.Header
 
-local COLOR_WHITE = Color3.fromHex("B4B4B4")
-local FONT_MAIN = Enum.Font.GothamBold
+    self.Controls = self._maid:GiveTask(Instance.new("Frame"))
+    self.Controls.Name = "Controls"
+    self.Controls.AnchorPoint = Vector2.new(1, 0.5)
+    self.Controls.Position = UDim2.new(1, 0, 0.5, 0)
+    self.Controls.Size = UDim2.new(0, 60, 1, 0)
+    self.Controls.BackgroundTransparency = 1
+    self.Controls.Parent = self.Header
 
-function AimlockFactory.new(): AimlockUI
-    local maid = Maid.new()
+    local controlsLayout = self._maid:GiveTask(Instance.new("UIListLayout"))
+    controlsLayout.FillDirection = Enum.FillDirection.Horizontal
+    controlsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    controlsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    controlsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    controlsLayout.Padding = UDim.new(0, 15)
+    controlsLayout.Parent = self.Controls
 
-    local container = Instance.new("Frame")
-    container.Name = "AimlockContainer"
-    container.Size = UDim2.new(1, 0, 0, 0)
-    container.BackgroundTransparency = 1 
-    container.BorderSizePixel = 0
-    container.AutomaticSize = Enum.AutomaticSize.Y
-
-    local containerLayout = Instance.new("UIListLayout")
-    containerLayout.FillDirection = Enum.FillDirection.Horizontal
-    containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    containerLayout.Parent = container
-
-    local header = Instance.new("Frame")
-    header.Name = "Header"
-    header.Size = UDim2.new(0, 280, 0, 50)
-    header.BackgroundTransparency = 1
-    header.BorderSizePixel = 0
-    header.LayoutOrder = 1
-    header.ClipsDescendants = true
-    header.Parent = container
-
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.Size = UDim2.fromOffset(130, 50)
-    title.Position = UDim2.fromOffset(20, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "Aimlock"
-    title.TextColor3 = COLOR_WHITE
-    title.Font = FONT_MAIN
-    title.TextSize = 22
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 2
-    title.Parent = header
-
-    local controls = Instance.new("Frame")
-    controls.Name = "Controls"
-    controls.Size = UDim2.fromOffset(0, 50)
-    controls.AutomaticSize = Enum.AutomaticSize.X
-    controls.Position = UDim2.fromScale(1, 0)
-    controls.AnchorPoint = Vector2.new(1, 0)
-    controls.BackgroundTransparency = 1
-    controls.Parent = header
-
-    local ctrlLayout = Instance.new("UIListLayout")
-    ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
-    ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ctrlLayout.Padding = UDim.new(0, 15)
-    ctrlLayout.Parent = controls
-
-    local ctrlPadding = Instance.new("UIPadding")
-    ctrlPadding.PaddingRight = UDim.new(0, 20)
-    ctrlPadding.Parent = controls
-
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
-    toggleBtn.Instance.Parent = controls
-    maid:GiveTask(toggleBtn)
-
-    local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
-    arrow.Instance.Parent = controls
-    maid:GiveTask(arrow)
-
-    local glowWrapper = Instance.new("Frame")
-    glowWrapper.Name = "GlowWrapper"
-    glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
-    glowWrapper.BackgroundTransparency = 1
-    glowWrapper.ZIndex = 1
-    glowWrapper.Parent = header
-
-    local glowBar = GlowBar.new()
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
-    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
-    glowBar.Instance.Size = UDim2.fromScale(1, 1)
-    glowBar.Instance.Parent = glowWrapper
-
-    local function removeConstraints(inst: Instance)
-        if inst:IsA("UISizeConstraint") or inst:IsA("UIAspectRatioConstraint") then
-            inst:Destroy()
-        end
-        for _, desc in ipairs(inst:GetDescendants()) do
-            if desc:IsA("UISizeConstraint") or desc:IsA("UIAspectRatioConstraint") then
-                desc:Destroy()
-            end
-        end
-    end
-    removeConstraints(glowBar.Instance)
-    maid:GiveTask(glowBar)
-
-    local function updateGlowBar()
-        local hAbsX = header.AbsolutePosition.X
-        local tAbsX = title.AbsolutePosition.X
-        local tAbsW = title.AbsoluteSize.X
-        local btnAbsX = toggleBtn.Instance.AbsolutePosition.X
-
-        if hAbsX == 0 or tAbsW == 0 or btnAbsX == 0 then return end
-
-        local startX = (tAbsX - hAbsX) + tAbsW + 5
-        local endX = (btnAbsX - hAbsX) - 5
-
-        local width = math.max(0, endX - startX)
-
-        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
-        glowWrapper.Size = UDim2.fromOffset(width, 32)
+    self.Toggle = self._maid:GiveTask(ToggleButton.new({
+        Parent = self.Controls
+    }))
+    
+    if self.Toggle.Instance then
+        self.Toggle.Instance.LayoutOrder = 1
     end
 
-    maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    
-    task.spawn(function()
-        for i = 1, 10 do
-            updateGlowBar()
-            task.wait(0.05)
+    self.Arrow = self._maid:GiveTask(Instance.new("TextLabel"))
+    self.Arrow.Name = "Arrow"
+    self.Arrow.Text = "v"
+    self.Arrow.TextColor3 = Color3.fromRGB(220, 30, 30)
+    self.Arrow.Font = Enum.Font.GothamBold
+    self.Arrow.TextSize = 12
+    self.Arrow.BackgroundTransparency = 1
+    self.Arrow.Size = UDim2.new(0, 10, 1, 0)
+    self.Arrow.LayoutOrder = 2
+    self.Arrow.Parent = self.Controls
+
+    self.GlowBar = self._maid:GiveTask(Instance.new("Frame"))
+    self.GlowBar.Name = "GlowBar"
+    self.GlowBar.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    self.GlowBar.BorderSizePixel = 0
+    self.GlowBar.AnchorPoint = Vector2.new(0, 0.5)
+    self.GlowBar.Parent = self.Header
+
+    local function updateLayout()
+        if not self.Header.Parent then return end
+        if not self.Toggle.Instance then return end
+
+        local headerX = self.Header.AbsolutePosition.X
+        local titleEnd = self.Title.AbsolutePosition.X + self.Title.AbsoluteSize.X
+        local toggleStart = self.Toggle.Instance.AbsolutePosition.X
+
+        local startX = (titleEnd + 5) - headerX
+        local endX = (toggleStart - 5) - headerX
+        local width = endX - startX
+
+        if width > 0 then
+            self.GlowBar.Visible = true
+            self.GlowBar.Position = UDim2.new(0, startX, 0.5, 0)
+            self.GlowBar.Size = UDim2.new(0, width, 0, 1)
+        else
+            self.GlowBar.Visible = false
+            self.GlowBar.Size = UDim2.new(0, 0, 0, 1)
         end
-    end)
+    end
 
-    local subFrame = Instance.new("Frame")
-    subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.fromScale(1, 1)
-    subFrame.BackgroundTransparency = 1
-    subFrame.BorderSizePixel = 0
-    subFrame.Visible = false
-    subFrame.LayoutOrder = 2
-    subFrame.Parent = container
+    self._maid:GiveTask(self.Title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateLayout))
+    self._maid:GiveTask(self.Title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout))
+    self._maid:GiveTask(self.Toggle.Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateLayout))
+    self._maid:GiveTask(self.Header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateLayout))
+    self._maid:GiveTask(self.Header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout))
 
-    local vLine = Sidebar.createVertical()
-    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
-    vLine.Instance.Position = UDim2.fromScale(0, 0)
-    vLine.Instance.Parent = subFrame
-    maid:GiveTask(vLine)
-
-    local rightContent = Instance.new("Frame")
-    rightContent.Name = "RightContent"
-    rightContent.Size = UDim2.new(1, -2, 1, 0)
-    rightContent.Position = UDim2.fromOffset(2, 0)
-    rightContent.BackgroundTransparency = 1
-    rightContent.BorderSizePixel = 0
-    rightContent.Parent = subFrame
-
-    local rightLayout = Instance.new("UIListLayout")
-    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    rightLayout.Parent = rightContent
-
-    local keySec = KeybindSection.new(1)
-    keySec.Instance.Parent = rightContent
-    maid:GiveTask(keySec)
-
-    local hLine = Sidebar.createHorizontal(2)
-    hLine.Instance.Parent = rightContent
-    maid:GiveTask(hLine)
-
-    local inputsScroll = Instance.new("ScrollingFrame")
-    inputsScroll.Name = "InputsScroll"
-    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
-    inputsScroll.BackgroundTransparency = 1
-    inputsScroll.BorderSizePixel = 0
-    inputsScroll.ScrollBarThickness = 0
-    inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    inputsScroll.LayoutOrder = 3
-    inputsScroll.Parent = rightContent
-
-    local inputsLayout = Instance.new("UIListLayout")
-    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    inputsLayout.Padding = UDim.new(0, 15)
-    inputsLayout.Parent = inputsScroll
-
-    local inputsPadding = Instance.new("UIPadding")
-    inputsPadding.PaddingTop = UDim.new(0, 20)
-    inputsPadding.PaddingBottom = UDim.new(0, 20)
-    inputsPadding.PaddingRight = UDim.new(0, 25)
-    inputsPadding.Parent = inputsScroll
-
-    local keyHoldSec = KeyHoldSection.new(1)
-    keyHoldSec.Instance.Parent = inputsScroll
-    maid:GiveTask(keyHoldSec)
-
-    local predSec = PredictSection.new(2)
-    predSec.Instance.Parent = inputsScroll
-    maid:GiveTask(predSec)
-
-    local smoothSec = SmoothSection.new(3)
-    smoothSec.Instance.Parent = inputsScroll
-    maid:GiveTask(smoothSec)
-
-    local aimPartSec = AimPartSection.new(4)
-    aimPartSec.Instance.Parent = inputsScroll
-    maid:GiveTask(aimPartSec)
-
-    local wallCheckSec = WallCheckSection.new(5)
-    wallCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(wallCheckSec)
-
-    local knockCheckSec = KnockCheckSection.new(6)
-    knockCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(knockCheckSec)
-
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
-        glowBar:SetState(state)
-        task.defer(updateGlowBar)
-    end))
-
-    maid:GiveTask(container)
+    task.defer(updateLayout)
     
-    local self = {}
-    self.Instance = container
-
-    function self:Destroy()
-        maid:Destroy()
+    for i = 1, 5 do
+        task.delay(i * 0.05, updateLayout)
     end
 
     return self
 end
 
-return AimlockFactory
+function Aimlock:Destroy()
+    self._maid:Destroy()
+end
+
+return Aimlock
