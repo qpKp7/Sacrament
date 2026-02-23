@@ -124,12 +124,12 @@ function AimlockFactory.new(): AimlockUI
         local hAbsX = header.AbsolutePosition.X
         local tAbsX = title.AbsolutePosition.X
         local tAbsW = title.AbsoluteSize.X
-        local cAbsX = controls.AbsolutePosition.X
+        local btnAbsX = toggleBtn.Instance.AbsolutePosition.X
 
-        if hAbsX == 0 or tAbsW == 0 or cAbsX == 0 then return end
+        if hAbsX == 0 or tAbsW == 0 or btnAbsX == 0 then return end
 
         local startX = (tAbsX - hAbsX) + tAbsW + 5
-        local endX = (cAbsX - hAbsX) - 5
+        local endX = (btnAbsX - hAbsX) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -139,13 +139,13 @@ function AimlockFactory.new(): AimlockUI
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
     task.spawn(function()
-        for _ = 1, 10 do
+        for i = 1, 10 do
             updateGlowBar()
             task.wait(0.05)
         end
