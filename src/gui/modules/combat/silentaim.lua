@@ -123,11 +123,11 @@ function SilentAimFactory.new(): SilentAimUI
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 or title.AbsoluteSize.X == 0 then return end
 
-        local titleRightEdge = title.AbsolutePosition.X + title.AbsoluteSize.X
-        local controlsLeftEdge = controls.AbsolutePosition.X
+        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftAbsolute = controls.AbsolutePosition.X
 
-        local startX = (titleRightEdge - header.AbsolutePosition.X) + 5
-        local endX = (controlsLeftEdge - header.AbsolutePosition.X) - 5
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
 
         local width = math.max(0, endX - startX)
 
