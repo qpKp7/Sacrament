@@ -8,14 +8,25 @@ Combat.__index = Combat
 export type CombatManager = typeof(setmetatable({}, Combat))
 
 local function SafeRequire(moduleName: string): (boolean, any)
-    local moduleScript = script.Parent:FindFirstChild(moduleName) :: ModuleScript?
-    if not moduleScript then
-        return false, moduleName .. " (ModuleScript) nao encontrado no diretorio atual."
+    if typeof(script) == "Instance" and typeof(script.Parent) == "Instance" then
+        local moduleScript = script.Parent:FindFirstChild(moduleName)
+        if moduleScript and moduleScript:IsA("ModuleScript") then
+            return pcall(function()
+                return require(moduleScript)
+            end)
+        end
     end
     
-    return pcall(function()
-        return require(moduleScript)
+    local success, result = pcall(function()
+        local requireOverride = require :: any
+        return requireOverride(moduleName)
     end)
+    
+    if success then
+        return true, result
+    end
+    
+    return false, "Modulo nao encontrado no ambiente de execucao (Loadstring/Bundler): " .. moduleName
 end
 
 local isAimlockLoaded, aimlockModule = SafeRequire("Aimlock")
@@ -24,12 +35,12 @@ local isSilentAimLoaded, silentAimModule = SafeRequire("SilentAim")
 if isAimlockLoaded and isSilentAimLoaded then
     print("[Combat] OK: Modulos de combate (Aimlock, SilentAim) inicializados com sucesso e sem erros.")
 else
-    local errorMessage = "[Combat] ERRO DE INICIALIZACAO: "
+    local errorMessage = "[Combat] ERRO DE INICIALIZACAO:\n"
     if not isAimlockLoaded then
-        errorMessage ..= "Falha no Aimlock -> " .. tostring(aimlockModule) .. " | "
+        errorMessage ..= "  -> Falha no Aimlock: " .. tostring(aimlockModule) .. "\n"
     end
     if not isSilentAimLoaded then
-        errorMessage ..= "Falha no SilentAim -> " .. tostring(silentAimModule)
+        errorMessage ..= "  -> Falha no SilentAim: " .. tostring(silentAimModule) .. "\n"
     end
     print(errorMessage)
 end
