@@ -60,7 +60,8 @@ function SilentAimFactory.new(): SilentAimUI
     title.Text = "Silent Aim"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
-    title.TextSize = 20
+    -- 1) MUDANÇA DE TEXTSIZE: Aumentado levemente para 22 para mais presença e legibilidade
+    title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
@@ -117,7 +118,9 @@ function SilentAimFactory.new(): SilentAimUI
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        local padding = 2
+        -- 2) MUDANÇA DE ESPAÇAMENTO: Margem explícita de 2px de respiro
+        local padding = 2 
+        
         local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X) - header.AbsolutePosition.X + padding
         local endX = controls.AbsolutePosition.X - header.AbsolutePosition.X - padding
         
