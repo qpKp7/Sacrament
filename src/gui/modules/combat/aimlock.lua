@@ -114,18 +114,21 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X) + 2
-        local endX = controls.AbsolutePosition.X - 2
+        local titleRightEdge = title.Position.X.Offset + title.AbsoluteSize.X
+        local controlsLeftEdge = header.AbsoluteSize.X - controls.AbsoluteSize.X
+        
+        local startX = titleRightEdge + 1 
+        local endX = controlsLeftEdge - 3 
+        
         local width = math.max(0, endX - startX)
         
+        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
         glowWrapper.Size = UDim2.fromOffset(width, 32)
-        glowWrapper.Position = UDim2.new(0, startX - header.AbsolutePosition.X, 0.5, 0)
     end
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     
     task.defer(updateGlowBar)
 
