@@ -10,6 +10,7 @@ local Sidebar = Import("gui/modules/combat/components/sidebar")
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
 local PredictSection = Import("gui/modules/combat/sections/shared/predict")
+local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
 local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
 local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
@@ -50,8 +51,7 @@ function AimlockFactory.new(): AimlockUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(0, 50)
-    title.AutomaticSize = Enum.AutomaticSize.X
+    title.Size = UDim2.fromOffset(130, 50)
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Aimlock"
@@ -59,6 +59,7 @@ function AimlockFactory.new(): AimlockUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 2
     title.Parent = header
 
     local controls = Instance.new("Frame")
@@ -96,6 +97,7 @@ function AimlockFactory.new(): AimlockUI
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
+    glowWrapper.ZIndex = 1
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
@@ -105,22 +107,29 @@ function AimlockFactory.new(): AimlockUI
     glowBar.Instance.Size = UDim2.fromScale(1, 1)
     glowBar.Instance.Parent = glowWrapper
 
-    do
-        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
-        if c1 then c1:Destroy() end
-        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
-        if c2 then c2:Destroy() end
+    local function removeConstraints(inst: Instance)
+        if inst:IsA("UISizeConstraint") or inst:IsA("UIAspectRatioConstraint") then
+            inst:Destroy()
+        end
+        for _, desc in ipairs(inst:GetDescendants()) do
+            if desc:IsA("UISizeConstraint") or desc:IsA("UIAspectRatioConstraint") then
+                desc:Destroy()
+            end
+        end
     end
+    removeConstraints(glowBar.Instance)
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        if header.AbsoluteSize.X == 0 then return end
+        local hAbsX = header.AbsolutePosition.X
+        local tAbsX = title.AbsolutePosition.X
+        local tAbsW = title.AbsoluteSize.X
+        local cAbsX = controls.AbsolutePosition.X
 
-        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
-        local controlsLeftAbsolute = controls.AbsolutePosition.X
+        if hAbsX == 0 or tAbsW == 0 or cAbsX == 0 then return end
 
-        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
-        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
+        local startX = (tAbsX - hAbsX) + tAbsW + 5
+        local endX = (cAbsX - hAbsX) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -207,20 +216,25 @@ function AimlockFactory.new(): AimlockUI
     predSec.Instance.Parent = inputsScroll
     maid:GiveTask(predSec)
 
-    local aimPartSec = AimPartSection.new(3)
+    local smoothSec = SmoothSection.new(3)
+    smoothSec.Instance.Parent = inputsScroll
+    maid:GiveTask(smoothSec)
+
+    local aimPartSec = AimPartSection.new(4)
     aimPartSec.Instance.Parent = inputsScroll
     maid:GiveTask(aimPartSec)
 
-    local wallCheckSec = WallCheckSection.new(4)
+    local wallCheckSec = WallCheckSection.new(5)
     wallCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(wallCheckSec)
 
-    local knockCheckSec = KnockCheckSection.new(5)
+    local knockCheckSec = KnockCheckSection.new(6)
     knockCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(knockCheckSec)
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
+        task.defer(updateGlowBar)
     end))
 
     maid:GiveTask(container)
