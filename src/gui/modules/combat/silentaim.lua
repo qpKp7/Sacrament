@@ -49,7 +49,7 @@ function SilentAimFactory.new(): SilentAimUI
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
     header.ClipsDescendants = true
-    header.Parent = container
+    header.Parent = header.Parent
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
@@ -108,22 +108,27 @@ function SilentAimFactory.new(): SilentAimUI
     glowBar.Instance.Size = UDim2.fromScale(1, 1)
     glowBar.Instance.Parent = glowWrapper
 
-    do
-        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
-        if c1 then c1:Destroy() end
-        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
-        if c2 then c2:Destroy() end
+    local function removeConstraints(inst: Instance)
+        if inst:IsA("UISizeConstraint") or inst:IsA("UIAspectRatioConstraint") then
+            inst:Destroy()
+        end
+        for _, desc in ipairs(inst:GetDescendants()) do
+            if desc:IsA("UISizeConstraint") or desc:IsA("UIAspectRatioConstraint") then
+                desc:Destroy()
+            end
+        end
     end
+    removeConstraints(glowBar.Instance)
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        if header.AbsoluteSize.X == 0 then return end
+        if header.AbsoluteSize.X == 0 or title.AbsoluteSize.X == 0 then return end
 
-        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
-        local controlsLeftAbsolute = controls.AbsolutePosition.X
+        local titleRightEdge = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftEdge = controls.AbsolutePosition.X
 
-        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
-        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
+        local startX = (titleRightEdge - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftEdge - header.AbsolutePosition.X) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -138,7 +143,10 @@ function SilentAimFactory.new(): SilentAimUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
-    task.defer(updateGlowBar)
+    task.defer(function()
+        updateGlowBar()
+        task.delay(0.05, updateGlowBar)
+    end)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
