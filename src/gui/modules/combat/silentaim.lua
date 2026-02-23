@@ -49,7 +49,7 @@ function SilentAimFactory.new(): SilentAimUI
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
     header.ClipsDescendants = true
-    header.Parent = header.Parent
+    header.Parent = container
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
