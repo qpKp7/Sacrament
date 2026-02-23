@@ -1,6 +1,6 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-local Import = ((_G :: any).SacramentImport :: any)
+local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 local AimlockModule = Import("gui/modules/combat/aimlock")
