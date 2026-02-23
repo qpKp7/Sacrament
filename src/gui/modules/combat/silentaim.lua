@@ -1,21 +1,21 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local root = script.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
 
-local ToggleButton = Import("gui/modules/combat/components/togglebutton")
-local Arrow = Import("gui/modules/combat/components/arrow")
-local GlowBar = Import("gui/modules/combat/components/glowbar")
-local Sidebar = Import("gui/modules/combat/components/sidebar")
+local ToggleButton = require(root.gui.modules.components.ToggleButton)
+local Arrow = require(root.gui.modules.components.Arrow)
+local GlowBar = require(root.gui.modules.components.Glowbar)
+local Sidebar = require(root.gui.modules.components.Sidebar)
 
-local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
-local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
-local PredictSection = Import("gui/modules/combat/sections/shared/predict")
-local HitChanceSection = Import("gui/modules/combat/sections/silentaim/hitchance")
-local MarkStyleSection = Import("gui/modules/combat/sections/silentaim/markstyle")
-local FovLimitSection = Import("gui/modules/combat/sections/silentaim/fovlimit")
-local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
-local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
-local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
+local KeybindSection = require(root.gui.modules.combat.sections.shared.Keybind)
+local KeyHoldSection = require(root.gui.modules.combat.sections.shared.Keyhold)
+local PredictSection = require(root.gui.modules.combat.sections.shared.Predict)
+local HitChanceSection = require(root.gui.modules.combat.sections.silentaim.Hitchance)
+local MarkStyleSection = require(root.gui.modules.combat.sections.silentaim.Markstyle)
+local FovLimitSection = require(root.gui.modules.combat.sections.silentaim.Fovlimit)
+local AimPartSection = require(root.gui.modules.combat.sections.shared.Aimpart)
+local WallCheckSection = require(root.gui.modules.combat.sections.shared.Wallcheck)
+local KnockCheckSection = require(root.gui.modules.combat.sections.shared.Knockcheck)
 
 export type SilentAimUI = {
     Instance: Frame,
@@ -242,7 +242,7 @@ function SilentAimFactory.new(): SilentAimUI
         maid:Destroy()
     end
 
-    return self
+    return self :: SilentAimUI
 end
 
 return SilentAimFactory
