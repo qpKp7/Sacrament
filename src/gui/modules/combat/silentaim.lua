@@ -61,6 +61,7 @@ function SilentAimFactory.new(): SilentAimUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 2
     title.Parent = header
 
     local controls = Instance.new("Frame")
@@ -98,6 +99,7 @@ function SilentAimFactory.new(): SilentAimUI
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
+    glowWrapper.ZIndex = 1
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
@@ -124,12 +126,12 @@ function SilentAimFactory.new(): SilentAimUI
         local hAbsX = header.AbsolutePosition.X
         local tAbsX = title.AbsolutePosition.X
         local tAbsW = title.AbsoluteSize.X
-        local cAbsX = controls.AbsolutePosition.X
+        local btnAbsX = toggleBtn.Instance.AbsolutePosition.X
 
-        if hAbsX == 0 and cAbsX == 0 then return end
+        if hAbsX == 0 or tAbsW == 0 or btnAbsX == 0 then return end
 
         local startX = (tAbsX - hAbsX) + tAbsW + 5
-        local endX = (cAbsX - hAbsX) - 5
+        local endX = (btnAbsX - hAbsX) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -139,8 +141,8 @@ function SilentAimFactory.new(): SilentAimUI
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
@@ -242,6 +244,7 @@ function SilentAimFactory.new(): SilentAimUI
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
+        task.defer(updateGlowBar)
     end))
 
     maid:GiveTask(container)
