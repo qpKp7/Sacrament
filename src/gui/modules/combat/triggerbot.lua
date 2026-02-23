@@ -1,14 +1,14 @@
 --!strict
-local root = script.Parent.Parent.Parent
-local Maid = require(root.utils.Maid)
+local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
 
-local ToggleButton = require(root.gui.modules.components.ToggleButton)
-local Arrow = require(root.gui.modules.components.Arrow)
-local GlowBar = require(root.gui.modules.components.Glowbar)
-local Sidebar = require(root.gui.modules.components.Sidebar)
-local Slider = require(root.gui.modules.components.Slider)
+local ToggleButton = Import("gui/modules/components/togglebutton")
+local Arrow = Import("gui/modules/components/arrow")
+local GlowBar = Import("gui/modules/components/glowbar")
+local Sidebar = Import("gui/modules/components/sidebar")
+local Slider = Import("gui/modules/components/slider")
 
-local KeybindSection = require(root.gui.modules.combat.sections.shared.Keybind)
+local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 
 export type TriggerBotUI = {
     Instance: Frame,
@@ -21,8 +21,7 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
 
--- Helper: Cria as linhas de Toggle limpas (Wall Check / Knock Check)
-local function createToggleRow(maid: any, title: string, layoutOrder: number): Frame
+local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = title:gsub(" ", "") .. "Row"
     row.Size = UDim2.new(1, 0, 0, 45)
@@ -53,8 +52,7 @@ local function createToggleRow(maid: any, title: string, layoutOrder: number): F
     return row
 end
 
--- Helper: Cria a linha do Delay (0.00 até 3.00)
-local function createDelayRow(maid: any, layoutOrder: number): Frame
+local function createDelayRow(maid: typeof(Maid.new()), layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = "DelayRow"
     row.Size = UDim2.new(1, 0, 0, 45)
@@ -102,7 +100,6 @@ local function createDelayRow(maid: any, layoutOrder: number): Frame
     input.TextSize = 14
     input.Parent = inputBg
 
-    -- Sanitização restrita e formatação
     maid:GiveTask(input:GetPropertyChangedSignal("Text"):Connect(function()
         local text = input.Text:gsub("[^%d%.]", "")
         if #text > 4 then text = string.sub(text, 1, 4) end
@@ -181,10 +178,6 @@ function TriggerBotFactory.new(): TriggerBotUI
     local ctrlPadding = Instance.new("UIPadding")
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
-
-    -- O UIListLayout do Roblox alinha o GRUPO à direita, mas a ordem interna 
-    -- continua da esquerda para a direita baseado no LayoutOrder.
-    -- Para a ordem visual ser ToggleButton -> Arrow, o Toggle deve ser 1 e o Arrow 2.
     
     local toggleBtn = ToggleButton.new()
     toggleBtn.Instance.LayoutOrder = 1
@@ -298,21 +291,17 @@ function TriggerBotFactory.new(): TriggerBotUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    -- 1. Delay
     local delayRow = createDelayRow(maid, 1)
     delayRow.Parent = inputsScroll
 
-    -- 2. Hit Chance
-    local hitChanceSlider = Slider.new("Hit Chance", 0, 100, 95)
+    local hitChanceSlider = Slider.new("Hit Chance", 0, 100, 95, 1)
     hitChanceSlider.Instance.LayoutOrder = 2
     hitChanceSlider.Instance.Parent = inputsScroll
     maid:GiveTask(hitChanceSlider)
 
-    -- 3. Wall Check
     local wallCheckRow = createToggleRow(maid, "Wall Check", 3)
     wallCheckRow.Parent = inputsScroll
 
-    -- 4. Knock Check
     local knockCheckRow = createToggleRow(maid, "Knock Check", 4)
     knockCheckRow.Parent = inputsScroll
 
