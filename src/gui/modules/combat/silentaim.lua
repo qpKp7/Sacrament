@@ -10,25 +10,28 @@ local Sidebar = Import("gui/modules/combat/components/sidebar")
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
 local PredictSection = Import("gui/modules/combat/sections/shared/predict")
+local HitChanceSection = Import("gui/modules/combat/sections/silentaim/hitchance")
+local MarkStyleSection = Import("gui/modules/combat/sections/silentaim/markstyle")
+local FovLimitSection = Import("gui/modules/combat/sections/silentaim/fovlimit")
 local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
 local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
 
-export type AimlockUI = {
+export type SilentAimUI = {
     Instance: Frame,
-    Destroy: (self: AimlockUI) -> ()
+    Destroy: (self: SilentAimUI) -> ()
 }
 
-local AimlockFactory = {}
+local SilentAimFactory = {}
 
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
-function AimlockFactory.new(): AimlockUI
+function SilentAimFactory.new(): SilentAimUI
     local maid = Maid.new()
 
     local container = Instance.new("Frame")
-    container.Name = "AimlockContainer"
+    container.Name = "SilentAimContainer"
     container.Size = UDim2.new(1, 0, 0, 0)
     container.BackgroundTransparency = 1 
     container.BorderSizePixel = 0
@@ -54,7 +57,7 @@ function AimlockFactory.new(): AimlockUI
     title.AutomaticSize = Enum.AutomaticSize.X
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
-    title.Text = "Aimlock"
+    title.Text = "Silent Aim"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
     title.TextSize = 22
@@ -202,15 +205,27 @@ function AimlockFactory.new(): AimlockUI
     predSec.Instance.Parent = inputsScroll
     maid:GiveTask(predSec)
 
-    local aimPartSec = AimPartSection.new(3)
+    local hitChanceSec = HitChanceSection.new(3)
+    hitChanceSec.Instance.Parent = inputsScroll
+    maid:GiveTask(hitChanceSec)
+
+    local markStyleSec = MarkStyleSection.new(4)
+    markStyleSec.Instance.Parent = inputsScroll
+    maid:GiveTask(markStyleSec)
+
+    local fovLimitSec = FovLimitSection.new(5)
+    fovLimitSec.Instance.Parent = inputsScroll
+    maid:GiveTask(fovLimitSec)
+
+    local aimPartSec = AimPartSection.new(6)
     aimPartSec.Instance.Parent = inputsScroll
     maid:GiveTask(aimPartSec)
 
-    local wallCheckSec = WallCheckSection.new(4)
+    local wallCheckSec = WallCheckSection.new(7)
     wallCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(wallCheckSec)
 
-    local knockCheckSec = KnockCheckSection.new(5)
+    local knockCheckSec = KnockCheckSection.new(8)
     knockCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(knockCheckSec)
 
@@ -230,4 +245,4 @@ function AimlockFactory.new(): AimlockUI
     return self
 end
 
-return AimlockFactory
+return SilentAimFactory
