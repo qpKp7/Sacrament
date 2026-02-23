@@ -38,7 +38,7 @@ function SilentAimFactory.new(): SilentAimUI
     container.AutomaticSize = Enum.AutomaticSize.Y
 
     local containerLayout = Instance.new("UIListLayout")
-    containerLayout.FillDirection = Enum.FillDirection.Horizontal
+    containerLayout.FillDirection = Enum.FillDirection.Vertical
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
@@ -53,7 +53,8 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(130, 50)
+    title.Size = UDim2.fromOffset(0, 50)
+    title.AutomaticSize = Enum.AutomaticSize.X
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
@@ -61,7 +62,6 @@ function SilentAimFactory.new(): SilentAimUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 2
     title.Parent = header
 
     local controls = Instance.new("Frame")
@@ -99,7 +99,6 @@ function SilentAimFactory.new(): SilentAimUI
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
-    glowWrapper.ZIndex = 1
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
@@ -109,29 +108,22 @@ function SilentAimFactory.new(): SilentAimUI
     glowBar.Instance.Size = UDim2.fromScale(1, 1)
     glowBar.Instance.Parent = glowWrapper
 
-    local function removeConstraints(inst: Instance)
-        if inst:IsA("UISizeConstraint") or inst:IsA("UIAspectRatioConstraint") then
-            inst:Destroy()
-        end
-        for _, desc in ipairs(inst:GetDescendants()) do
-            if desc:IsA("UISizeConstraint") or desc:IsA("UIAspectRatioConstraint") then
-                desc:Destroy()
-            end
-        end
+    do
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
     end
-    removeConstraints(glowBar.Instance)
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        local hAbsX = header.AbsolutePosition.X
-        local tAbsX = title.AbsolutePosition.X
-        local tAbsW = title.AbsoluteSize.X
-        local btnAbsX = toggleBtn.Instance.AbsolutePosition.X
+        if header.AbsoluteSize.X == 0 then return end
 
-        if hAbsX == 0 or tAbsW == 0 or btnAbsX == 0 then return end
+        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftAbsolute = controls.AbsolutePosition.X
 
-        local startX = (tAbsX - hAbsX) + tAbsW + 5
-        local endX = (btnAbsX - hAbsX) - 5
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -141,21 +133,16 @@ function SilentAimFactory.new(): SilentAimUI
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
-    task.spawn(function()
-        for i = 1, 10 do
-            updateGlowBar()
-            task.wait(0.05)
-        end
-    end)
+    task.defer(updateGlowBar)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.fromScale(1, 1)
+    subFrame.Size = UDim2.new(1, 0, 0, 420)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.Visible = false
@@ -244,7 +231,6 @@ function SilentAimFactory.new(): SilentAimUI
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
-        task.defer(updateGlowBar)
     end))
 
     maid:GiveTask(container)
