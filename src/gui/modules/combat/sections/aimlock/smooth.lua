@@ -25,8 +25,8 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(1, -60, 1, 0)
-    title.Position = UDim2.fromOffset(0, 0)
+    title.Size = UDim2.new(1, -80, 1, 0) 
+    title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Smooth"
     title.TextColor3 = COLOR_WHITE
