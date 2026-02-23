@@ -1,6 +1,5 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-
 local Import = ((_G :: any).SacramentImport :: any)
 local Maid = Import("utils/maid")
 
@@ -28,14 +27,11 @@ local CombatModuleFactory = {}
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
 local COLOR_GLOW = Color3.fromHex("FF3333")
-
 local TWEEN_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function findArrowButtonInHeader(header: Frame): TextButton?
     local controls = header:FindFirstChild("Controls")
-    if not controls then
-        return nil
-    end
+    if not controls then return nil end
 
     for _, desc in ipairs(controls:GetDescendants()) do
         if desc:IsA("TextButton") then
@@ -45,7 +41,6 @@ local function findArrowButtonInHeader(header: Frame): TextButton?
             end
         end
     end
-
     return nil
 end
 
@@ -56,29 +51,8 @@ local function replaceButton(btn: TextButton): TextButton
     return clone
 end
 
-local function cancelTweens(item: AccordionItem)
-    if item.tweenColor then
-        item.tweenColor:Cancel()
-        item.tweenColor:Destroy()
-        item.tweenColor = nil
-    end
-    if item.tweenRot then
-        item.tweenRot:Cancel()
-        item.tweenRot:Destroy()
-        item.tweenRot = nil
-    end
-    if item.tweenStroke then
-        item.tweenStroke:Cancel()
-        item.tweenStroke:Destroy()
-        item.tweenStroke = nil
-    end
-end
-
 local function applyState(item: AccordionItem, isOpen: boolean, animate: boolean)
-    cancelTweens(item)
-
     item.subFrame.Visible = isOpen
-
     local targetColor = if isOpen then COLOR_ARROW_OPEN else COLOR_ARROW_CLOSED
     local targetRotation = if isOpen then 90 else 0
     local targetStrokeTransparency = if isOpen then 0.7 else 1
@@ -90,34 +64,25 @@ local function applyState(item: AccordionItem, isOpen: boolean, animate: boolean
         return
     end
 
-    item.tweenColor = TweenService:Create(item.button, TWEEN_INFO, { TextColor3 = targetColor })
-    item.tweenRot = TweenService:Create(item.button, TWEEN_INFO, { Rotation = targetRotation })
-    item.tweenStroke = TweenService:Create(item.stroke, TWEEN_INFO, { Transparency = targetStrokeTransparency })
-
-    item.tweenColor:Play()
-    item.tweenRot:Play()
-    item.tweenStroke:Play()
+    TweenService:Create(item.button, TWEEN_INFO, { TextColor3 = targetColor }):Play()
+    TweenService:Create(item.button, TWEEN_INFO, { Rotation = targetRotation }):Play()
+    TweenService:Create(item.stroke, TWEEN_INFO, { Transparency = targetStrokeTransparency }):Play()
 end
 
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
+    print("[Sacrament] Initializing Combat Module...")
 
     local container = Instance.new("Frame")
     container.Name = "CombatContainer"
     container.Size = UDim2.fromScale(1, 1)
-    container.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-    container.BorderSizePixel = 0
+    container.BackgroundTransparency = 1
     container.ClipsDescendants = true
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 18)
-    corner.Parent = container
 
     local leftPanel = Instance.new("Frame")
     leftPanel.Name = "LeftPanel"
     leftPanel.Size = UDim2.new(0, 280, 1, 0)
     leftPanel.BackgroundTransparency = 1
-    leftPanel.BorderSizePixel = 0
     leftPanel.Parent = container
 
     local leftLayout = Instance.new("UIListLayout")
@@ -130,7 +95,6 @@ function CombatModuleFactory.new(): CombatModule
     rightPanel.Size = UDim2.new(1, -280, 1, 0)
     rightPanel.Position = UDim2.fromOffset(280, 0)
     rightPanel.BackgroundTransparency = 1
-    rightPanel.BorderSizePixel = 0
     rightPanel.Parent = container
 
     local items: { AccordionItem } = {}
@@ -141,100 +105,63 @@ function CombatModuleFactory.new(): CombatModule
         header.Parent = leftPanel
         header.Visible = true
 
-        subFrame.AutomaticSize = Enum.AutomaticSize.None
         subFrame.Size = UDim2.fromScale(1, 1)
-        subFrame.Position = UDim2.fromOffset(0, 0)
         subFrame.Parent = rightPanel
         subFrame.Visible = false
 
         local rawBtn = findArrowButtonInHeader(header)
-        if not rawBtn then
-            return
-        end
+        if not rawBtn then return end
 
         local btn = replaceButton(rawBtn)
-        btn.Text = ">"
-        btn.TextColor3 = COLOR_ARROW_CLOSED
-        btn.Rotation = 0
-
-        local stroke = btn:FindFirstChildWhichIsA("UIStroke")
-        if stroke then
-            stroke:Destroy()
-        end
-
         local glowStroke = Instance.new("UIStroke")
         glowStroke.Color = COLOR_GLOW
-        glowStroke.Thickness = 1
         glowStroke.Transparency = 1
         glowStroke.Parent = btn
 
         local item: AccordionItem = {
-            header = header,
-            subFrame = subFrame,
-            button = btn,
-            stroke = glowStroke,
-            tweenColor = nil,
-            tweenRot = nil,
-            tweenStroke = nil,
+            header = header, subFrame = subFrame, button = btn, stroke = glowStroke
         }
-
         table.insert(items, item)
 
         maid:GiveTask(btn.MouseButton1Click:Connect(function()
             if openItem == item then
                 openItem = nil
                 applyState(item, false, true)
-                return
+            else
+                if openItem then applyState(openItem, false, true) end
+                openItem = item
+                applyState(item, true, true)
             end
-
-            if openItem then
-                applyState(openItem, false, true)
-            end
-
-            openItem = item
-            applyState(item, true, true)
         end))
-
         applyState(item, false, false)
     end
 
+    -- Aimlock
     local aimlock = AimlockModule.new()
     maid:GiveTask(aimlock)
+    registerAccordion(aimlock.Instance.Header, aimlock.Instance.SubFrame, 1)
 
-    local aimHeader = aimlock.Instance:FindFirstChild("Header")
-    local aimSub = aimlock.Instance:FindFirstChild("SubFrame")
-    if aimHeader and aimSub and aimHeader:IsA("Frame") and aimSub:IsA("Frame") then
-        registerAccordion(aimHeader, aimSub, 1)
-    end
-
+    -- Silent Aim
     local silentAim = SilentAimModule.new()
     maid:GiveTask(silentAim)
+    registerAccordion(silentAim.Instance.Header, silentAim.Instance.SubFrame, 2)
 
-    local silentHeader = silentAim.Instance:FindFirstChild("Header")
-    local silentSub = silentAim.Instance:FindFirstChild("SubFrame")
-    if silentHeader and silentSub and silentHeader:IsA("Frame") and silentSub:IsA("Frame") then
-        registerAccordion(silentHeader, silentSub, 2)
-    end
-
+    -- TriggerBot
     local triggerBot = TriggerBotModule.new()
     maid:GiveTask(triggerBot)
-
-    local triggerHeader = triggerBot.Instance:FindFirstChild("Header")
-    local triggerSub = triggerBot.Instance:FindFirstChild("SubFrame")
-    if triggerHeader and triggerSub and triggerHeader:IsA("Frame") and triggerSub:IsA("Frame") then
-        registerAccordion(triggerHeader, triggerSub, 3)
+    
+    local tHeader = triggerBot.Instance:FindFirstChild("Header")
+    local tSub = triggerBot.Instance:FindFirstChild("SubFrame")
+    
+    if tHeader and tSub then
+        print("[Sacrament] Registering TriggerBot Accordion")
+        registerAccordion(tHeader :: Frame, tSub :: Frame, 3)
+    else
+        warn("[Sacrament] TriggerBot components missing! Check Header/SubFrame naming.")
     end
 
     maid:GiveTask(container)
-
-    local self = {} :: any
-    self.Instance = container
-
-    function self:Destroy()
-        maid:Destroy()
-    end
-
-    return (self :: any) :: CombatModule
+    return { Instance = container, Destroy = function() maid:Destroy() end }
 end
 
 return CombatModuleFactory
