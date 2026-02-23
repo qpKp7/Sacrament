@@ -119,8 +119,8 @@ function AimlockFactory.new(): AimlockUI
         local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
         local controlsLeftAbsolute = controls.AbsolutePosition.X
 
-        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 3
-        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 3
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
 
         local width = math.max(0, endX - startX)
 
