@@ -1,6 +1,6 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local root = script.Parent.Parent.Parent.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
 
 export type AimPartSection = {
     Instance: Frame,
@@ -151,7 +151,7 @@ function AimPartFactory.new(layoutOrder: number): AimPartSection
         maid:Destroy()
     end
 
-    return self
+    return self :: AimPartSection
 end
 
 return AimPartFactory
