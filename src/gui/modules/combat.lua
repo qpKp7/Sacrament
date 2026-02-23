@@ -11,18 +11,30 @@ export type CombatManager = {
 }
 
 local function GetModule(name: string): any?
-    -- Tenta localizar o modulo no ambiente atual (Parent do script ou arvore de jogo)
     local success, result = pcall(function()
+        -- Tentativa 1: Ambiente de Script Standard
         local currentScript = (script :: any)
-        if currentScript and currentScript.Parent then
+        if typeof(currentScript) == "Instance" and currentScript.Parent then
             local found = currentScript.Parent:FindFirstChild(name)
             if found and found:IsA("ModuleScript") then
                 return require(found)
             end
         end
         
-        -- Fallback: Busca global se o script estiver orfao (comum em loadstring)
-        return (getgenv() :: any)[name] or (_G :: any)[name]
+        -- Tentativa 2: Busca Global (Executores/Loadstring)
+        local registry = (getgenv and getgenv() or _G) :: any
+        if registry[name] then
+            return registry[name]
+        end
+
+        -- Tentativa 3: Recursao no ambiente de UI (comum para Sacrament)
+        local CoreGui = game:GetService("CoreGui")
+        local foundInGui = CoreGui:FindFirstChild(name, true)
+        if foundInGui and foundInGui:IsA("ModuleScript") then
+            return require(foundInGui)
+        end
+        
+        error("Dependencia nao encontrada em nenhum escopo: " .. name)
     end)
     
     return if success then result else nil
@@ -31,17 +43,18 @@ end
 local Aimlock = GetModule("Aimlock")
 local SilentAim = GetModule("SilentAim")
 
--- Log de Verificacao de Dependencias
+-- Log de Verificacao de Integridade
 do
-    local status = {}
-    if Aimlock then table.insert(status, "Aimlock: OK") else table.insert(status, "Aimlock: MISSING/ERROR") end
-    if SilentAim then table.insert(status, "SilentAim: OK") else table.insert(status, "SilentAim: MISSING/ERROR") end
+    local missing = {}
+    if not Aimlock then table.insert(missing, "Aimlock") end
+    if not SilentAim then table.insert(missing, "SilentAim") end
     
-    if Aimlock and SilentAim then
-        print("[Combat] OK: Sistema de combate inicializado com sucesso.")
+    if #missing == 0 then
+        print("[Combat] OK: Modulos detectados e vinculados com sucesso.")
     else
-        warn("[Combat] ERRO CRITICO: Verifique se os arquivos estao no mesmo diretorio ou no ambiente global.")
-        print("[Combat] Status Detalhado: " .. table.concat(status, " | "))
+        local errorMsg = "[Combat] ERRO: Falha ao vincular (" .. table.concat(missing, ", ") .. "). Verifique se os arquivos estao no getgenv() ou no mesmo diretorio."
+        warn(errorMsg)
+        print(errorMsg)
     end
 end
 
@@ -59,11 +72,13 @@ function Combat:Enable()
     self.IsActive = true
 
     if Aimlock and typeof(Aimlock) == "table" and Aimlock.Enable then
-        Aimlock:Enable()
+        local success, err = pcall(function() Aimlock:Enable() end)
+        if not success then warn("[Combat] Erro ao ativar Aimlock: " .. tostring(err)) end
     end
 
     if SilentAim and typeof(SilentAim) == "table" and SilentAim.Enable then
-        SilentAim:Enable()
+        local success, err = pcall(function() SilentAim:Enable() end)
+        if not success then warn("[Combat] Erro ao ativar SilentAim: " .. tostring(err)) end
     end
 end
 
@@ -72,15 +87,17 @@ function Combat:Disable()
     self.IsActive = false
 
     if Aimlock and typeof(Aimlock) == "table" and Aimlock.Disable then
-        Aimlock:Disable()
+        pcall(function() Aimlock:Disable() end)
     end
 
     if SilentAim and typeof(SilentAim) == "table" and SilentAim.Disable then
-        SilentAim:Disable()
+        pcall(function() SilentAim:Disable() end)
     end
 
     for _, connection in self.Connections do
-        connection:Disconnect()
+        if typeof(connection) == "RBXScriptConnection" then
+            connection:Disconnect()
+        end
     end
     table.clear(self.Connections)
 end
