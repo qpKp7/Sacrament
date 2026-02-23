@@ -53,27 +53,27 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(85, 50)
+    title.Size = UDim2.fromOffset(105, 50)
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
-    title.TextSize = 18
+    title.TextSize = 20
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(30, 32)
-    glowWrapper.Position = UDim2.new(0, 140, 0.5, 0)
+    glowWrapper.Size = UDim2.fromOffset(24, 32)
+    glowWrapper.Position = UDim2.new(0, 150, 0.5, 0)
     glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
     local glowBar = GlowBar.new()
     glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.new(0.5, 0, 0.5, 0)
+    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
     glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
     glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
     glowBar.Instance.Parent = glowWrapper
