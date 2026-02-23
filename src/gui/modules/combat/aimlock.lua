@@ -115,7 +115,7 @@ function AimlockFactory.new(): AimlockUI
 
     local function updateGlowBar()
         local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X) + 2
-        local endX = (controls.AbsolutePosition.X) - 2
+        local endX = controls.AbsolutePosition.X - 2
         local width = math.max(0, endX - startX)
         
         glowWrapper.Size = UDim2.fromOffset(width, 32)
