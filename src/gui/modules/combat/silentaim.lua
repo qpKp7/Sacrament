@@ -53,7 +53,8 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(105, 50)
+    title.Size = UDim2.fromOffset(0, 50)
+    title.AutomaticSize = Enum.AutomaticSize.X
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
@@ -63,32 +64,10 @@ function SilentAimFactory.new(): SilentAimUI
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
-    local glowWrapper = Instance.new("Frame")
-    glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(24, 32)
-    glowWrapper.Position = UDim2.new(0, 150, 0.5, 0)
-    glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowWrapper.BackgroundTransparency = 1
-    glowWrapper.Parent = header
-
-    local glowBar = GlowBar.new()
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
-    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
-    glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
-    glowBar.Instance.Parent = glowWrapper
-
-    do
-        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
-        if c1 then c1:Destroy() end
-        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
-        if c2 then c2:Destroy() end
-    end
-    maid:GiveTask(glowBar)
-
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
-    controls.Size = UDim2.fromOffset(105, 50)
+    controls.Size = UDim2.fromOffset(0, 50)
+    controls.AutomaticSize = Enum.AutomaticSize.X
     controls.Position = UDim2.fromScale(1, 0)
     controls.AnchorPoint = Vector2.new(1, 0)
     controls.BackgroundTransparency = 1
@@ -115,6 +94,44 @@ function SilentAimFactory.new(): SilentAimUI
     arrow.Instance.LayoutOrder = 2
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
+
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Parent = header
+
+    local glowBar = GlowBar.new()
+    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
+    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+    glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
+    glowBar.Instance.Parent = glowWrapper
+
+    do
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
+    end
+    maid:GiveTask(glowBar)
+
+    local function updateGlowBar()
+        local padding = 2
+        local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X) - header.AbsolutePosition.X + padding
+        local endX = controls.AbsolutePosition.X - header.AbsolutePosition.X - padding
+        
+        local width = math.max(0, endX - startX)
+        glowWrapper.Size = UDim2.fromOffset(width, 32)
+        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
+    end
+
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    
+    task.defer(updateGlowBar)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
