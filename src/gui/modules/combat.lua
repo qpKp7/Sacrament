@@ -1,12 +1,11 @@
 --!strict
 local TweenService = game:GetService("TweenService")
+local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
 
-local root = script.Parent.Parent.Parent
-local Maid = require(root.utils.Maid)
-
-local AimlockModule = require(script.Parent.combat.aimlock)
-local SilentAimModule = require(script.Parent.combat.silentaim)
-local TriggerBotModule = require(script.Parent.combat.triggerbot)
+local AimlockModule = Import("gui/modules/combat/aimlock")
+local SilentAimModule = Import("gui/modules/combat/silentaim")
+local TriggerBotModule = Import("gui/modules/combat/triggerbot")
 
 export type CombatModule = {
     Instance: Frame,
