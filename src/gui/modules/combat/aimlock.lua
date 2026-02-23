@@ -36,7 +36,7 @@ function AimlockFactory.new(): AimlockUI
     container.AutomaticSize = Enum.AutomaticSize.Y
 
     local containerLayout = Instance.new("UIListLayout")
-    containerLayout.FillDirection = Enum.FillDirection.Horizontal
+    containerLayout.FillDirection = Enum.FillDirection.Vertical
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
@@ -51,7 +51,8 @@ function AimlockFactory.new(): AimlockUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(130, 50)
+    title.Size = UDim2.fromOffset(0, 50)
+    title.AutomaticSize = Enum.AutomaticSize.X
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Aimlock"
@@ -59,7 +60,6 @@ function AimlockFactory.new(): AimlockUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 2
     title.Parent = header
 
     local controls = Instance.new("Frame")
@@ -93,7 +93,7 @@ function AimlockFactory.new(): AimlockUI
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
 
-   local glowWrapper = Instance.new("Frame")
+    local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
@@ -114,7 +114,7 @@ function AimlockFactory.new(): AimlockUI
     end
     maid:GiveTask(glowBar)
 
-   local function updateGlowBar()
+    local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
 
         local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
@@ -131,21 +131,16 @@ function AimlockFactory.new(): AimlockUI
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(toggleBtn.Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
-    task.spawn(function()
-        for i = 1, 10 do
-            updateGlowBar()
-            task.wait(0.05)
-        end
-    end)
+    task.defer(updateGlowBar)
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.fromScale(1, 1)
+    subFrame.Size = UDim2.new(1, 0, 0, 320)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.Visible = false
@@ -226,7 +221,6 @@ function AimlockFactory.new(): AimlockUI
 
     maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
         glowBar:SetState(state)
-        task.defer(updateGlowBar)
     end))
 
     maid:GiveTask(container)
