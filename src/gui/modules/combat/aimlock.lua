@@ -1,5 +1,5 @@
 --!strict
-local Import = (_G :: any).SacramentImport
+local Import = ((_G :: any).SacramentImport :: any)
 local Maid = Import("utils/maid")
 
 local ToggleButton = Import("gui/modules/components/togglebutton")
