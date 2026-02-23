@@ -1,6 +1,6 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local root = script.Parent.Parent.Parent.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
 
 export type SmoothSection = {
     Instance: Frame,
@@ -17,8 +17,8 @@ local FONT_MAIN = Enum.Font.GothamBold
 
 local DEFAULT_SMOOTH = "0.50"
 
-local function enforceDecimalBox(box: TextBox, default: string, decimals: number, maxLen: number)
-    box:GetPropertyChangedSignal("Text"):Connect(function()
+local function enforceDecimalBox(maid: any, box: TextBox, default: string, decimals: number, maxLen: number)
+    maid:GiveTask(box:GetPropertyChangedSignal("Text"):Connect(function()
         local text = box.Text
         local clean = string.gsub(text, "[^%d%.]", "")
         local dots = 0
@@ -35,9 +35,9 @@ local function enforceDecimalBox(box: TextBox, default: string, decimals: number
         if box.Text ~= clean then
             box.Text = clean
         end
-    end)
+    end))
     
-    box.FocusLost:Connect(function()
+    maid:GiveTask(box.FocusLost:Connect(function()
         local num = tonumber(box.Text)
         if not num then
             box.Text = default
@@ -46,7 +46,7 @@ local function enforceDecimalBox(box: TextBox, default: string, decimals: number
         
         num = math.clamp(num, 0, 1)
         box.Text = string.format("%." .. tostring(decimals) .. "f", num)
-    end)
+    end))
 end
 
 function SmoothFactory.new(layoutOrder: number): SmoothSection
@@ -114,7 +114,7 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
     smoothBox.ClearTextOnFocus = false
     smoothBox.Parent = inputCont
     
-    enforceDecimalBox(smoothBox, DEFAULT_SMOOTH, 2, 4)
+    enforceDecimalBox(maid, smoothBox, DEFAULT_SMOOTH, 2, 4)
 
     maid:GiveTask(row)
 
@@ -125,7 +125,7 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
         maid:Destroy()
     end
 
-    return self
+    return self :: SmoothSection
 end
 
 return SmoothFactory
