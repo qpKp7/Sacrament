@@ -57,8 +57,7 @@ function AimlockFactory.new(): AimlockUI
     title.Text = "Aimlock"
     title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
-    -- 1) MUDANÇA DE TEXTSIZE: Aumentado levemente para 22 para mais presença e legibilidade
-    title.TextSize = 22 
+    title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
@@ -115,15 +114,12 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        -- 2) MUDANÇA DE ESPAÇAMENTO: Margem explícita de 2px de respiro
-        local padding = 2 
-        
-        local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X) - header.AbsolutePosition.X + padding
-        local endX = controls.AbsolutePosition.X - header.AbsolutePosition.X - padding
-        
+        local startX = (title.AbsolutePosition.X + title.AbsoluteSize.X) + 2
+        local endX = (controls.AbsolutePosition.X) - 2
         local width = math.max(0, endX - startX)
+        
         glowWrapper.Size = UDim2.fromOffset(width, 32)
-        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
+        glowWrapper.Position = UDim2.new(0, startX - header.AbsolutePosition.X, 0.5, 0)
     end
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
