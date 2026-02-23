@@ -119,13 +119,15 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        if header.AbsoluteSize.X == 0 or title.AbsoluteSize.X == 0 then return end
+        local hAbsX = header.AbsolutePosition.X
+        local tAbsX = title.AbsolutePosition.X
+        local tAbsW = title.AbsoluteSize.X
+        local cAbsX = controls.AbsolutePosition.X
 
-        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
-        local controlsLeftAbsolute = controls.AbsolutePosition.X
+        if hAbsX == 0 and cAbsX == 0 then return end
 
-        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
-        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
+        local startX = (tAbsX - hAbsX) + tAbsW + 5
+        local endX = (cAbsX - hAbsX) - 5
 
         local width = math.max(0, endX - startX)
 
@@ -140,9 +142,11 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
-    task.defer(function()
-        updateGlowBar()
-        task.delay(0.05, updateGlowBar)
+    task.spawn(function()
+        for i = 1, 10 do
+            updateGlowBar()
+            task.wait(0.05)
+        end
     end)
 
     local subFrame = Instance.new("Frame")
