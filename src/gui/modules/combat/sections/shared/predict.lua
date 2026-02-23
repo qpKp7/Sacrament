@@ -1,6 +1,6 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local root = script.Parent.Parent.Parent.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
 
 export type PredictSection = {
     Instance: Frame,
@@ -17,8 +17,8 @@ local FONT_MAIN = Enum.Font.GothamBold
 
 local DEFAULT_PREDICT = "0.135"
 
-local function enforceDecimalBox(box: TextBox, default: string, decimals: number, maxLen: number)
-    box:GetPropertyChangedSignal("Text"):Connect(function()
+local function enforceDecimalBox(maid: any, box: TextBox, default: string, decimals: number, maxLen: number)
+    maid:GiveTask(box:GetPropertyChangedSignal("Text"):Connect(function()
         local text = box.Text
         local clean = string.gsub(text, "[^%d%.]", "")
         local dots = 0
@@ -35,9 +35,9 @@ local function enforceDecimalBox(box: TextBox, default: string, decimals: number
         if box.Text ~= clean then
             box.Text = clean
         end
-    end)
+    end))
     
-    box.FocusLost:Connect(function()
+    maid:GiveTask(box.FocusLost:Connect(function()
         local num = tonumber(box.Text)
         if not num then
             box.Text = default
@@ -46,7 +46,7 @@ local function enforceDecimalBox(box: TextBox, default: string, decimals: number
         
         num = math.clamp(num, 0, 1)
         box.Text = string.format("%." .. tostring(decimals) .. "f", num)
-    end)
+    end))
 end
 
 function PredictFactory.new(layoutOrder: number): PredictSection
@@ -111,7 +111,7 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     predBox.ClearTextOnFocus = false
     predBox.Parent = inputCont
     
-    enforceDecimalBox(predBox, DEFAULT_PREDICT, 3, 5)
+    enforceDecimalBox(maid, predBox, DEFAULT_PREDICT, 3, 5)
 
     maid:GiveTask(row)
 
@@ -122,7 +122,7 @@ function PredictFactory.new(layoutOrder: number): PredictSection
         maid:Destroy()
     end
 
-    return self
+    return self :: PredictSection
 end
 
 return PredictFactory
