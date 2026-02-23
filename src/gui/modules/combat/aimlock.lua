@@ -1,19 +1,19 @@
 --!strict
-local root = script.Parent.Parent.Parent.Parent
-local Maid = require(root.utils.Maid)
+local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
 
-local ToggleButton = require(root.gui.modules.components.ToggleButton)
-local Arrow = require(root.gui.modules.components.Arrow)
-local GlowBar = require(root.gui.modules.components.Glowbar)
-local Sidebar = require(root.gui.modules.components.Sidebar)
+local ToggleButton = Import("gui/modules/components/togglebutton")
+local Arrow = Import("gui/modules/components/arrow")
+local GlowBar = Import("gui/modules/components/glowbar")
+local Sidebar = Import("gui/modules/components/sidebar")
 
-local KeybindSection = require(root.gui.modules.combat.sections.shared.Keybind)
-local KeyHoldSection = require(root.gui.modules.combat.sections.shared.Keyhold)
-local PredictSection = require(root.gui.modules.combat.sections.shared.Predict)
-local SmoothSection = require(root.gui.modules.combat.sections.aimlock.Smooth)
-local AimPartSection = require(root.gui.modules.combat.sections.shared.Aimpart)
-local WallCheckSection = require(root.gui.modules.combat.sections.shared.Wallcheck)
-local KnockCheckSection = require(root.gui.modules.combat.sections.shared.Knockcheck)
+local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
+local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
+local PredictSection = Import("gui/modules/combat/sections/shared/predict")
+local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
+local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
+local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
+local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
 
 export type AimlockUI = {
     Instance: Frame,
