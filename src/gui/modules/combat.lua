@@ -1,220 +1,93 @@
 --!strict
-local TweenService = game:GetService("TweenService")
+local Combat = {}
+Combat.__index = Combat
 
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
-
-local AimlockModule = Import("gui/modules/combat/aimlock")
-local SilentAimModule = Import("gui/modules/combat/silentaim")
-local TriggerBotModule = Import("gui/modules/combat/triggerbot")
-
-export type CombatModule = {
-	Instance: Frame,
-	Destroy: (self: CombatModule) -> (),
+export type CombatManager = {
+    Connections: {RBXScriptConnection},
+    IsActive: boolean,
+    Enable: (self: CombatManager) -> (),
+    Disable: (self: CombatManager) -> (),
+    Destroy: (self: CombatManager) -> ()
 }
 
-type AccordionItem = {
-	header: Frame,
-	subFrame: Frame,
-	button: GuiButton?,
-	glyph: TextLabel?,
-}
-
-local CombatModuleFactory = {}
-
-local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
-local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
-local TWEEN_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-local function getControls(header: Frame): Instance?
-	return header:FindFirstChild("Controls")
+local function GetModule(name: string): any?
+    -- Tenta localizar o modulo no ambiente atual (Parent do script ou arvore de jogo)
+    local success, result = pcall(function()
+        local currentScript = (script :: any)
+        if currentScript and currentScript.Parent then
+            local found = currentScript.Parent:FindFirstChild(name)
+            if found and found:IsA("ModuleScript") then
+                return require(found)
+            end
+        end
+        
+        -- Fallback: Busca global se o script estiver orfao (comum em loadstring)
+        return (getgenv() :: any)[name] or (_G :: any)[name]
+    end)
+    
+    return if success then result else nil
 end
 
-local function findRightmostButton(controls: Instance): GuiButton?
-	local best: GuiButton? = nil
-	local bestX = -math.huge
+local Aimlock = GetModule("Aimlock")
+local SilentAim = GetModule("SilentAim")
 
-	for _, desc in ipairs(controls:GetDescendants()) do
-		if desc:IsA("GuiButton") then
-			local x = desc.AbsolutePosition.X
-			if x > bestX then
-				bestX = x
-				best = desc
-			end
-		end
-	end
-
-	return best
+-- Log de Verificacao de Dependencias
+do
+    local status = {}
+    if Aimlock then table.insert(status, "Aimlock: OK") else table.insert(status, "Aimlock: MISSING/ERROR") end
+    if SilentAim then table.insert(status, "SilentAim: OK") else table.insert(status, "SilentAim: MISSING/ERROR") end
+    
+    if Aimlock and SilentAim then
+        print("[Combat] OK: Sistema de combate inicializado com sucesso.")
+    else
+        warn("[Combat] ERRO CRITICO: Verifique se os arquivos estao no mesmo diretorio ou no ambiente global.")
+        print("[Combat] Status Detalhado: " .. table.concat(status, " | "))
+    end
 end
 
-local function findArrowGlyph(controls: Instance): TextLabel?
-	local best: TextLabel? = nil
-	local bestX = -math.huge
-
-	for _, desc in ipairs(controls:GetDescendants()) do
-		if desc:IsA("TextLabel") then
-			local t = desc.Text
-			if t == ">" or t == "v" or t == "<" or t == "V" or t == "^" then
-				local x = desc.AbsolutePosition.X
-				if x > bestX then
-					bestX = x
-					best = desc
-				end
-			end
-		end
-	end
-
-	return best
+function Combat.new(): CombatManager
+    local self = setmetatable({
+        Connections = {},
+        IsActive = false
+    }, Combat)
+    
+    return (self :: any) :: CombatManager
 end
 
-local function applyState(item: AccordionItem, isOpen: boolean, animate: boolean)
-	item.subFrame.Visible = isOpen
+function Combat:Enable()
+    if self.IsActive then return end
+    self.IsActive = true
 
-	local targetColor = if isOpen then COLOR_ARROW_OPEN else COLOR_ARROW_CLOSED
-	local targetText = if isOpen then "v" else ">"
+    if Aimlock and typeof(Aimlock) == "table" and Aimlock.Enable then
+        Aimlock:Enable()
+    end
 
-	if item.glyph then
-		item.glyph.Text = targetText
-		if animate then
-			TweenService:Create(item.glyph, TWEEN_INFO, { TextColor3 = targetColor }):Play()
-		else
-			item.glyph.TextColor3 = targetColor
-		end
-	elseif item.button and item.button:IsA("TextButton") then
-		(item.button :: TextButton).Text = targetText
-		if animate then
-			TweenService:Create(item.button, TWEEN_INFO, { TextColor3 = targetColor }):Play()
-		else
-			(item.button :: TextButton).TextColor3 = targetColor
-		end
-	end
+    if SilentAim and typeof(SilentAim) == "table" and SilentAim.Enable then
+        SilentAim:Enable()
+    end
 end
 
-function CombatModuleFactory.new(): CombatModule
-	local maid = Maid.new()
+function Combat:Disable()
+    if not self.IsActive then return end
+    self.IsActive = false
 
-	local container = Instance.new("Frame")
-	container.Name = "CombatContainer"
-	container.Size = UDim2.fromScale(1, 1)
-	container.BackgroundTransparency = 1
-	container.BorderSizePixel = 0
-	container.ClipsDescendants = true
+    if Aimlock and typeof(Aimlock) == "table" and Aimlock.Disable then
+        Aimlock:Disable()
+    end
 
-	local leftPanel = Instance.new("Frame")
-	leftPanel.Name = "LeftPanel"
-	leftPanel.Size = UDim2.new(0, 280, 1, 0)
-	leftPanel.BackgroundTransparency = 1
-	leftPanel.BorderSizePixel = 0
-	leftPanel.Parent = container
+    if SilentAim and typeof(SilentAim) == "table" and SilentAim.Disable then
+        SilentAim:Disable()
+    end
 
-	local leftLayout = Instance.new("UIListLayout")
-	leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	leftLayout.Padding = UDim.new(0, 10)
-	leftLayout.Parent = leftPanel
-
-	local rightPanel = Instance.new("Frame")
-	rightPanel.Name = "RightPanel"
-	rightPanel.Size = UDim2.new(1, -280, 1, 0)
-	rightPanel.Position = UDim2.fromOffset(280, 0)
-	rightPanel.BackgroundTransparency = 1
-	rightPanel.BorderSizePixel = 0
-	rightPanel.Parent = container
-
-	local items: { AccordionItem } = {}
-	local openItem: AccordionItem? = nil
-
-	local function toggleItem(item: AccordionItem)
-		if openItem == item then
-			openItem = nil
-			applyState(item, false, true)
-			return
-		end
-
-		if openItem then
-			applyState(openItem, false, true)
-		end
-
-		openItem = item
-		applyState(item, true, true)
-	end
-
-	local function bindArrow(item: AccordionItem)
-		local controls = getControls(item.header)
-		if not controls then
-			return
-		end
-
-		local btn = findRightmostButton(controls)
-		local glyph = findArrowGlyph(controls)
-
-		item.button = btn
-		item.glyph = glyph
-
-		applyState(item, false, false)
-
-		if btn then
-			maid:GiveTask(btn.Activated:Connect(function()
-				toggleItem(item)
-			end))
-		end
-	end
-
-	local function registerAccordion(header: Frame, subFrame: Frame, layoutOrder: number)
-		header.LayoutOrder = layoutOrder
-		header.Parent = leftPanel
-		header.Visible = true
-
-		subFrame.Size = UDim2.fromScale(1, 1)
-		subFrame.Parent = rightPanel
-		subFrame.Visible = false
-
-		local item: AccordionItem = {
-			header = header,
-			subFrame = subFrame,
-			button = nil,
-			glyph = nil,
-		}
-		table.insert(items, item)
-
-		task.defer(function()
-			bindArrow(item)
-		end)
-	end
-
-	local aimlock = AimlockModule.new()
-	maid:GiveTask(aimlock)
-	local aHeader = aimlock.Instance:FindFirstChild("Header")
-	local aSub = aimlock.Instance:FindFirstChild("SubFrame")
-	if aHeader and aSub then
-		registerAccordion(aHeader :: Frame, aSub :: Frame, 1)
-	end
-
-	local silentAim = SilentAimModule.new()
-	maid:GiveTask(silentAim)
-	local sHeader = silentAim.Instance:FindFirstChild("Header")
-	local sSub = silentAim.Instance:FindFirstChild("SubFrame")
-	if sHeader and sSub then
-		registerAccordion(sHeader :: Frame, sSub :: Frame, 2)
-	end
-
-	local triggerBot = TriggerBotModule.new()
-	maid:GiveTask(triggerBot)
-	local tHeader = triggerBot.Instance:FindFirstChild("Header")
-	local tSub = triggerBot.Instance:FindFirstChild("SubFrame")
-	if tHeader and tSub then
-		registerAccordion(tHeader :: Frame, tSub :: Frame, 3)
-	end
-
-	maid:GiveTask(container)
-
-	local self = {}
-	self.Instance = container
-
-	function self:Destroy()
-		maid:Destroy()
-	end
-
-	return self :: CombatModule
+    for _, connection in self.Connections do
+        connection:Disconnect()
+    end
+    table.clear(self.Connections)
 end
 
-return CombatModuleFactory
+function Combat:Destroy()
+    self:Disable()
+    setmetatable(self :: any, nil)
+end
+
+return Combat
