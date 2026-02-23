@@ -48,6 +48,7 @@ function SilentAimFactory.new(): SilentAimUI
     header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
+    header.ClipsDescendants = true
     header.Parent = container
 
     local title = Instance.new("TextLabel")
@@ -62,11 +63,9 @@ function SilentAimFactory.new(): SilentAimUI
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
-    -- GlowWrapper desacoplado do container 'controls' para posicionamento absoluto
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
-    glowWrapper.Size = UDim2.fromOffset(25, 32) -- Tamanho encurtado para evitar sobreposição lateral
-    -- Posição 140px é o centro exato entre o fim do Title (105px) e o início do Controls (175px)
+    glowWrapper.Size = UDim2.fromOffset(30, 32)
     glowWrapper.Position = UDim2.new(0, 140, 0.5, 0)
     glowWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
     glowWrapper.BackgroundTransparency = 1
@@ -79,7 +78,6 @@ function SilentAimFactory.new(): SilentAimUI
     glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
     glowBar.Instance.Parent = glowWrapper
 
-    -- Limpeza de constraints para permitir redimensionamento manual preciso
     do
         local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
         if c1 then c1:Destroy() end
