@@ -10,6 +10,7 @@ local Sidebar = Import("gui/modules/combat/components/sidebar")
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
 local PredictSection = Import("gui/modules/combat/sections/shared/predict")
+local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
 local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
 local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
@@ -50,8 +51,7 @@ function AimlockFactory.new(): AimlockUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(0, 50)
-    title.AutomaticSize = Enum.AutomaticSize.X
+    title.Size = UDim2.fromOffset(130, 50)
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Aimlock"
@@ -210,15 +210,19 @@ function AimlockFactory.new(): AimlockUI
     predSec.Instance.Parent = inputsScroll
     maid:GiveTask(predSec)
 
-    local aimPartSec = AimPartSection.new(3)
+    local smoothSec = SmoothSection.new(3)
+    smoothSec.Instance.Parent = inputsScroll
+    maid:GiveTask(smoothSec)
+
+    local aimPartSec = AimPartSection.new(4)
     aimPartSec.Instance.Parent = inputsScroll
     maid:GiveTask(aimPartSec)
 
-    local wallCheckSec = WallCheckSection.new(4)
+    local wallCheckSec = WallCheckSection.new(5)
     wallCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(wallCheckSec)
 
-    local knockCheckSec = KnockCheckSection.new(5)
+    local knockCheckSec = KnockCheckSection.new(6)
     knockCheckSec.Instance.Parent = inputsScroll
     maid:GiveTask(knockCheckSec)
 
