@@ -2,7 +2,7 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
-local ToggleButton = Import("gui/modules/combat/components/togglebutton")
+local TextBox = Import("gui/modules/combat/components/textbox")
 
 export type SmoothSection = {
     Instance: Frame,
@@ -25,7 +25,7 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.new(1, -80, 1, 0) 
+    title.Size = UDim2.new(1, -80, 1, 0)
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Smooth"
@@ -35,11 +35,12 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = container
 
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.AnchorPoint = Vector2.new(1, 0.5)
-    toggleBtn.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-    toggleBtn.Instance.Parent = container
-    maid:GiveTask(toggleBtn)
+    local valueBox = TextBox.new()
+    valueBox.Instance.AnchorPoint = Vector2.new(1, 0.5)
+    valueBox.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+    valueBox.Instance.Size = UDim2.fromOffset(90, 28)
+    valueBox.Instance.Parent = container
+    maid:GiveTask(valueBox)
 
     maid:GiveTask(container)
     
