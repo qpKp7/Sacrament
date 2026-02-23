@@ -53,8 +53,7 @@ function SilentAimFactory.new(): SilentAimUI
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.Size = UDim2.fromOffset(0, 50)
-    title.AutomaticSize = Enum.AutomaticSize.X
+    title.Size = UDim2.fromOffset(130, 50)
     title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Silent Aim"
