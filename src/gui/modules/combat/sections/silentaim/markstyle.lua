@@ -1,6 +1,6 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
+local root = script.Parent.Parent.Parent.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
 
 export type MarkStyleSection = {
     Instance: Frame,
@@ -19,7 +19,7 @@ local FONT_MAIN = Enum.Font.GothamBold
 function MarkStyleFactory.new(layoutOrder: number): MarkStyleSection
     local maid = Maid.new()
     local isDropdownOpen = false
-    local options = {"Highlight", "TorsoDot", "BodyOutline"}
+    local options = {"Highlight", "TorsoDot", "BodyOutline", "Notify", "None"}
 
     local row = Instance.new("Frame")
     row.Name = "MarkStyleRow"
@@ -151,7 +151,7 @@ function MarkStyleFactory.new(layoutOrder: number): MarkStyleSection
         maid:Destroy()
     end
 
-    return self
+    return self :: MarkStyleSection
 end
 
 return MarkStyleFactory
