@@ -1,7 +1,7 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
-local Slider = Import("gui/modules/combat/components/slider")
+local root = script.Parent.Parent.Parent.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
+local Slider = require(root.gui.modules.components.Slider)
 
 export type HitChanceSection = {
     Instance: Frame,
@@ -24,7 +24,7 @@ function HitChanceFactory.new(layoutOrder: number): HitChanceSection
         maid:Destroy()
     end
 
-    return self
+    return self :: HitChanceSection
 end
 
 return HitChanceFactory
