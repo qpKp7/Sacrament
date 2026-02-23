@@ -103,9 +103,9 @@ function SilentAimFactory.new(): SilentAimUI
 
     local glowBar = GlowBar.new()
     glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.new(0.5, 1, 0.5, 0)
+    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
     glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
-    glowBar.Instance.Size = UDim2.new(1, 0, 1, 0)
+    glowBar.Instance.Size = UDim2.fromScale(1, 1)
     glowBar.Instance.Parent = glowWrapper
 
     do
@@ -117,21 +117,26 @@ function SilentAimFactory.new(): SilentAimUI
     maid:GiveTask(glowBar)
 
     local function updateGlowBar()
-        local titleRightEdge = title.Position.X.Offset + title.AbsoluteSize.X
-        local controlsLeftEdge = header.AbsoluteSize.X - controls.AbsoluteSize.X
-        
-        local startX = titleRightEdge + 1 
-        local endX = controlsLeftEdge - 3 
-        
+        if header.AbsoluteSize.X == 0 then return end
+
+        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftAbsolute = controls.AbsolutePosition.X
+
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 2
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 2
+
         local width = math.max(0, endX - startX)
-        
+
         glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
         glowWrapper.Size = UDim2.fromOffset(width, 32)
     end
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     
     task.defer(updateGlowBar)
 
