@@ -1,7 +1,7 @@
 --!strict
-local Import = (_G :: any).SacramentImport
-local Maid = Import("utils/maid")
-local ToggleButton = Import("gui/modules/combat/components/togglebutton")
+local root = script.Parent.Parent.Parent.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
+local ToggleButton = require(root.gui.modules.components.ToggleButton)
 
 export type WallCheckSection = {
     Instance: Frame,
@@ -67,7 +67,7 @@ function WallCheckFactory.new(layoutOrder: number): WallCheckSection
         maid:Destroy()
     end
 
-    return self
+    return self :: WallCheckSection
 end
 
 return WallCheckFactory
