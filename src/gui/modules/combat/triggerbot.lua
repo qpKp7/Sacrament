@@ -6,7 +6,7 @@ local ToggleButton = Import("gui/modules/combat/components/togglebutton")
 local Arrow = Import("gui/modules/combat/components/arrow")
 local GlowBar = Import("gui/modules/combat/components/glowbar")
 local Sidebar = Import("gui/modules/combat/components/sidebar")
-local Slider = Import("gui/modules/combat/components/slider") -- [CORREÇÃO: O nome correto do arquivo é slider, não sliderbar]
+local Slider = Import("gui/modules/combat/components/slider")
 
 local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
 
@@ -21,7 +21,6 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
 
--- Helper: Cria as linhas de Toggle limpas (Wall Check / Knock Check)
 local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = title:gsub(" ", "") .. "Row"
@@ -53,7 +52,6 @@ local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOr
     return row
 end
 
--- Helper: Cria a linha do Delay (0.00 até 3.00)
 local function createDelayRow(maid: typeof(Maid.new()), layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = "DelayRow"
@@ -102,7 +100,6 @@ local function createDelayRow(maid: typeof(Maid.new()), layoutOrder: number): Fr
     input.TextSize = 14
     input.Parent = inputBg
 
-    -- Sanitização restrita e formatação
     maid:GiveTask(input:GetPropertyChangedSignal("Text"):Connect(function()
         local text = input.Text:gsub("[^%d%.]", "")
         if #text > 4 then text = string.sub(text, 1, 4) end
@@ -182,17 +179,15 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
 
-    -- Como o HorizontalAlignment é Right, LayoutOrder=1 fica totalmente à direita. LayoutOrder=2 fica à sua esquerda.
-    -- Ordem visual: ToggleButton (Esq) -> Arrow (Dir)
-    local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 1
-    arrow.Instance.Parent = controls
-    maid:GiveTask(arrow)
-
     local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 2
+    toggleBtn.Instance.LayoutOrder = 1
     toggleBtn.Instance.Parent = controls
     maid:GiveTask(toggleBtn)
+
+    local arrow = Arrow.new()
+    arrow.Instance.LayoutOrder = 2
+    arrow.Instance.Parent = controls
+    maid:GiveTask(arrow)
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
@@ -296,21 +291,17 @@ function TriggerBotFactory.new(): TriggerBotUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    -- 1. Delay
     local delayRow = createDelayRow(maid, 1)
     delayRow.Parent = inputsScroll
 
-    -- 2. Hit Chance
     local hitChanceSlider = Slider.new("Hit Chance", 0, 100, 95)
     hitChanceSlider.Instance.LayoutOrder = 2
     hitChanceSlider.Instance.Parent = inputsScroll
     maid:GiveTask(hitChanceSlider)
 
-    -- 3. Wall Check
     local wallCheckRow = createToggleRow(maid, "Wall Check", 3)
     wallCheckRow.Parent = inputsScroll
 
-    -- 4. Knock Check
     local knockCheckRow = createToggleRow(maid, "Knock Check", 4)
     knockCheckRow.Parent = inputsScroll
 
