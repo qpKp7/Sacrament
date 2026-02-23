@@ -1,6 +1,6 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-local Import = (_G :: any).SacramentImport
+local Import = ((_G :: any).SacramentImport :: any)
 local Maid = Import("utils/maid")
 
 local AimlockModule = Import("gui/modules/combat/aimlock")
@@ -71,7 +71,6 @@ end
 
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
-    print("[Sacrament] Initializing Combat Module...")
 
     local container = Instance.new("Frame")
     container.Name = "CombatContainer"
@@ -137,7 +136,6 @@ function CombatModuleFactory.new(): CombatModule
         applyState(item, false, false)
     end
 
-    -- Aimlock
     local aimlock = AimlockModule.new()
     maid:GiveTask(aimlock)
     local aHeader = aimlock.Instance:FindFirstChild("Header")
@@ -146,7 +144,6 @@ function CombatModuleFactory.new(): CombatModule
         registerAccordion(aHeader :: Frame, aSub :: Frame, 1)
     end
 
-    -- Silent Aim
     local silentAim = SilentAimModule.new()
     maid:GiveTask(silentAim)
     local sHeader = silentAim.Instance:FindFirstChild("Header")
@@ -155,15 +152,12 @@ function CombatModuleFactory.new(): CombatModule
         registerAccordion(sHeader :: Frame, sSub :: Frame, 2)
     end
 
-    -- TriggerBot
     local triggerBot = TriggerBotModule.new()
     maid:GiveTask(triggerBot)
     local tHeader = triggerBot.Instance:FindFirstChild("Header")
     local tSub = triggerBot.Instance:FindFirstChild("SubFrame")
     if tHeader and tSub then
         registerAccordion(tHeader :: Frame, tSub :: Frame, 3)
-    else
-        warn("[Sacrament] TriggerBot components missing! Check Header/SubFrame naming.")
     end
 
     maid:GiveTask(container)
