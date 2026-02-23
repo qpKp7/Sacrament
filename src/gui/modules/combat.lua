@@ -139,6 +139,7 @@ function CombatModuleFactory.new(): CombatModule
     local function registerAccordion(header: Frame, subFrame: Frame, layoutOrder: number)
         header.LayoutOrder = layoutOrder
         header.Parent = leftPanel
+        header.Visible = true
 
         subFrame.AutomaticSize = Enum.AutomaticSize.None
         subFrame.Size = UDim2.fromScale(1, 1)
