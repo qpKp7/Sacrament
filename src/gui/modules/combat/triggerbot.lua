@@ -14,6 +14,7 @@ export type TriggerBotUI = {
 }
 
 local TriggerBotFactory = {}
+
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
@@ -26,9 +27,8 @@ function TriggerBotFactory.new(): TriggerBotUI
     container.BackgroundTransparency = 1 
     container.AutomaticSize = Enum.AutomaticSize.Y
 
-    -- HEADER
     local header = Instance.new("Frame")
-    header.Name = "Header" -- Crucial para o combat.lua encontrar
+    header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 50)
     header.BackgroundTransparency = 1
     header.Parent = container
@@ -59,6 +59,7 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
     ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ctrlLayout.Padding = UDim.new(0, 15)
     ctrlLayout.Parent = controls
 
@@ -67,14 +68,15 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlPadding.Parent = controls
 
     local toggleBtn = ToggleButton.new()
+    toggleBtn.Instance.LayoutOrder = 1
     toggleBtn.Instance.Parent = controls
     maid:GiveTask(toggleBtn)
 
     local arrow = Arrow.new()
+    arrow.Instance.LayoutOrder = 2
     arrow.Instance.Parent = controls
     maid:GiveTask(arrow)
 
-    -- GLOWBAR (Regra 5px)
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
@@ -99,9 +101,8 @@ function TriggerBotFactory.new(): TriggerBotUI
     maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME
     local subFrame = Instance.new("Frame")
-    subFrame.Name = "SubFrame" -- Crucial para o combat.lua encontrar
+    subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 100)
     subFrame.BackgroundTransparency = 1
     subFrame.Parent = container
@@ -116,15 +117,29 @@ function TriggerBotFactory.new(): TriggerBotUI
     rightContent.Position = UDim2.fromOffset(2, 0)
     rightContent.BackgroundTransparency = 1
     rightContent.Parent = subFrame
+    
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Parent = rightContent
 
     local keySec = KeybindSection.new(1)
     keySec.Instance.Parent = rightContent
     maid:GiveTask(keySec)
 
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state) glowBar:SetState(state) end))
+    maid:GiveTask(toggleBtn.Toggled:Connect(function(state) 
+        glowBar:SetState(state) 
+    end))
+
     maid:GiveTask(container)
 
-    return { Instance = container, Destroy = function() maid:Destroy() end }
+    local self = {}
+    self.Instance = container
+
+    function self:Destroy()
+        maid:Destroy()
+    end
+
+    return self
 end
 
 return TriggerBotFactory
