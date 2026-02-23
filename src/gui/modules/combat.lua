@@ -1,11 +1,12 @@
 --!strict
 local TweenService = game:GetService("TweenService")
-local Import = ((_G :: any).SacramentImport :: any)
-local Maid = Import("utils/maid")
 
-local AimlockModule = Import("gui/modules/combat/aimlock")
-local SilentAimModule = Import("gui/modules/combat/silentaim")
-local TriggerBotModule = Import("gui/modules/combat/triggerbot")
+local root = script.Parent.Parent.Parent
+local Maid = require(root.utils.Maid)
+
+local AimlockModule = require(script.Parent.combat.aimlock)
+local SilentAimModule = require(script.Parent.combat.silentaim)
+local TriggerBotModule = require(script.Parent.combat.triggerbot)
 
 export type CombatModule = {
     Instance: Frame,
@@ -133,35 +134,49 @@ function CombatModuleFactory.new(): CombatModule
                 applyState(item, true, true)
             end
         end))
+        
         applyState(item, false, false)
     end
 
     -- Aimlock
     local aimlock = AimlockModule.new()
     maid:GiveTask(aimlock)
-    registerAccordion(aimlock.Instance.Header, aimlock.Instance.SubFrame, 1)
+    local aHeader = aimlock.Instance:FindFirstChild("Header")
+    local aSub = aimlock.Instance:FindFirstChild("SubFrame")
+    if aHeader and aSub then
+        registerAccordion(aHeader :: Frame, aSub :: Frame, 1)
+    end
 
     -- Silent Aim
     local silentAim = SilentAimModule.new()
     maid:GiveTask(silentAim)
-    registerAccordion(silentAim.Instance.Header, silentAim.Instance.SubFrame, 2)
+    local sHeader = silentAim.Instance:FindFirstChild("Header")
+    local sSub = silentAim.Instance:FindFirstChild("SubFrame")
+    if sHeader and sSub then
+        registerAccordion(sHeader :: Frame, sSub :: Frame, 2)
+    end
 
     -- TriggerBot
     local triggerBot = TriggerBotModule.new()
     maid:GiveTask(triggerBot)
-    
     local tHeader = triggerBot.Instance:FindFirstChild("Header")
     local tSub = triggerBot.Instance:FindFirstChild("SubFrame")
-    
     if tHeader and tSub then
-        print("[Sacrament] Registering TriggerBot Accordion")
         registerAccordion(tHeader :: Frame, tSub :: Frame, 3)
     else
         warn("[Sacrament] TriggerBot components missing! Check Header/SubFrame naming.")
     end
 
     maid:GiveTask(container)
-    return { Instance = container, Destroy = function() maid:Destroy() end }
+    
+    local self = {}
+    self.Instance = container
+
+    function self:Destroy()
+        maid:Destroy()
+    end
+
+    return self :: CombatModule
 end
 
 return CombatModuleFactory
