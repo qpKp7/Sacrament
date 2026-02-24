@@ -4,14 +4,14 @@ local UIManager = require(script.Parent.gui.UIManager)
 
 local App = {}
 
-function App.Start()
-    InputHandler.Init()
-    UIManager.Init()
+function App.Start(): ()
+	InputHandler.Init()
+	UIManager.Init()
 end
 
-function App.Stop()
-    InputHandler.Destroy()
-    UIManager.Destroy()
+function App.Stop(): ()
+	InputHandler.Destroy()
+	UIManager.Destroy()
 end
 
 return App
