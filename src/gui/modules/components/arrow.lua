@@ -36,13 +36,22 @@ function ArrowFactory.new(): Arrow
     button.AnchorPoint = Vector2.new(0.5, 0.5)
     button.BackgroundTransparency = 1
     button.Text = ">"
+    button.Rotation = 0
     button.TextColor3 = COLOR_CLOSED
     button.Font = FONT_MAIN
     button.TextSize = 18
     button.ZIndex = 2
     button.Parent = container
 
+    local currentTween: Tween? = nil
+
     local function updateVisuals(isExpanded: boolean)
+        if currentTween then
+            currentTween:Cancel()
+            currentTween:Destroy()
+            currentTween = nil
+        end
+
         local targetRot = isExpanded and 90 or 0
         local targetColor = isExpanded and COLOR_OPEN or COLOR_CLOSED
         
@@ -50,10 +59,20 @@ function ArrowFactory.new(): Arrow
             Rotation = targetRot,
             TextColor3 = targetColor
         })
+        
+        currentTween = tween
         tween:Play()
-        maid:GiveTask(tween.Completed:Connect(function()
+        
+        local connection: RBXScriptConnection
+        connection = tween.Completed:Connect(function()
+            if connection then
+                connection:Disconnect()
+            end
+            if currentTween == tween then
+                currentTween = nil
+            end
             tween:Destroy()
-        end))
+        end)
     end
 
     maid:GiveTask(button.MouseButton1Click:Connect(function()
@@ -72,6 +91,10 @@ function ArrowFactory.new(): Arrow
     end
 
     function self:Destroy()
+        if currentTween then
+            currentTween:Cancel()
+            currentTween:Destroy()
+        end
         maid:Destroy()
     end
 
