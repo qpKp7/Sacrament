@@ -2,18 +2,30 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
-local ToggleButton = Import("gui/modules/components/togglebutton")
-local Arrow = Import("gui/modules/components/arrow")
-local GlowBar = Import("gui/modules/components/glowbar")
-local Sidebar = Import("gui/modules/components/sidebar")
+-- Proteção de Módulo: Isolamento de dependências via pcall
+local function SafeImport(path: string): any?
+    local success, result = pcall(function()
+        return Import(path)
+    end)
+    if not success then
+        warn("[Sacrament] Falha ao importar: " .. path)
+        return nil
+    end
+    return result
+end
 
-local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
-local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
-local PredictSection = Import("gui/modules/combat/sections/shared/predict")
-local SmoothSection = Import("gui/modules/combat/sections/aimlock/smooth")
-local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
-local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
-local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
+local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local Arrow = SafeImport("gui/modules/components/arrow")
+local GlowBar = SafeImport("gui/modules/components/glowbar")
+local Sidebar = SafeImport("gui/modules/components/sidebar")
+
+local KeybindSection = SafeImport("gui/modules/combat/sections/shared/keybind")
+local KeyHoldSection = SafeImport("gui/modules/combat/sections/shared/keyhold")
+local PredictSection = SafeImport("gui/modules/combat/sections/shared/predict")
+local SmoothSection = SafeImport("gui/modules/combat/sections/aimlock/smooth")
+local AimPartSection = SafeImport("gui/modules/combat/sections/shared/aimpart")
+local WallCheckSection = SafeImport("gui/modules/combat/sections/shared/wallcheck")
+local KnockCheckSection = SafeImport("gui/modules/combat/sections/shared/knockcheck")
 
 export type AimlockUI = {
     Instance: Frame,
@@ -83,15 +95,21 @@ function AimlockFactory.new(): AimlockUI
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
 
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
-    toggleBtn.Instance.Parent = controls
-    maid:GiveTask(toggleBtn)
+    local toggleBtn
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        toggleBtn = ToggleButton.new()
+        toggleBtn.Instance.LayoutOrder = 1
+        toggleBtn.Instance.Parent = controls
+        maid:GiveTask(toggleBtn)
+    end
 
-    local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
-    arrow.Instance.Parent = controls
-    maid:GiveTask(arrow)
+    local arrow
+    if Arrow and type(Arrow.new) == "function" then
+        arrow = Arrow.new()
+        arrow.Instance.LayoutOrder = 2
+        arrow.Instance.Parent = controls
+        maid:GiveTask(arrow)
+    end
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
@@ -99,20 +117,21 @@ function AimlockFactory.new(): AimlockUI
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
-    local glowBar = GlowBar.new()
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
-    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
-    glowBar.Instance.Size = UDim2.fromScale(1, 1)
-    glowBar.Instance.Parent = glowWrapper
+    local glowBar
+    if GlowBar and type(GlowBar.new) == "function" then
+        glowBar = GlowBar.new()
+        glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+        glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+        glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        glowBar.Instance.Parent = glowWrapper
 
-    do
         local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
         if c1 then c1:Destroy() end
         local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
         if c2 then c2:Destroy() end
+        maid:GiveTask(glowBar)
     end
-    maid:GiveTask(glowBar)
 
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
@@ -147,11 +166,13 @@ function AimlockFactory.new(): AimlockUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    local vLine = Sidebar.createVertical()
-    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
-    vLine.Instance.Position = UDim2.fromScale(0, 0)
-    vLine.Instance.Parent = subFrame
-    maid:GiveTask(vLine)
+    if Sidebar and type(Sidebar.createVertical) == "function" then
+        local vLine = Sidebar.createVertical()
+        vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+        vLine.Instance.Position = UDim2.fromScale(0, 0)
+        vLine.Instance.Parent = subFrame
+        maid:GiveTask(vLine)
+    end
 
     local rightContent = Instance.new("Frame")
     rightContent.Name = "RightContent"
@@ -179,9 +200,11 @@ function AimlockFactory.new(): AimlockUI
 
     safeLoadSection(KeybindSection, 1, rightContent)
 
-    local hLine = Sidebar.createHorizontal(2)
-    hLine.Instance.Parent = rightContent
-    maid:GiveTask(hLine)
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
+        local hLine = Sidebar.createHorizontal(2)
+        hLine.Instance.Parent = rightContent
+        maid:GiveTask(hLine)
+    end
 
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
@@ -212,8 +235,36 @@ function AimlockFactory.new(): AimlockUI
     safeLoadSection(WallCheckSection, 5, inputsScroll)
     safeLoadSection(KnockCheckSection, 6, inputsScroll)
 
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-        glowBar:SetState(state)
+    if toggleBtn and glowBar then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            glowBar:SetState(state)
+        end))
+    end
+
+    -- Sincronização do Acordeão e Clique no Header
+    local isExpanded = false
+    if arrow then
+        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+            isExpanded = state
+            subFrame.Visible = state
+        end))
+    end
+
+    local headerBtn = Instance.new("TextButton")
+    headerBtn.Name = "HeaderClick"
+    headerBtn.Size = UDim2.new(1, -100, 1, 0) -- Margem para não sobrepor os toggles
+    headerBtn.Position = UDim2.fromScale(0, 0)
+    headerBtn.BackgroundTransparency = 1
+    headerBtn.Text = ""
+    headerBtn.ZIndex = 5
+    headerBtn.Parent = header
+
+    maid:GiveTask(headerBtn.MouseButton1Click:Connect(function()
+        isExpanded = not isExpanded
+        if arrow then
+            arrow:SetState(isExpanded)
+        end
+        subFrame.Visible = isExpanded
     end))
 
     maid:GiveTask(container)
