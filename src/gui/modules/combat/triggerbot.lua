@@ -1,14 +1,26 @@
 --!strict
-local Import = ((_G :: any).SacramentImport :: any)
+local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
-local ToggleButton = Import("gui/modules/components/togglebutton")
-local Arrow = Import("gui/modules/components/arrow")
-local GlowBar = Import("gui/modules/components/glowbar")
-local Sidebar = Import("gui/modules/components/sidebar")
-local Slider = Import("gui/modules/components/slider")
+-- Proteção de Módulo: Isolamento de dependências via pcall [cite: 2026-02-24]
+local function SafeImport(path: string): any?
+    local success, result = pcall(function()
+        return Import(path)
+    end)
+    if not success then
+        warn("[Sacrament] Falha ao importar dependência em TriggerBot: " .. path)
+        return nil
+    end
+    return result
+end
 
-local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
+local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local Arrow = SafeImport("gui/modules/components/arrow")
+local GlowBar = SafeImport("gui/modules/components/glowbar")
+local Sidebar = SafeImport("gui/modules/components/sidebar")
+local Slider = SafeImport("gui/modules/components/slider")
+
+local KeybindSection = SafeImport("gui/modules/combat/sections/shared/keybind")
 
 export type TriggerBotUI = {
     Instance: Frame,
@@ -21,7 +33,7 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
 
-local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOrder: number): Frame
+local function createToggleRow(maid: any, title: string, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = title:gsub(" ", "") .. "Row"
     row.Size = UDim2.new(1, 0, 0, 45)
@@ -43,16 +55,18 @@ local function createToggleRow(maid: typeof(Maid.new()), title: string, layoutOr
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
-    local toggle = ToggleButton.new()
-    toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-    toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-    toggle.Instance.Parent = row
-    maid:GiveTask(toggle)
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        local toggle = ToggleButton.new()
+        toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        toggle.Instance.Parent = row
+        maid:GiveTask(toggle)
+    end
 
     return row
 end
 
-local function createDelayRow(maid: typeof(Maid.new()), layoutOrder: number): Frame
+local function createDelayRow(maid: any, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = "DelayRow"
     row.Size = UDim2.new(1, 0, 0, 45)
@@ -179,15 +193,20 @@ function TriggerBotFactory.new(): TriggerBotUI
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
     
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
-    toggleBtn.Instance.Parent = controls
-    maid:GiveTask(toggleBtn)
+    local toggleBtn = nil
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        toggleBtn = ToggleButton.new()
+        toggleBtn.Instance.LayoutOrder = 1
+        toggleBtn.Instance.Parent = controls
+        maid:GiveTask(toggleBtn)
+    end
 
-    local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
-    arrow.Instance.Parent = controls
-    maid:GiveTask(arrow)
+    if Arrow and type(Arrow.new) == "function" then
+        local arrow = Arrow.new()
+        arrow.Instance.LayoutOrder = 2
+        arrow.Instance.Parent = controls
+        maid:GiveTask(arrow)
+    end
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
@@ -195,32 +214,29 @@ function TriggerBotFactory.new(): TriggerBotUI
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
-    local glowBar = GlowBar.new()
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
-    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
-    glowBar.Instance.Size = UDim2.fromScale(1, 1)
-    glowBar.Instance.Parent = glowWrapper
+    local glowBar = nil
+    if GlowBar and type(GlowBar.new) == "function" then
+        glowBar = GlowBar.new()
+        glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+        glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+        glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        glowBar.Instance.Parent = glowWrapper
 
-    do
         local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
         if c1 then c1:Destroy() end
         local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
         if c2 then c2:Destroy() end
+        maid:GiveTask(glowBar)
     end
-    maid:GiveTask(glowBar)
 
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
-
         local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
         local controlsLeftAbsolute = controls.AbsolutePosition.X
-
         local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
         local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
-
         local width = math.max(0, endX - startX)
-
         glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
         glowWrapper.Size = UDim2.fromOffset(width, 32)
     end
@@ -243,11 +259,13 @@ function TriggerBotFactory.new(): TriggerBotUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    local vLine = Sidebar.createVertical()
-    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
-    vLine.Instance.Position = UDim2.fromScale(0, 0)
-    vLine.Instance.Parent = subFrame
-    maid:GiveTask(vLine)
+    if Sidebar and type(Sidebar.createVertical) == "function" then
+        local vLine = Sidebar.createVertical()
+        vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+        vLine.Instance.Position = UDim2.fromScale(0, 0)
+        vLine.Instance.Parent = subFrame
+        maid:GiveTask(vLine)
+    end
 
     local rightContent = Instance.new("Frame")
     rightContent.Name = "RightContent"
@@ -261,13 +279,25 @@ function TriggerBotFactory.new(): TriggerBotUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local keySec = KeybindSection.new(1)
-    keySec.Instance.Parent = rightContent
-    maid:GiveTask(keySec)
+    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+        if type(moduleType) == "table" and type(moduleType.new) == "function" then
+            local success, instance = pcall(function()
+                return moduleType.new(order)
+            end)
+            if success and instance and instance.Instance then
+                instance.Instance.Parent = parentInstance
+                maid:GiveTask(instance)
+            end
+        end
+    end
 
-    local hLine = Sidebar.createHorizontal(2)
-    hLine.Instance.Parent = rightContent
-    maid:GiveTask(hLine)
+    safeLoadSection(KeybindSection, 1, rightContent)
+
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
+        local hLine = Sidebar.createHorizontal(2)
+        hLine.Instance.Parent = rightContent
+        maid:GiveTask(hLine)
+    end
 
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
@@ -294,10 +324,12 @@ function TriggerBotFactory.new(): TriggerBotUI
     local delayRow = createDelayRow(maid, 1)
     delayRow.Parent = inputsScroll
 
-    local hitChanceSlider = Slider.new("Hit Chance", 0, 100, 95, 1)
-    hitChanceSlider.Instance.LayoutOrder = 2
-    hitChanceSlider.Instance.Parent = inputsScroll
-    maid:GiveTask(hitChanceSlider)
+    if Slider and type(Slider.new) == "function" then
+        local hitChanceSlider = Slider.new("Hit Chance", 0, 100, 95, 1)
+        hitChanceSlider.Instance.LayoutOrder = 2
+        hitChanceSlider.Instance.Parent = inputsScroll
+        maid:GiveTask(hitChanceSlider)
+    end
 
     local wallCheckRow = createToggleRow(maid, "Wall Check", 3)
     wallCheckRow.Parent = inputsScroll
@@ -305,9 +337,11 @@ function TriggerBotFactory.new(): TriggerBotUI
     local knockCheckRow = createToggleRow(maid, "Knock Check", 4)
     knockCheckRow.Parent = inputsScroll
 
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
-        glowBar:SetState(state)
-    end))
+    if toggleBtn and glowBar then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            glowBar:SetState(state)
+        end))
+    end
 
     maid:GiveTask(container)
     
