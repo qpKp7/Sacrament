@@ -1,6 +1,6 @@
 --!strict
-local root = script.Parent.Parent.Parent.Parent.Parent.Parent
-local Maid = require(root.utils.Maid)
+local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
 
 export type MarkStyleSection = {
     Instance: Frame,
