@@ -18,15 +18,16 @@ type AccordionItem = {
     subFrame: Frame,
     controls: Instance?,
     arrowGlyph: Instance?,
+    fakeGlyph: TextLabel?,
+    fakeStroke: UIStroke?,
     arrowHit: GuiButton?,
 }
 
 local CombatModuleFactory = {}
 
--- Configurações de Estilo Precisas [cite: 2026-02-24]
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
-local COLOR_GLOW = Color3.fromHex("FF3333") -- Vermelho mais claro para glow discreto
+local COLOR_GLOW = Color3.fromHex("FF3333") 
 local TWEEN_INFO = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function isArrowText(t: string): boolean
@@ -43,7 +44,8 @@ local function findArrowGlyph(controls: Instance): Instance?
 
     for _, desc in ipairs(controls:GetDescendants()) do
         if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-            if isArrowText(desc.Text) then
+            local t = desc.Text
+            if isArrowText(t) then
                 local x = desc.AbsolutePosition.X
                 if x > bestX then
                     bestX = x
@@ -56,45 +58,36 @@ local function findArrowGlyph(controls: Instance): Instance?
     return best
 end
 
-local function playVisualTween(guiObject: GuiObject, open: boolean)
-    -- Glow discreto: Espessura 1, Transparência variável [cite: 2026-02-24]
-    local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
-    local targetStrokeTrans = open and 0.75 or 1 -- 0.75 é discreto e suave
-
-    local tween = TweenService:Create(guiObject, TWEEN_INFO, { 
-        TextColor3 = targetColor,
-        TextStrokeTransparency = targetStrokeTrans
-    } :: any)
-    
-    tween:Play()
-    
-    local connection: RBXScriptConnection
-    connection = tween.Completed:Connect(function()
-        tween:Destroy()
-        if connection then
-            connection:Disconnect()
-        end
-    end)
-end
-
-local function setArrowVisual(glyph: Instance?, open: boolean, animate: boolean)
-    if not glyph or not (glyph:IsA("TextLabel") or glyph:IsA("TextButton")) then
+local function setArrowVisual(item: AccordionItem, open: boolean, animate: boolean)
+    if not item.fakeGlyph or not item.fakeStroke then
         return
     end
 
-    local textObj = glyph :: TextLabel | TextButton
-    
-    -- Transição Direta de Caractere: Sem passar por "<" [cite: 2026-02-24]
-    textObj.Text = open and "v" or ">"
-    textObj.Rotation = 0 -- Força rotação zero para evitar bugs visuais
-    textObj.TextStrokeColor3 = COLOR_GLOW
-    textObj.TextStrokeThickness = 1
+    local targetText = open and "v" or ">"
+    local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
+    local targetStrokeTrans = open and 0.75 or 1 -- 0.75 para Glow bem suave e discreto
+
+    -- Troca o caractere instantaneamente (impede símbolos esquisitos como '<')
+    item.fakeGlyph.Text = targetText
 
     if animate then
-        playVisualTween(textObj, open)
+        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { TextColor3 = targetColor } :: any)
+        local t2 = TweenService:Create(item.fakeStroke, TWEEN_INFO, { Transparency = targetStrokeTrans } :: any)
+        
+        t1:Play()
+        t2:Play()
+        
+        local connection: RBXScriptConnection
+        connection = t1.Completed:Connect(function()
+            t1:Destroy()
+            t2:Destroy()
+            if connection then
+                connection:Disconnect()
+            end
+        end)
     else
-        textObj.TextColor3 = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
-        textObj.TextStrokeTransparency = open and 0.75 or 1
+        item.fakeGlyph.TextColor3 = targetColor
+        item.fakeStroke.Transparency = targetStrokeTrans
     end
 end
 
@@ -200,15 +193,17 @@ function CombatModuleFactory.new(): CombatModule
     local function applyState(item: AccordionItem, open: boolean, animate: boolean)
         isSyncing = true
         item.subFrame.Visible = open
-        setArrowVisual(item.arrowGlyph, open, animate)
+        setArrowVisual(item, open, animate)
         isSyncing = false
     end
 
     local function bindAccordion(item: AccordionItem)
         local controls = findControls(item.header)
-        if not controls then return end
-        
+        if not controls then
+            return
+        end
         item.controls = controls
+
         local glyph = findArrowGlyph(controls)
         item.arrowGlyph = glyph
 
@@ -216,16 +211,45 @@ function CombatModuleFactory.new(): CombatModule
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
-            -- Blindagem contra rotações indesejadas [cite: 2026-02-24]
-            if glyph:IsA("GuiObject") then
-                glyph.Rotation = 0
-                maid:GiveTask(glyph:GetPropertyChangedSignal("Rotation"):Connect(function()
-                    if glyph.Rotation ~= 0 then glyph.Rotation = 0 end
+            -- Oculta a seta problemática original para assumirmos o controle visual
+            if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
+                local textObj = glyph :: TextLabel | TextButton
+                textObj.TextTransparency = 1
+                maid:GiveTask(textObj:GetPropertyChangedSignal("TextTransparency"):Connect(function()
+                    if textObj.TextTransparency ~= 1 then textObj.TextTransparency = 1 end
+                end))
+                
+                textObj.TextStrokeTransparency = 1
+                maid:GiveTask(textObj:GetPropertyChangedSignal("TextStrokeTransparency"):Connect(function()
+                    if textObj.TextStrokeTransparency ~= 1 then textObj.TextStrokeTransparency = 1 end
                 end))
             end
+
+            -- Cria a Fake Arrow totalmente controlada, limpa e livre de bugs de rotação
+            local fake = Instance.new("TextLabel")
+            fake.Name = "FakeArrowClean"
+            fake.BackgroundTransparency = 1
+            fake.Size = UDim2.fromScale(1, 1)
+            fake.Position = UDim2.fromScale(0.5, 0.5)
+            fake.AnchorPoint = Vector2.new(0.5, 0.5)
+            fake.Font = Enum.Font.GothamBold
+            fake.TextSize = 18
+            fake.Text = ">"
+            fake.TextColor3 = COLOR_ARROW_CLOSED
+            fake.ZIndex = glyph.ZIndex + 1
+            fake.Parent = glyph.Parent 
+            
+            local stroke = Instance.new("UIStroke")
+            stroke.Color = COLOR_GLOW
+            stroke.Thickness = 1
+            stroke.Transparency = 1
+            stroke.Parent = fake
+
+            item.fakeGlyph = fake
+            item.fakeStroke = stroke
+            maid:GiveTask(fake)
         end
 
-        -- Orquestrador de Accordion (Apenas um aberto) [cite: 2026-02-24]
         maid:GiveTask(item.subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
             if isSyncing then return end
             
@@ -236,9 +260,11 @@ function CombatModuleFactory.new(): CombatModule
                 end
                 openItem = item
                 applyState(item, true, true)
-            elseif openItem == item then
-                openItem = nil
-                applyState(item, false, true)
+            else
+                if openItem == item then
+                    openItem = nil
+                    applyState(item, false, true)
+                end
             end
         end))
 
@@ -265,6 +291,8 @@ function CombatModuleFactory.new(): CombatModule
             subFrame = subFrame,
             controls = nil,
             arrowGlyph = nil,
+            fakeGlyph = nil,
+            fakeStroke = nil,
             arrowHit = nil,
         }
         table.insert(items, item)
@@ -276,7 +304,9 @@ function CombatModuleFactory.new(): CombatModule
 
     local function safeLoadSection(moduleType: any, order: number)
         if typeof(moduleType) == "table" and moduleType.new then
-            local success, instance = pcall(function() return moduleType.new() end)
+            local success, instance = pcall(function()
+                return moduleType.new()
+            end)
             
             if success and instance then
                 maid:GiveTask(instance)
