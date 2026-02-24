@@ -1,21 +1,33 @@
 --!strict
-local Import = ((_G :: any).SacramentImport :: any)
+local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
-local ToggleButton = Import("gui/modules/components/togglebutton")
-local Arrow = Import("gui/modules/components/arrow")
-local GlowBar = Import("gui/modules/components/glowbar")
-local Sidebar = Import("gui/modules/components/sidebar")
+-- Proteção de Módulo: Evita que o SilentAim falhe se uma dependência externa quebrar.
+local function SafeImport(path: string): any?
+    local success, result = pcall(function()
+        return Import(path)
+    end)
+    if not success then
+        warn("[Sacrament] Falha ao importar dependência em SilentAim: " .. path)
+        return nil
+    end
+    return result
+end
 
-local KeybindSection = Import("gui/modules/combat/sections/shared/keybind")
-local KeyHoldSection = Import("gui/modules/combat/sections/shared/keyhold")
-local PredictSection = Import("gui/modules/combat/sections/shared/predict")
-local HitChanceSection = Import("gui/modules/combat/sections/silentaim/hitchance")
-local MarkStyleSection = Import("gui/modules/combat/sections/silentaim/markstyle")
-local FovLimitSection = Import("gui/modules/combat/sections/silentaim/fovlimit")
-local AimPartSection = Import("gui/modules/combat/sections/shared/aimpart")
-local WallCheckSection = Import("gui/modules/combat/sections/shared/wallcheck")
-local KnockCheckSection = Import("gui/modules/combat/sections/shared/knockcheck")
+local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local Arrow = SafeImport("gui/modules/components/arrow")
+local GlowBar = SafeImport("gui/modules/components/glowbar")
+local Sidebar = SafeImport("gui/modules/components/sidebar")
+
+local KeybindSection = SafeImport("gui/modules/combat/sections/shared/keybind")
+local KeyHoldSection = SafeImport("gui/modules/combat/sections/shared/keyhold")
+local PredictSection = SafeImport("gui/modules/combat/sections/shared/predict")
+local HitChanceSection = SafeImport("gui/modules/combat/sections/silentaim/hitchance")
+local MarkStyleSection = SafeImport("gui/modules/combat/sections/silentaim/markstyle")
+local FovLimitSection = SafeImport("gui/modules/combat/sections/silentaim/fovlimit")
+local AimPartSection = SafeImport("gui/modules/combat/sections/shared/aimpart")
+local WallCheckSection = SafeImport("gui/modules/combat/sections/shared/wallcheck")
+local KnockCheckSection = SafeImport("gui/modules/combat/sections/shared/knockcheck")
 
 export type SilentAimUI = {
     Instance: Frame,
@@ -85,15 +97,20 @@ function SilentAimFactory.new(): SilentAimUI
     ctrlPadding.PaddingRight = UDim.new(0, 20)
     ctrlPadding.Parent = controls
 
-    local toggleBtn = ToggleButton.new()
-    toggleBtn.Instance.LayoutOrder = 1
-    toggleBtn.Instance.Parent = controls
-    maid:GiveTask(toggleBtn)
+    local toggleBtn = nil
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        toggleBtn = ToggleButton.new()
+        toggleBtn.Instance.LayoutOrder = 1
+        toggleBtn.Instance.Parent = controls
+        maid:GiveTask(toggleBtn)
+    end
 
-    local arrow = Arrow.new()
-    arrow.Instance.LayoutOrder = 2
-    arrow.Instance.Parent = controls
-    maid:GiveTask(arrow)
+    if Arrow and type(Arrow.new) == "function" then
+        local arrow = Arrow.new()
+        arrow.Instance.LayoutOrder = 2
+        arrow.Instance.Parent = controls
+        maid:GiveTask(arrow)
+    end
 
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
@@ -101,32 +118,30 @@ function SilentAimFactory.new(): SilentAimUI
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
-    local glowBar = GlowBar.new()
-    glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
-    glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
-    glowBar.Instance.Size = UDim2.fromScale(1, 1)
-    glowBar.Instance.Parent = glowWrapper
+    local glowBar = nil
+    if GlowBar and type(GlowBar.new) == "function" then
+        glowBar = GlowBar.new()
+        glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+        glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+        glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        glowBar.Instance.Parent = glowWrapper
 
-    do
         local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
         if c1 then c1:Destroy() end
         local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
         if c2 then c2:Destroy() end
+        
+        maid:GiveTask(glowBar)
     end
-    maid:GiveTask(glowBar)
 
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
-
         local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
         local controlsLeftAbsolute = controls.AbsolutePosition.X
-
         local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
         local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
-
         local width = math.max(0, endX - startX)
-
         glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
         glowWrapper.Size = UDim2.fromOffset(width, 32)
     end
@@ -137,7 +152,6 @@ function SilentAimFactory.new(): SilentAimUI
     maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    
     task.defer(updateGlowBar)
 
     local subFrame = Instance.new("Frame")
@@ -149,11 +163,13 @@ function SilentAimFactory.new(): SilentAimUI
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    local vLine = Sidebar.createVertical()
-    vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
-    vLine.Instance.Position = UDim2.fromScale(0, 0)
-    vLine.Instance.Parent = subFrame
-    maid:GiveTask(vLine)
+    if Sidebar and type(Sidebar.createVertical) == "function" then
+        local vLine = Sidebar.createVertical()
+        vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+        vLine.Instance.Position = UDim2.fromScale(0, 0)
+        vLine.Instance.Parent = subFrame
+        maid:GiveTask(vLine)
+    end
 
     local rightContent = Instance.new("Frame")
     rightContent.Name = "RightContent"
@@ -167,13 +183,25 @@ function SilentAimFactory.new(): SilentAimUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local keySec = KeybindSection.new(1)
-    keySec.Instance.Parent = rightContent
-    maid:GiveTask(keySec)
+    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+        if type(moduleType) == "table" and type(moduleType.new) == "function" then
+            local success, instance = pcall(function()
+                return moduleType.new(order)
+            end)
+            if success and instance and instance.Instance then
+                instance.Instance.Parent = parentInstance
+                maid:GiveTask(instance)
+            end
+        end
+    end
 
-    local hLine = Sidebar.createHorizontal(2)
-    hLine.Instance.Parent = rightContent
-    maid:GiveTask(hLine)
+    safeLoadSection(KeybindSection, 1, rightContent)
+
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
+        local hLine = Sidebar.createHorizontal(2)
+        hLine.Instance.Parent = rightContent
+        maid:GiveTask(hLine)
+    end
 
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
@@ -197,41 +225,20 @@ function SilentAimFactory.new(): SilentAimUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    local keyHoldSec = KeyHoldSection.new(1)
-    keyHoldSec.Instance.Parent = inputsScroll
-    maid:GiveTask(keyHoldSec)
+    safeLoadSection(KeyHoldSection, 1, inputsScroll)
+    safeLoadSection(PredictSection, 2, inputsScroll)
+    safeLoadSection(HitChanceSection, 3, inputsScroll)
+    safeLoadSection(MarkStyleSection, 4, inputsScroll)
+    safeLoadSection(FovLimitSection, 5, inputsScroll)
+    safeLoadSection(AimPartSection, 6, inputsScroll)
+    safeLoadSection(WallCheckSection, 7, inputsScroll)
+    safeLoadSection(KnockCheckSection, 8, inputsScroll)
 
-    local predSec = PredictSection.new(2)
-    predSec.Instance.Parent = inputsScroll
-    maid:GiveTask(predSec)
-
-    local hitChanceSec = HitChanceSection.new(3)
-    hitChanceSec.Instance.Parent = inputsScroll
-    maid:GiveTask(hitChanceSec)
-
-    local markStyleSec = MarkStyleSection.new(4)
-    markStyleSec.Instance.Parent = inputsScroll
-    maid:GiveTask(markStyleSec)
-
-    local fovLimitSec = FovLimitSection.new(5)
-    fovLimitSec.Instance.Parent = inputsScroll
-    maid:GiveTask(fovLimitSec)
-
-    local aimPartSec = AimPartSection.new(6)
-    aimPartSec.Instance.Parent = inputsScroll
-    maid:GiveTask(aimPartSec)
-
-    local wallCheckSec = WallCheckSection.new(7)
-    wallCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(wallCheckSec)
-
-    local knockCheckSec = KnockCheckSection.new(8)
-    knockCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(knockCheckSec)
-
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
-        glowBar:SetState(state)
-    end))
+    if toggleBtn and glowBar then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            glowBar:SetState(state)
+        end))
+    end
 
     maid:GiveTask(container)
     
