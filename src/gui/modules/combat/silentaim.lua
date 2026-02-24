@@ -105,8 +105,9 @@ function SilentAimFactory.new(): SilentAimUI
         maid:GiveTask(toggleBtn)
     end
 
+    local arrow = nil
     if Arrow and type(Arrow.new) == "function" then
-        local arrow = Arrow.new()
+        arrow = Arrow.new()
         arrow.Instance.LayoutOrder = 2
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
@@ -239,6 +240,32 @@ function SilentAimFactory.new(): SilentAimUI
             glowBar:SetState(state)
         end))
     end
+
+    -- Sincronização do Acordeão e Clique no Header
+    local isExpanded = false
+    if arrow then
+        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+            isExpanded = state
+            subFrame.Visible = state
+        end))
+    end
+
+    local headerBtn = Instance.new("TextButton")
+    headerBtn.Name = "HeaderClick"
+    headerBtn.Size = UDim2.new(1, -100, 1, 0) 
+    headerBtn.Position = UDim2.fromScale(0, 0)
+    headerBtn.BackgroundTransparency = 1
+    headerBtn.Text = ""
+    headerBtn.ZIndex = 5
+    headerBtn.Parent = header
+
+    maid:GiveTask(headerBtn.MouseButton1Click:Connect(function()
+        isExpanded = not isExpanded
+        if arrow then
+            arrow:SetState(isExpanded)
+        end
+        subFrame.Visible = isExpanded
+    end))
 
     maid:GiveTask(container)
     
