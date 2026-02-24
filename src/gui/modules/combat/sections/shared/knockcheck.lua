@@ -1,7 +1,20 @@
 --!strict
-local root = script.Parent.Parent.Parent.Parent.Parent.Parent
-local Maid = require(root.utils.Maid)
-local ToggleButton = require(root.gui.modules.components.ToggleButton)
+local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
+
+-- Proteção de Módulo: Isolamento de dependências via pcall
+local function SafeImport(path: string): any?
+    local success, result = pcall(function()
+        return Import(path)
+    end)
+    if not success then
+        warn("[Sacrament] Falha ao importar dependência em KnockCheck: " .. path)
+        return nil
+    end
+    return result
+end
+
+local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type KnockCheckSection = {
     Instance: Frame,
@@ -52,11 +65,13 @@ function KnockCheckFactory.new(layoutOrder: number): KnockCheckSection
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
-    local toggle = ToggleButton.new()
-    toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-    toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-    toggle.Instance.Parent = toggleCont
-    maid:GiveTask(toggle)
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        local toggle = ToggleButton.new()
+        toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        toggle.Instance.Parent = toggleCont
+        maid:GiveTask(toggle)
+    end
 
     maid:GiveTask(row)
 
