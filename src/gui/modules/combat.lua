@@ -63,15 +63,20 @@ local function setArrowVisual(item: AccordionItem, open: boolean, animate: boole
         return
     end
 
-    local targetText = open and "v" or ">"
+    -- LÓGICA DE TRANSIÇÃO PURA:
+    -- Mantemos o texto sempre em ">" e utilizamos a rotação.
+    -- Rodar ">" a 90 graus produz a forma de "v" com perfeição, eliminando o erro visual do "<"
+    local targetRotation = open and 90 or 0
     local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
     local targetStrokeTrans = open and 0.75 or 1 -- 0.75 para Glow bem suave e discreto
 
-    -- Troca o caractere instantaneamente (impede símbolos esquisitos como '<')
-    item.fakeGlyph.Text = targetText
+    item.fakeGlyph.Text = ">"
 
     if animate then
-        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { TextColor3 = targetColor } :: any)
+        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { 
+            TextColor3 = targetColor,
+            Rotation = targetRotation
+        } :: any)
         local t2 = TweenService:Create(item.fakeStroke, TWEEN_INFO, { Transparency = targetStrokeTrans } :: any)
         
         t1:Play()
@@ -87,6 +92,7 @@ local function setArrowVisual(item: AccordionItem, open: boolean, animate: boole
         end)
     else
         item.fakeGlyph.TextColor3 = targetColor
+        item.fakeGlyph.Rotation = targetRotation
         item.fakeStroke.Transparency = targetStrokeTrans
     end
 end
@@ -211,7 +217,7 @@ function CombatModuleFactory.new(): CombatModule
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
-            -- Oculta a seta problemática original para assumirmos o controle visual
+            -- Oculta a seta problemática original para assumirmos o controlo visual isolado
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
@@ -225,7 +231,7 @@ function CombatModuleFactory.new(): CombatModule
                 end))
             end
 
-            -- Cria a Fake Arrow totalmente controlada, limpa e livre de bugs de rotação
+            -- Cria a Fake Arrow totalmente controlada e livre de bugs de caracteres
             local fake = Instance.new("TextLabel")
             fake.Name = "FakeArrowClean"
             fake.BackgroundTransparency = 1
@@ -235,6 +241,7 @@ function CombatModuleFactory.new(): CombatModule
             fake.Font = Enum.Font.GothamBold
             fake.TextSize = 18
             fake.Text = ">"
+            fake.Rotation = 0
             fake.TextColor3 = COLOR_ARROW_CLOSED
             fake.ZIndex = glyph.ZIndex + 1
             fake.Parent = glyph.Parent 
