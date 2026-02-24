@@ -1,5 +1,6 @@
 --!strict
 local UserInputService = game:GetService("UserInputService")
+
 local Import = (_G :: any).SacramentImport
 local UIState = Import("state/uistate")
 local Constants = Import("config/constants")
