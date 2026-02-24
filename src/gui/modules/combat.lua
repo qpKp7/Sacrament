@@ -23,9 +23,11 @@ type AccordionItem = {
 
 local CombatModuleFactory = {}
 
+-- Configurações de Estilo Precisas [cite: 2026-02-24]
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
-local TWEEN_INFO = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local COLOR_GLOW = Color3.fromHex("FF3333") -- Vermelho mais claro para glow discreto
+local TWEEN_INFO = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function isArrowText(t: string): boolean
     return t == ">" or t == "v" or t == "<" or t == "V" or t == "^"
@@ -41,8 +43,7 @@ local function findArrowGlyph(controls: Instance): Instance?
 
     for _, desc in ipairs(controls:GetDescendants()) do
         if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-            local t = desc.Text
-            if isArrowText(t) then
+            if isArrowText(desc.Text) then
                 local x = desc.AbsolutePosition.X
                 if x > bestX then
                     bestX = x
@@ -55,16 +56,16 @@ local function findArrowGlyph(controls: Instance): Instance?
     return best
 end
 
-local function playColorTween(guiObject: GuiObject, targetColor: Color3, isOpen: boolean)
-    -- Glow suave utilizando TextStroke nativo para não alterar a UI tree
-    local strokeColor = isOpen and COLOR_ARROW_OPEN or Color3.new(0, 0, 0)
-    local strokeTransp = isOpen and 0.5 or 1
+local function playVisualTween(guiObject: GuiObject, open: boolean)
+    -- Glow discreto: Espessura 1, Transparência variável [cite: 2026-02-24]
+    local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
+    local targetStrokeTrans = open and 0.75 or 1 -- 0.75 é discreto e suave
 
     local tween = TweenService:Create(guiObject, TWEEN_INFO, { 
         TextColor3 = targetColor,
-        TextStrokeColor3 = strokeColor,
-        TextStrokeTransparency = strokeTransp
+        TextStrokeTransparency = targetStrokeTrans
     } :: any)
+    
     tween:Play()
     
     local connection: RBXScriptConnection
@@ -77,24 +78,23 @@ local function playColorTween(guiObject: GuiObject, targetColor: Color3, isOpen:
 end
 
 local function setArrowVisual(glyph: Instance?, open: boolean, animate: boolean)
-    if not glyph then
+    if not glyph or not (glyph:IsA("TextLabel") or glyph:IsA("TextButton")) then
         return
     end
 
-    local targetText = open and "v" or ">"
-    local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
+    local textObj = glyph :: TextLabel | TextButton
+    
+    -- Transição Direta de Caractere: Sem passar por "<" [cite: 2026-02-24]
+    textObj.Text = open and "v" or ">"
+    textObj.Rotation = 0 -- Força rotação zero para evitar bugs visuais
+    textObj.TextStrokeColor3 = COLOR_GLOW
+    textObj.TextStrokeThickness = 1
 
-    if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
-        local textObj = glyph :: TextLabel | TextButton
-        textObj.Text = targetText
-        
-        if animate then
-            playColorTween(textObj, targetColor, open)
-        else
-            textObj.TextColor3 = targetColor
-            textObj.TextStrokeColor3 = open and COLOR_ARROW_OPEN or Color3.new(0, 0, 0)
-            textObj.TextStrokeTransparency = open and 0.5 or 1
-        end
+    if animate then
+        playVisualTween(textObj, open)
+    else
+        textObj.TextColor3 = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
+        textObj.TextStrokeTransparency = open and 0.75 or 1
     end
 end
 
@@ -206,11 +206,9 @@ function CombatModuleFactory.new(): CombatModule
 
     local function bindAccordion(item: AccordionItem)
         local controls = findControls(item.header)
-        if not controls then
-            return
-        end
+        if not controls then return end
+        
         item.controls = controls
-
         local glyph = findArrowGlyph(controls)
         item.arrowGlyph = glyph
 
@@ -218,18 +216,16 @@ function CombatModuleFactory.new(): CombatModule
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
-            -- Blindagem absoluta: Bloqueia rotações de scripts internos (evita o bug do "<")
+            -- Blindagem contra rotações indesejadas [cite: 2026-02-24]
             if glyph:IsA("GuiObject") then
-                maid:GiveTask(glyph:GetPropertyChangedSignal("Rotation"):Connect(function()
-                    if glyph.Rotation ~= 0 then
-                        glyph.Rotation = 0
-                    end
-                end))
                 glyph.Rotation = 0
+                maid:GiveTask(glyph:GetPropertyChangedSignal("Rotation"):Connect(function()
+                    if glyph.Rotation ~= 0 then glyph.Rotation = 0 end
+                end))
             end
         end
 
-        -- Orquestrador de Exclusividade: Intercepta qualquer mudança de visibilidade
+        -- Orquestrador de Accordion (Apenas um aberto) [cite: 2026-02-24]
         maid:GiveTask(item.subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
             if isSyncing then return end
             
@@ -240,11 +236,9 @@ function CombatModuleFactory.new(): CombatModule
                 end
                 openItem = item
                 applyState(item, true, true)
-            else
-                if openItem == item then
-                    openItem = nil
-                    applyState(item, false, true)
-                end
+            elseif openItem == item then
+                openItem = nil
+                applyState(item, false, true)
             end
         end))
 
@@ -282,9 +276,7 @@ function CombatModuleFactory.new(): CombatModule
 
     local function safeLoadSection(moduleType: any, order: number)
         if typeof(moduleType) == "table" and moduleType.new then
-            local success, instance = pcall(function()
-                return moduleType.new()
-            end)
+            local success, instance = pcall(function() return moduleType.new() end)
             
             if success and instance then
                 maid:GiveTask(instance)
