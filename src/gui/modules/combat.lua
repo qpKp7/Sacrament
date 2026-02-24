@@ -28,7 +28,9 @@ local CombatModuleFactory = {}
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
 local COLOR_GLOW = Color3.fromHex("FF3333") 
-local TWEEN_INFO = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- Animação ultra-rápida, focada apenas no fade de cor e glow (0.15s)
+local TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function isArrowText(t: string): boolean
     return t == ">" or t == "v" or t == "<" or t == "V" or t == "^"
@@ -44,8 +46,7 @@ local function findArrowGlyph(controls: Instance): Instance?
 
     for _, desc in ipairs(controls:GetDescendants()) do
         if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-            local t = desc.Text
-            if isArrowText(t) then
+            if isArrowText(desc.Text) then
                 local x = desc.AbsolutePosition.X
                 if x > bestX then
                     bestX = x
@@ -54,29 +55,22 @@ local function findArrowGlyph(controls: Instance): Instance?
             end
         end
     end
-
     return best
 end
 
 local function setArrowVisual(item: AccordionItem, open: boolean, animate: boolean)
-    if not item.fakeGlyph or not item.fakeStroke then
-        return
-    end
+    if not item.fakeGlyph or not item.fakeStroke then return end
 
-    -- LÓGICA DE TRANSIÇÃO PURA:
-    -- Mantemos o texto sempre em ">" e utilizamos a rotação.
-    -- Rodar ">" a 90 graus produz a forma de "v" com perfeição, eliminando o erro visual do "<"
-    local targetRotation = open and 90 or 0
+    local targetText = open and "v" or ">"
     local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
-    local targetStrokeTrans = open and 0.75 or 1 -- 0.75 para Glow bem suave e discreto
+    local targetStrokeTrans = open and 0.85 or 1 -- Glow extremamente suave (0.85) a invisível (1)
 
-    item.fakeGlyph.Text = ">"
+    -- Troca de texto e rotação instantâneas (elimina delay e frames intermediários errados)
+    item.fakeGlyph.Text = targetText
+    item.fakeGlyph.Rotation = 0
 
     if animate then
-        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { 
-            TextColor3 = targetColor,
-            Rotation = targetRotation
-        } :: any)
+        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { TextColor3 = targetColor } :: any)
         local t2 = TweenService:Create(item.fakeStroke, TWEEN_INFO, { Transparency = targetStrokeTrans } :: any)
         
         t1:Play()
@@ -86,35 +80,25 @@ local function setArrowVisual(item: AccordionItem, open: boolean, animate: boole
         connection = t1.Completed:Connect(function()
             t1:Destroy()
             t2:Destroy()
-            if connection then
-                connection:Disconnect()
-            end
+            if connection then connection:Disconnect() end
         end)
     else
         item.fakeGlyph.TextColor3 = targetColor
-        item.fakeGlyph.Rotation = targetRotation
         item.fakeStroke.Transparency = targetStrokeTrans
     end
 end
 
 local function ensureArrowOrder(controls: Instance, arrowGlyph: Instance?)
     local function setOrder(obj: Instance?, order: number)
-        if obj and obj:IsA("GuiObject") then
-            obj.LayoutOrder = order
-        end
+        if obj and obj:IsA("GuiObject") then obj.LayoutOrder = order end
     end
 
-    local arrowRoot: Instance? = nil
-    if arrowGlyph and arrowGlyph.Parent then
-        arrowRoot = arrowGlyph.Parent
-    end
-
+    local arrowRoot = if arrowGlyph and arrowGlyph.Parent then arrowGlyph.Parent else nil
     local toggleRoot: Instance? = nil
+
     for _, child in ipairs(controls:GetChildren()) do
         if child:IsA("GuiObject") then
-            if arrowRoot and (child == arrowRoot or child:IsDescendantOf(arrowRoot)) then
-                continue
-            end
+            if arrowRoot and (child == arrowRoot or child:IsDescendantOf(arrowRoot)) then continue end
             toggleRoot = child
             break
         end
@@ -127,12 +111,8 @@ local function ensureArrowOrder(controls: Instance, arrowGlyph: Instance?)
 end
 
 local function createHitboxOverGlyph(maid: any, glyph: Instance): GuiButton?
-    if glyph:IsA("TextButton") then
-        return glyph
-    end
-    if not glyph:IsA("GuiObject") or not glyph.Parent then
-        return nil
-    end
+    if glyph:IsA("TextButton") then return glyph end
+    if not glyph:IsA("GuiObject") or not glyph.Parent then return nil end
 
     local guiObj = glyph :: GuiObject
     local hit = Instance.new("TextButton")
@@ -142,9 +122,6 @@ local function createHitboxOverGlyph(maid: any, glyph: Instance): GuiButton?
     hit.AutoButtonColor = false
     hit.Text = ""
     hit.ZIndex = guiObj.ZIndex + 1
-    hit.AnchorPoint = guiObj.AnchorPoint
-    hit.Size = guiObj.Size
-    hit.Position = guiObj.Position
     hit.Parent = guiObj.Parent
 
     local function sync()
@@ -155,9 +132,9 @@ local function createHitboxOverGlyph(maid: any, glyph: Instance): GuiButton?
     end
 
     maid:GiveTask(guiObj:GetPropertyChangedSignal("ZIndex"):Connect(sync))
-    maid:GiveTask(guiObj:GetPropertyChangedSignal("AnchorPoint"):Connect(sync))
     maid:GiveTask(guiObj:GetPropertyChangedSignal("Size"):Connect(sync))
     maid:GiveTask(guiObj:GetPropertyChangedSignal("Position"):Connect(sync))
+    sync()
 
     return hit
 end
@@ -176,7 +153,6 @@ function CombatModuleFactory.new(): CombatModule
     leftPanel.Name = "LeftPanel"
     leftPanel.Size = UDim2.new(0, 280, 1, 0)
     leftPanel.BackgroundTransparency = 1
-    leftPanel.BorderSizePixel = 0
     leftPanel.Parent = container
 
     local leftLayout = Instance.new("UIListLayout")
@@ -189,7 +165,6 @@ function CombatModuleFactory.new(): CombatModule
     rightPanel.Size = UDim2.new(1, -280, 1, 0)
     rightPanel.Position = UDim2.fromOffset(280, 0)
     rightPanel.BackgroundTransparency = 1
-    rightPanel.BorderSizePixel = 0
     rightPanel.Parent = container
 
     local items: { AccordionItem } = {}
@@ -205,11 +180,9 @@ function CombatModuleFactory.new(): CombatModule
 
     local function bindAccordion(item: AccordionItem)
         local controls = findControls(item.header)
-        if not controls then
-            return
-        end
+        if not controls then return end
+        
         item.controls = controls
-
         local glyph = findArrowGlyph(controls)
         item.arrowGlyph = glyph
 
@@ -217,21 +190,14 @@ function CombatModuleFactory.new(): CombatModule
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
-            -- Oculta a seta problemática original para assumirmos o controlo visual isolado
+            -- Oculta seta original permanentemente (para evitar conflitos)
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
-                maid:GiveTask(textObj:GetPropertyChangedSignal("TextTransparency"):Connect(function()
-                    if textObj.TextTransparency ~= 1 then textObj.TextTransparency = 1 end
-                end))
-                
                 textObj.TextStrokeTransparency = 1
-                maid:GiveTask(textObj:GetPropertyChangedSignal("TextStrokeTransparency"):Connect(function()
-                    if textObj.TextStrokeTransparency ~= 1 then textObj.TextStrokeTransparency = 1 end
-                end))
             end
 
-            -- Cria a Fake Arrow totalmente controlada e livre de bugs de caracteres
+            -- Fake Arrow: Lógica visual estritamente controlada
             local fake = Instance.new("TextLabel")
             fake.Name = "FakeArrowClean"
             fake.BackgroundTransparency = 1
@@ -262,16 +228,12 @@ function CombatModuleFactory.new(): CombatModule
             
             local isOpen = item.subFrame.Visible
             if isOpen then
-                if openItem and openItem ~= item then
-                    applyState(openItem, false, true)
-                end
+                if openItem and openItem ~= item then applyState(openItem, false, true) end
                 openItem = item
                 applyState(item, true, true)
-            else
-                if openItem == item then
-                    openItem = nil
-                    applyState(item, false, true)
-                end
+            elseif openItem == item then
+                openItem = nil
+                applyState(item, false, true)
             end
         end))
 
@@ -287,42 +249,25 @@ function CombatModuleFactory.new(): CombatModule
     local function registerAccordion(header: Frame, subFrame: Frame, layoutOrder: number)
         header.LayoutOrder = layoutOrder
         header.Parent = leftPanel
-        header.Visible = true
-
         subFrame.Size = UDim2.fromScale(1, 1)
         subFrame.Parent = rightPanel
-        subFrame.Visible = false
 
         local item: AccordionItem = {
-            header = header,
-            subFrame = subFrame,
-            controls = nil,
-            arrowGlyph = nil,
-            fakeGlyph = nil,
-            fakeStroke = nil,
-            arrowHit = nil,
+            header = header, subFrame = subFrame, controls = nil,
+            arrowGlyph = nil, fakeGlyph = nil, fakeStroke = nil, arrowHit = nil,
         }
         table.insert(items, item)
-
-        task.defer(function()
-            bindAccordion(item)
-        end)
+        task.defer(function() bindAccordion(item) end)
     end
 
     local function safeLoadSection(moduleType: any, order: number)
         if typeof(moduleType) == "table" and moduleType.new then
-            local success, instance = pcall(function()
-                return moduleType.new()
-            end)
-            
+            local success, instance = pcall(function() return moduleType.new() end)
             if success and instance then
                 maid:GiveTask(instance)
                 local header = instance.Instance:FindFirstChild("Header")
                 local subFrame = instance.Instance:FindFirstChild("SubFrame")
-                
-                if header and subFrame then
-                    registerAccordion(header :: Frame, subFrame :: Frame, order)
-                end
+                if header and subFrame then registerAccordion(header :: Frame, subFrame :: Frame, order) end
             end
         end
     end
@@ -332,14 +277,9 @@ function CombatModuleFactory.new(): CombatModule
     safeLoadSection(TriggerBotModule, 3)
 
     maid:GiveTask(container)
-
     local self = {}
     self.Instance = container
-
-    function self:Destroy()
-        maid:Destroy()
-    end
-
+    function self:Destroy() maid:Destroy() end
     return self :: CombatModule
 end
 
