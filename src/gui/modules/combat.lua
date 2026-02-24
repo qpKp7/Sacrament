@@ -29,8 +29,8 @@ local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
 local COLOR_GLOW = Color3.fromHex("FF3333") 
 
--- Animação ultra-rápida, focada apenas no fade de cor e glow (0.15s)
-local TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+-- Animação reativada: 0.25s garante movimento visível, suave e elegante, sem a lentidão do delay antigo.
+local TWEEN_INFO = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function isArrowText(t: string): boolean
     return t == ">" or t == "v" or t == "<" or t == "V" or t == "^"
@@ -61,16 +61,19 @@ end
 local function setArrowVisual(item: AccordionItem, open: boolean, animate: boolean)
     if not item.fakeGlyph or not item.fakeStroke then return end
 
-    local targetText = open and "v" or ">"
+    -- A mágica geométrica: O texto é SEMPRE ">". A rotação de 90 graus cria o "v" perfeito.
+    -- Isso garante uma transição fluida sem piscar ou mostrar caracteres errados (como "<").
+    local targetRotation = open and 90 or 0
     local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
-    local targetStrokeTrans = open and 0.85 or 1 -- Glow extremamente suave (0.85) a invisível (1)
+    local targetStrokeTrans = open and 0.85 or 1 
 
-    -- Troca de texto e rotação instantâneas (elimina delay e frames intermediários errados)
-    item.fakeGlyph.Text = targetText
-    item.fakeGlyph.Rotation = 0
+    item.fakeGlyph.Text = ">"
 
     if animate then
-        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { TextColor3 = targetColor } :: any)
+        local t1 = TweenService:Create(item.fakeGlyph, TWEEN_INFO, { 
+            TextColor3 = targetColor,
+            Rotation = targetRotation
+        } :: any)
         local t2 = TweenService:Create(item.fakeStroke, TWEEN_INFO, { Transparency = targetStrokeTrans } :: any)
         
         t1:Play()
@@ -84,6 +87,7 @@ local function setArrowVisual(item: AccordionItem, open: boolean, animate: boole
         end)
     else
         item.fakeGlyph.TextColor3 = targetColor
+        item.fakeGlyph.Rotation = targetRotation
         item.fakeStroke.Transparency = targetStrokeTrans
     end
 end
@@ -190,14 +194,14 @@ function CombatModuleFactory.new(): CombatModule
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
-            -- Oculta seta original permanentemente (para evitar conflitos)
+            -- Ocultar seta original completamente para não atrapalhar
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
                 textObj.TextStrokeTransparency = 1
             end
 
-            -- Fake Arrow: Lógica visual estritamente controlada
+            -- Fake Arrow: Única responsável pela renderização visual da transição
             local fake = Instance.new("TextLabel")
             fake.Name = "FakeArrowClean"
             fake.BackgroundTransparency = 1
