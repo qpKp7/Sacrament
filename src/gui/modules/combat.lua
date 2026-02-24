@@ -25,7 +25,7 @@ local CombatModuleFactory = {}
 
 local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
-local TWEEN_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_INFO = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function isArrowText(t: string): boolean
     return t == ">" or t == "v" or t == "<" or t == "V" or t == "^"
@@ -55,8 +55,16 @@ local function findArrowGlyph(controls: Instance): Instance?
     return best
 end
 
-local function playColorTween(guiObject: GuiObject, targetColor: Color3)
-    local tween = TweenService:Create(guiObject, TWEEN_INFO, { TextColor3 = targetColor } :: any)
+local function playColorTween(guiObject: GuiObject, targetColor: Color3, isOpen: boolean)
+    -- Glow suave utilizando TextStroke nativo para não alterar a UI tree
+    local strokeColor = isOpen and COLOR_ARROW_OPEN or Color3.new(0, 0, 0)
+    local strokeTransp = isOpen and 0.5 or 1
+
+    local tween = TweenService:Create(guiObject, TWEEN_INFO, { 
+        TextColor3 = targetColor,
+        TextStrokeColor3 = strokeColor,
+        TextStrokeTransparency = strokeTransp
+    } :: any)
     tween:Play()
     
     local connection: RBXScriptConnection
@@ -73,17 +81,19 @@ local function setArrowVisual(glyph: Instance?, open: boolean, animate: boolean)
         return
     end
 
-    local targetText = if open then "v" else ">"
-    local targetColor = if open then COLOR_ARROW_OPEN else COLOR_ARROW_CLOSED
+    local targetText = open and "v" or ">"
+    local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
 
     if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
         local textObj = glyph :: TextLabel | TextButton
         textObj.Text = targetText
         
         if animate then
-            playColorTween(textObj, targetColor)
+            playColorTween(textObj, targetColor, open)
         else
             textObj.TextColor3 = targetColor
+            textObj.TextStrokeColor3 = open and COLOR_ARROW_OPEN or Color3.new(0, 0, 0)
+            textObj.TextStrokeTransparency = open and 0.5 or 1
         end
     end
 end
@@ -185,25 +195,13 @@ function CombatModuleFactory.new(): CombatModule
 
     local items: { AccordionItem } = {}
     local openItem: AccordionItem? = nil
+    local isSyncing = false
 
     local function applyState(item: AccordionItem, open: boolean, animate: boolean)
+        isSyncing = true
         item.subFrame.Visible = open
         setArrowVisual(item.arrowGlyph, open, animate)
-    end
-
-    local function toggleItem(item: AccordionItem)
-        if openItem == item then
-            openItem = nil
-            applyState(item, false, true)
-            return
-        end
-
-        if openItem then
-            applyState(openItem, false, true)
-        end
-
-        openItem = item
-        applyState(item, true, true)
+        isSyncing = false
     end
 
     local function bindAccordion(item: AccordionItem)
@@ -219,11 +217,40 @@ function CombatModuleFactory.new(): CombatModule
         if glyph then
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
+            
+            -- Blindagem absoluta: Bloqueia rotações de scripts internos (evita o bug do "<")
+            if glyph:IsA("GuiObject") then
+                maid:GiveTask(glyph:GetPropertyChangedSignal("Rotation"):Connect(function()
+                    if glyph.Rotation ~= 0 then
+                        glyph.Rotation = 0
+                    end
+                end))
+                glyph.Rotation = 0
+            end
         end
+
+        -- Orquestrador de Exclusividade: Intercepta qualquer mudança de visibilidade
+        maid:GiveTask(item.subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            if isSyncing then return end
+            
+            local isOpen = item.subFrame.Visible
+            if isOpen then
+                if openItem and openItem ~= item then
+                    applyState(openItem, false, true)
+                end
+                openItem = item
+                applyState(item, true, true)
+            else
+                if openItem == item then
+                    openItem = nil
+                    applyState(item, false, true)
+                end
+            end
+        end))
 
         if item.arrowHit then
             maid:GiveTask(item.arrowHit.Activated:Connect(function()
-                toggleItem(item)
+                item.subFrame.Visible = not item.subFrame.Visible
             end))
         end
 
