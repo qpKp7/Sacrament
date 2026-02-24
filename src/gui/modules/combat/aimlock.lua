@@ -1,5 +1,5 @@
 --!strict
-local Import = ((_G :: any).SacramentImport :: any)
+local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 local ToggleButton = Import("gui/modules/components/togglebutton")
@@ -165,9 +165,19 @@ function AimlockFactory.new(): AimlockUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local keySec = KeybindSection.new(1)
-    keySec.Instance.Parent = rightContent
-    maid:GiveTask(keySec)
+    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+        if typeof(moduleType) == "table" and moduleType.new then
+            local success, instance = pcall(function()
+                return moduleType.new(order)
+            end)
+            if success and instance then
+                instance.Instance.Parent = parentInstance
+                maid:GiveTask(instance)
+            end
+        end
+    end
+
+    safeLoadSection(KeybindSection, 1, rightContent)
 
     local hLine = Sidebar.createHorizontal(2)
     hLine.Instance.Parent = rightContent
@@ -195,31 +205,14 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    local keyHoldSec = KeyHoldSection.new(1)
-    keyHoldSec.Instance.Parent = inputsScroll
-    maid:GiveTask(keyHoldSec)
+    safeLoadSection(KeyHoldSection, 1, inputsScroll)
+    safeLoadSection(PredictSection, 2, inputsScroll)
+    safeLoadSection(SmoothSection, 3, inputsScroll)
+    safeLoadSection(AimPartSection, 4, inputsScroll)
+    safeLoadSection(WallCheckSection, 5, inputsScroll)
+    safeLoadSection(KnockCheckSection, 6, inputsScroll)
 
-    local predSec = PredictSection.new(2)
-    predSec.Instance.Parent = inputsScroll
-    maid:GiveTask(predSec)
-
-    local smoothSec = SmoothSection.new(3)
-    smoothSec.Instance.Parent = inputsScroll
-    maid:GiveTask(smoothSec)
-
-    local aimPartSec = AimPartSection.new(4)
-    aimPartSec.Instance.Parent = inputsScroll
-    maid:GiveTask(aimPartSec)
-
-    local wallCheckSec = WallCheckSection.new(5)
-    wallCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(wallCheckSec)
-
-    local knockCheckSec = KnockCheckSection.new(6)
-    knockCheckSec.Instance.Parent = inputsScroll
-    maid:GiveTask(knockCheckSec)
-
-    maid:GiveTask(toggleBtn.Toggled:Connect(function(state)
+    maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
         glowBar:SetState(state)
     end))
 
