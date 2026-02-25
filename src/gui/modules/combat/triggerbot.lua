@@ -51,7 +51,7 @@ local function createToggleRow(maid: any, title: string, layoutOrder: number): F
     lbl.Text = title
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 18
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
@@ -84,7 +84,7 @@ local function createDelayRow(maid: any, layoutOrder: number): Frame
     lbl.Text = "Delay"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 18
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
