@@ -76,7 +76,7 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     lbl.Text = "Show FOV Circle"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 18
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = toggleRow
 
