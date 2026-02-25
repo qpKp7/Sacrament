@@ -29,7 +29,6 @@ local COLOR_ARROW_CLOSED = Color3.fromHex("CCCCCC")
 local COLOR_ARROW_OPEN = Color3.fromHex("C80000")
 local COLOR_GLOW = Color3.fromHex("FF3333") 
 
--- Animação reativada: 0.25s garante movimento visível, suave e elegante, sem a lentidão do delay antigo.
 local TWEEN_INFO = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function isArrowText(t: string): boolean
@@ -61,8 +60,6 @@ end
 local function setArrowVisual(item: AccordionItem, open: boolean, animate: boolean)
     if not item.fakeGlyph or not item.fakeStroke then return end
 
-    -- A mágica geométrica: O texto é SEMPRE ">". A rotação de 90 graus cria o "v" perfeito.
-    -- Isso garante uma transição fluida sem piscar ou mostrar caracteres errados (como "<").
     local targetRotation = open and 90 or 0
     local targetColor = open and COLOR_ARROW_OPEN or COLOR_ARROW_CLOSED
     local targetStrokeTrans = open and 0.85 or 1 
@@ -194,14 +191,12 @@ function CombatModuleFactory.new(): CombatModule
             ensureArrowOrder(controls, glyph)
             item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
-            -- Ocultar seta original completamente para não atrapalhar
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
                 textObj.TextStrokeTransparency = 1
             end
 
-            -- Fake Arrow: Única responsável pela renderização visual da transição
             local fake = Instance.new("TextLabel")
             fake.Name = "FakeArrowClean"
             fake.BackgroundTransparency = 1
@@ -227,6 +222,33 @@ function CombatModuleFactory.new(): CombatModule
             maid:GiveTask(fake)
         end
 
+        -- CORREÇÃO DO BUG DE 2 CLIQUES:
+        -- 1. Destruímos o botão de clique original do sub-módulo (que possui estado local "sujo")
+        local oldHeaderClick = item.header:FindFirstChild("HeaderClick")
+        if oldHeaderClick then
+            oldHeaderClick:Destroy()
+        end
+
+        -- 2. Recriamos o botão sendo controlado 100% por este orquestrador central
+        local newHeaderClick = Instance.new("TextButton")
+        newHeaderClick.Name = "HeaderClick"
+        newHeaderClick.Size = UDim2.new(1, -100, 1, 0)
+        newHeaderClick.Position = UDim2.fromScale(0, 0)
+        newHeaderClick.BackgroundTransparency = 1
+        newHeaderClick.Text = ""
+        newHeaderClick.ZIndex = 5
+        newHeaderClick.Parent = item.header
+
+        local function toggleSubframe()
+            item.subFrame.Visible = not item.subFrame.Visible
+        end
+
+        maid:GiveTask(newHeaderClick.Activated:Connect(toggleSubframe))
+
+        if item.arrowHit then
+            maid:GiveTask(item.arrowHit.Activated:Connect(toggleSubframe))
+        end
+
         maid:GiveTask(item.subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
             if isSyncing then return end
             
@@ -240,12 +262,6 @@ function CombatModuleFactory.new(): CombatModule
                 applyState(item, false, true)
             end
         end))
-
-        if item.arrowHit then
-            maid:GiveTask(item.arrowHit.Activated:Connect(function()
-                item.subFrame.Visible = not item.subFrame.Visible
-            end))
-        end
 
         applyState(item, false, false)
     end
