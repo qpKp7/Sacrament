@@ -111,35 +111,6 @@ local function ensureArrowOrder(controls: Instance, arrowGlyph: Instance?)
     end
 end
 
-local function createHitboxOverGlyph(maid: any, glyph: Instance): GuiButton?
-    if glyph:IsA("TextButton") then return glyph end
-    if not glyph:IsA("GuiObject") or not glyph.Parent then return nil end
-
-    local guiObj = glyph :: GuiObject
-    local hit = Instance.new("TextButton")
-    hit.Name = "ArrowHitbox"
-    hit.BackgroundTransparency = 1
-    hit.BorderSizePixel = 0
-    hit.AutoButtonColor = false
-    hit.Text = ""
-    hit.ZIndex = guiObj.ZIndex + 1
-    hit.Parent = guiObj.Parent
-
-    local function sync()
-        hit.ZIndex = guiObj.ZIndex + 1
-        hit.AnchorPoint = guiObj.AnchorPoint
-        hit.Size = guiObj.Size
-        hit.Position = guiObj.Position
-    end
-
-    maid:GiveTask(guiObj:GetPropertyChangedSignal("ZIndex"):Connect(sync))
-    maid:GiveTask(guiObj:GetPropertyChangedSignal("Size"):Connect(sync))
-    maid:GiveTask(guiObj:GetPropertyChangedSignal("Position"):Connect(sync))
-    sync()
-
-    return hit
-end
-
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
 
@@ -170,13 +141,10 @@ function CombatModuleFactory.new(): CombatModule
 
     local items: { AccordionItem } = {}
     local openItem: AccordionItem? = nil
-    local isSyncing = false
 
     local function applyState(item: AccordionItem, open: boolean, animate: boolean)
-        isSyncing = true
         item.subFrame.Visible = open
         setArrowVisual(item, open, animate)
-        isSyncing = false
     end
 
     local function bindAccordion(item: AccordionItem)
@@ -189,14 +157,15 @@ function CombatModuleFactory.new(): CombatModule
 
         if glyph then
             ensureArrowOrder(controls, glyph)
-            item.arrowHit = createHitboxOverGlyph(maid, glyph)
             
+            -- Ocultar a seta original para assumir controlo absoluto [cite: 2026-02-24]
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
                 textObj.TextStrokeTransparency = 1
             end
 
+            -- Fake Arrow limpa [cite: 2026-02-24]
             local fake = Instance.new("TextLabel")
             fake.Name = "FakeArrowClean"
             fake.BackgroundTransparency = 1
@@ -220,48 +189,56 @@ function CombatModuleFactory.new(): CombatModule
             item.fakeGlyph = fake
             item.fakeStroke = stroke
             maid:GiveTask(fake)
+
+            -- Hitbox isolada e sobreposta para garantir clique prioritário (ZIndex 100) [cite: 2026-02-24]
+            local arrowHit = Instance.new("TextButton")
+            arrowHit.Name = "CombatArrowHitbox"
+            arrowHit.Size = UDim2.fromScale(2, 2)
+            arrowHit.Position = UDim2.fromScale(0.5, 0.5)
+            arrowHit.AnchorPoint = Vector2.new(0.5, 0.5)
+            arrowHit.BackgroundTransparency = 1
+            arrowHit.Text = ""
+            arrowHit.ZIndex = 100 
+            arrowHit.Parent = fake
+
+            item.arrowHit = arrowHit
         end
 
-        -- CORREÇÃO DO BUG DE 2 CLIQUES:
-        -- 1. Destruímos o botão de clique original do sub-módulo (que possui estado local "sujo")
-        local oldHeaderClick = item.header:FindFirstChild("HeaderClick")
-        if oldHeaderClick then
-            oldHeaderClick:Destroy()
-        end
+        -- Destruir lógicas internas antigas que causavam o bug do clique duplo [cite: 2026-02-24]
+        local oldClick = item.header:FindFirstChild("HeaderClick")
+        if oldClick then oldClick:Destroy() end
 
-        -- 2. Recriamos o botão sendo controlado 100% por este orquestrador central
         local newHeaderClick = Instance.new("TextButton")
-        newHeaderClick.Name = "HeaderClick"
-        newHeaderClick.Size = UDim2.new(1, -100, 1, 0)
+        newHeaderClick.Name = "CombatHeaderClick"
+        newHeaderClick.Size = UDim2.new(1, -80, 1, 0)
         newHeaderClick.Position = UDim2.fromScale(0, 0)
         newHeaderClick.BackgroundTransparency = 1
         newHeaderClick.Text = ""
-        newHeaderClick.ZIndex = 5
+        newHeaderClick.ZIndex = 50
         newHeaderClick.Parent = item.header
 
-        local function toggleSubframe()
-            item.subFrame.Visible = not item.subFrame.Visible
-        end
-
-        maid:GiveTask(newHeaderClick.Activated:Connect(toggleSubframe))
-
-        if item.arrowHit then
-            maid:GiveTask(item.arrowHit.Activated:Connect(toggleSubframe))
-        end
-
-        maid:GiveTask(item.subFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-            if isSyncing then return end
-            
-            local isOpen = item.subFrame.Visible
-            if isOpen then
-                if openItem and openItem ~= item then applyState(openItem, false, true) end
+        -- Orquestrador Direto: Ignora `.Visible` mutável e atua com base no estado nativo
+        local function onToggle()
+            local isOpening = not item.subFrame.Visible
+            if isOpening then
+                if openItem and openItem ~= item then
+                    applyState(openItem, false, true)
+                end
                 openItem = item
                 applyState(item, true, true)
-            elseif openItem == item then
-                openItem = nil
+            else
+                if openItem == item then
+                    openItem = nil
+                end
                 applyState(item, false, true)
             end
-        end))
+        end
+
+        maid:GiveTask(newHeaderClick.Activated:Connect(onToggle))
+        
+        if item.arrowHit then
+            maid:GiveTask(item.arrowHit.Activated:Connect(onToggle))
+        end
 
         applyState(item, false, false)
     end
