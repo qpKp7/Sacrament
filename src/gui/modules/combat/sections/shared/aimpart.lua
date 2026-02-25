@@ -47,7 +47,7 @@ function AimPartFactory.new(layoutOrder: number): AimPartSection
     lbl.Text = "Aim Part"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 18
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
