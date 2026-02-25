@@ -56,7 +56,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     lbl.Text = "KEY"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 20
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
