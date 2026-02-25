@@ -56,7 +56,7 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     lblTitle.Text = "Key Hold"
     lblTitle.TextColor3 = COLOR_LABEL
     lblTitle.Font = FONT_MAIN
-    lblTitle.TextSize = 14
+    lblTitle.TextSize = 18
     lblTitle.TextXAlignment = Enum.TextXAlignment.Left
     lblTitle.Parent = row
 
