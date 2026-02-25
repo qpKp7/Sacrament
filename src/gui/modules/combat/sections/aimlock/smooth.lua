@@ -78,7 +78,7 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
     lbl.Text = "Smooth"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 18
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
