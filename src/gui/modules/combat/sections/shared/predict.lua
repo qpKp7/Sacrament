@@ -77,7 +77,7 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     lbl.Text = "Predict"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
-    lbl.TextSize = 14
+    lbl.TextSize = 18
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
