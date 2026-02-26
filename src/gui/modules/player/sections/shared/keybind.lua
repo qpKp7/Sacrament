@@ -23,7 +23,7 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
 
     local container = Instance.new("Frame")
     container.Name = "KeybindSection"
-    container.Size = UDim2.new(1, 0, 0, 50)
+    container.Size = UDim2.new(1, 0, 0, 45)
     container.BackgroundTransparency = 1
     container.LayoutOrder = layoutOrder or 1
 
@@ -39,13 +39,13 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
     title.Text = "KEY"
     title.TextColor3 = COLOR_LABEL
     title.Font = FONT_MAIN
-    title.TextSize = 20
+    title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = container
 
     local btnBg = Instance.new("Frame")
     btnBg.Name = "ButtonBg"
-    btnBg.Size = UDim2.new(0, 100, 0, 28)
+    btnBg.Size = UDim2.new(0, 130, 0, 32)
     btnBg.AnchorPoint = Vector2.new(1, 0.5)
     btnBg.Position = UDim2.new(1, 0, 0.5, 0)
     btnBg.BackgroundColor3 = COLOR_BG
@@ -67,7 +67,7 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
     bindBtn.Text = "NONE"
     bindBtn.TextColor3 = COLOR_ACCENT
     bindBtn.Font = FONT_MAIN
-    bindBtn.TextSize = 12
+    bindBtn.TextSize = 14
     bindBtn.Parent = btnBg
 
     local isListening = false
@@ -75,7 +75,7 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
 
     local function updateVisual()
         if isListening then
-            bindBtn.Text = "..."
+            bindBtn.Text = "...?"
             bindBtn.TextColor3 = COLOR_ACCENT
             stroke.Color = COLOR_ACCENT
         else
@@ -100,7 +100,6 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
         if not isListening then return end
         
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            -- Escape ou Backspace limpam a keybind
             if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.Backspace then
                 currentKey = nil
             else
@@ -109,7 +108,6 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
             isListening = false
             updateVisual()
         elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
-            -- Clicar fora cancela a escuta mantendo a tecla anterior
             isListening = false
             updateVisual()
         end
