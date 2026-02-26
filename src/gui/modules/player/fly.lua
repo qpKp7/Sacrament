@@ -180,7 +180,6 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    rightLayout.Padding = UDim.new(0, 15) -- Espaçamento igual ao Trigger Bot
     rightLayout.Parent = rightContent
 
     local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
@@ -207,7 +206,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     -- 2. Area Rolável (InputsScroll)
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
-    inputsScroll.Size = UDim2.new(1, 0, 1, -57) -- Altura ajustada
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
     inputsScroll.BackgroundTransparency = 1
     inputsScroll.BorderSizePixel = 0
     inputsScroll.ScrollBarThickness = 0
@@ -222,12 +221,12 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     inputsLayout.Parent = inputsScroll
 
     local inputsPadding = Instance.new("UIPadding")
-    inputsPadding.PaddingTop = UDim.new(0, 20) -- Padding superior para espaçamento
+    inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(SpeedSection, 2, inputsScroll) -- Speed reintroduzido
+    safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
     if toggleBtn and glowBar then
@@ -238,27 +237,23 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local isExpanded = false
     
-    -- Hitbox da Seta (apenas expande/colapsa)
-    local arrowHitbox = Instance.new("TextButton")
-    arrowHitbox.Name = "ArrowHitbox"
-    arrowHitbox.Size = UDim2.new(0, 50, 1, 0)
-    arrowHitbox.AnchorPoint = Vector2.new(1, 0)
-    arrowHitbox.Position = UDim2.fromScale(1, 0)
-    arrowHitbox.BackgroundTransparency = 1
-    arrowHitbox.Text = ""
-    arrowHitbox.ZIndex = 10 
-    arrowHitbox.Parent = header
+    -- Correção: Hitbox que expande o Subframe configurada para NÃO cobrir o Toggle
+    local headerBtn = Instance.new("TextButton")
+    headerBtn.Name = "HeaderClick"
+    headerBtn.Size = UDim2.new(1, -100, 1, 0) -- Deixa 100 pixels livres na direita para o Toggle
+    headerBtn.Position = UDim2.fromScale(0, 0)
+    headerBtn.BackgroundTransparency = 1
+    headerBtn.Text = ""
+    headerBtn.ZIndex = 5
+    headerBtn.Parent = header
 
-    maid:GiveTask(arrowHitbox.MouseButton1Click:Connect(function()
+    maid:GiveTask(headerBtn.MouseButton1Click:Connect(function()
         isExpanded = not isExpanded
-        subFrame.Visible = isExpanded
         if arrow and type(arrow.SetState) == "function" then
             arrow:SetState(isExpanded)
         end
+        subFrame.Visible = isExpanded
     end))
-
-    -- Removida a hitbox do header para o toggle funcionar corretamente
-    -- O ToggleButton já tem sua própria área clicável no 'controls' frame.
 
     maid:GiveTask(container)
     local self = {}
