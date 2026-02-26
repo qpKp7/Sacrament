@@ -45,7 +45,7 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
 
     local btnBg = Instance.new("Frame")
     btnBg.Name = "ButtonBg"
-    btnBg.Size = UDim2.new(0, 130, 0, 32)
+    btnBg.Size = UDim2.new(0, 100, 0, 28) -- Dimensões ajustadas para igualar Trigger Bot
     btnBg.AnchorPoint = Vector2.new(1, 0.5)
     btnBg.Position = UDim2.new(1, 0, 0.5, 0)
     btnBg.BackgroundColor3 = COLOR_BG
@@ -65,7 +65,7 @@ function KeybindFactory.new(layoutOrder: number?): KeybindUI
     bindBtn.Size = UDim2.fromScale(1, 1)
     bindBtn.BackgroundTransparency = 1
     bindBtn.Text = "NONE"
-    bindBtn.TextColor3 = COLOR_ACCENT
+    bindBtn.TextColor3 = COLOR_ACCENT -- Cor NONE vermelha
     bindBtn.Font = FONT_MAIN
     bindBtn.TextSize = 14
     bindBtn.Parent = btnBg
