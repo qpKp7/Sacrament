@@ -39,6 +39,7 @@ local COLOR_STROKE = Color3.fromHex("333333")
 local COLOR_TEXT_WHITE = Color3.fromHex("FFFFFF")
 local FONT_MAIN = Enum.Font.GothamBold
 
+-- Ajuste 2: Value Box do Velocity refinada (Inteiro, 3 chars, 110x32) [cite: 2026-02-25]
 local function createVelocityRow(maid: any, layoutOrder: number): Frame
     local row = Instance.new("Frame")
     row.Name = "VelocityRow"
@@ -62,7 +63,7 @@ local function createVelocityRow(maid: any, layoutOrder: number): Frame
     lbl.Parent = row
 
     local inputBg = Instance.new("Frame")
-    inputBg.Size = UDim2.new(0, 60, 0, 24)
+    inputBg.Size = UDim2.new(0, 110, 0, 32) -- Tamanho aumentado para proporção elegante [cite: 2026-02-25]
     inputBg.Position = UDim2.new(1, 0, 0.5, 0)
     inputBg.AnchorPoint = Vector2.new(1, 0.5)
     inputBg.BackgroundColor3 = COLOR_BG
@@ -80,18 +81,17 @@ local function createVelocityRow(maid: any, layoutOrder: number): Frame
     local input = Instance.new("TextBox")
     input.Size = UDim2.fromScale(1, 1)
     input.BackgroundTransparency = 1
-    input.Text = "32.00"
-    input.PlaceholderText = "32.00"
+    input.Text = "32" -- Valor inicial inteiro [cite: 2026-02-25]
+    input.PlaceholderText = "32"
     input.TextColor3 = COLOR_TEXT_WHITE
     input.Font = FONT_MAIN
     input.TextSize = 14
     input.Parent = inputBg
 
     maid:GiveTask(input:GetPropertyChangedSignal("Text"):Connect(function()
-        local text = input.Text:gsub("[^%d%.]", "")
-        local parts = string.split(text, ".")
-        if #parts > 2 then
-            text = parts[1] .. "." .. table.concat(parts, "", 2)
+        local text = input.Text:gsub("%D", "") -- Filtro APENAS de inteiros [cite: 2026-02-25]
+        if #text > 3 then
+            text = string.sub(text, 1, 3) -- Limite de 3 caracteres [cite: 2026-02-25]
         end
         if input.Text ~= text then
             input.Text = text
@@ -101,11 +101,11 @@ local function createVelocityRow(maid: any, layoutOrder: number): Frame
     maid:GiveTask(input.FocusLost:Connect(function()
         local num = tonumber(input.Text)
         if not num then
-            input.Text = "32.00"
+            input.Text = "32"
             return
         end
-        num = math.clamp(num, 0, 100)
-        input.Text = string.format("%.2f", num)
+        num = math.clamp(num, 0, 999) -- Clamp 0 a 999 [cite: 2026-02-25]
+        input.Text = tostring(num)
     end))
 
     return row
@@ -257,6 +257,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Padding = UDim.new(0, 14) -- Ajuste 3: Espaçamento respirável (14px) [cite: 2026-02-25]
     rightLayout.Parent = rightContent
 
     local inputsPadding = Instance.new("UIPadding")
@@ -264,26 +265,33 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = rightContent
 
-    -- 1. KEY Bind
+    -- 1. KEY Bind (Ordem e Identidade visual Sacrament) [cite: 2026-02-25]
     if KeybindSection and type(KeybindSection.new) == "function" then
         local keybind = KeybindSection.new(1)
         keybind.Instance.Parent = rightContent
         maid:GiveTask(keybind)
     end
 
-    -- 2. Key Hold Toggle
+    -- Ajuste 1: Divisória Horizontal Vermelha abaixo do KEY [cite: 2026-02-25]
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
+        local hLine = Sidebar.createHorizontal(2)
+        hLine.Instance.Parent = rightContent
+        maid:GiveTask(hLine)
+    end
+
+    -- 3. Key Hold Toggle [cite: 2026-02-25]
     if KeyHoldSection and type(KeyHoldSection.new) == "function" then
-        local keyhold = KeyHoldSection.new(2)
+        local keyhold = KeyHoldSection.new(3)
         keyhold.Instance.Parent = rightContent
         maid:GiveTask(keyhold)
     end
 
-    -- 3. Fly Speed Toggle
+    -- 4. Fly Speed Toggle [cite: 2026-02-25]
     local flySpeedToggleRow = Instance.new("Frame")
     flySpeedToggleRow.Name = "FlySpeedToggleRow"
     flySpeedToggleRow.Size = UDim2.new(1, 0, 0, 45)
     flySpeedToggleRow.BackgroundTransparency = 1
-    flySpeedToggleRow.LayoutOrder = 3
+    flySpeedToggleRow.LayoutOrder = 4
     flySpeedToggleRow.Parent = rightContent
 
     local fstPad = Instance.new("UIPadding")
@@ -310,11 +318,11 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         maid:GiveTask(fstToggle)
     end
 
-    -- 4. Fly Speed Slider (Condicional)
+    -- 5. Fly Speed Slider (Condicional) [cite: 2026-02-25]
     local flySpeedSlider = nil
     if Slider and type(Slider.new) == "function" then
         flySpeedSlider = Slider.new("Speed", 0, 200, 60, 0)
-        flySpeedSlider.Instance.LayoutOrder = 4
+        flySpeedSlider.Instance.LayoutOrder = 5
         flySpeedSlider.Instance.Visible = false 
         flySpeedSlider.Instance.Parent = rightContent
         maid:GiveTask(flySpeedSlider)
@@ -326,18 +334,18 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end))
     end
 
-    -- 5. Velocity Box
-    local velocityRow = createVelocityRow(maid, 5)
+    -- 6. Velocity Box (Atualizada com novo tamanho e lógica) [cite: 2026-02-25]
+    local velocityRow = createVelocityRow(maid, 6)
     velocityRow.Parent = rightContent
 
-    -- 6. Animation Dropdown
+    -- 7. Animation Dropdown [cite: 2026-02-25]
     if AnimationsSection and type(AnimationsSection.new) == "function" then
-        local anims = AnimationsSection.new(6)
+        local anims = AnimationsSection.new(7)
         anims.Instance.Parent = rightContent
         maid:GiveTask(anims)
     end
 
-    -- GlowBar Sync Principal
+    -- GlowBar Sync Principal [cite: 2026-02-20]
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
