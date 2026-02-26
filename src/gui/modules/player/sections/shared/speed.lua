@@ -33,10 +33,10 @@ function SpeedFactory.new(layoutOrder: number?): SpeedUI
 
     local container = Instance.new("Frame")
     container.Name = "SpeedSection"
-    container.Size = UDim2.new(1, 0, 0, 0) -- Tamanho inicial 0
+    container.Size = UDim2.new(1, 0, 0, 45) -- Corrigido: Tamanho base 45 para não sumir no Scroll
     container.BackgroundTransparency = 1
     container.LayoutOrder = layoutOrder or 1
-    container.AutomaticSize = Enum.AutomaticSize.Y -- Expande automaticamente
+    container.AutomaticSize = Enum.AutomaticSize.Y
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -110,7 +110,7 @@ function SpeedFactory.new(layoutOrder: number?): SpeedUI
     trackCorner.Parent = track
 
     local fill = Instance.new("Frame")
-    fill.Size = UDim2.fromScale(32 / 300, 1) -- Valor inicial 32 (de 0-300)
+    fill.Size = UDim2.fromScale(32 / 300, 1)
     fill.BackgroundColor3 = COLOR_ACCENT
     fill.Parent = track
 
@@ -155,7 +155,7 @@ function SpeedFactory.new(layoutOrder: number?): SpeedUI
     if toggleObj then
         maid:GiveTask(toggleObj.Toggled:Connect(function(state: boolean)
             sliderRow.Visible = state
-            container.Size = state and UDim2.new(1, 0, 0, 90) or UDim2.new(1, 0, 0, 45) -- Ajusta tamanho
+            container.Size = state and UDim2.new(1, 0, 0, 90) or UDim2.new(1, 0, 0, 45)
         end))
     end
 
