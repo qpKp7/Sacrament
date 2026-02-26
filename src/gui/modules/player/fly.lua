@@ -22,9 +22,6 @@ local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
 local Sidebar = SafeImport("gui/modules/components/sidebar")
 
-local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
-local KeyHoldSection = SafeImport("gui/modules/player/sections/shared/keyhold")
-
 export type FlyUI = {
     Instance: Frame,
     Destroy: (self: FlyUI) -> ()
@@ -186,20 +183,84 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
-        if type(moduleType) == "table" and type(moduleType.new) == "function" then
-            local success, instance = pcall(function()
-                return moduleType.new(order)
-            end)
-            if success and instance and instance.Instance then
-                instance.Instance.Parent = parentInstance
-                maid:GiveTask(instance)
-            end
-        end
-    end
-
     -- 1. Cabecalho Fixo: Keybind + Linha Horizontal
-    safeLoadSection(KeybindSection, 1, rightContent)
+    local keybindRow = Instance.new("Frame")
+    keybindRow.Size = UDim2.new(1, 0, 0, 45)
+    keybindRow.BackgroundTransparency = 1
+    keybindRow.LayoutOrder = 1
+    keybindRow.Parent = rightContent
+
+    local kbPad = Instance.new("UIPadding")
+    kbPad.PaddingLeft = UDim.new(0, 20)
+    kbPad.PaddingRight = UDim.new(0, 25)
+    kbPad.Parent = keybindRow
+
+    local kbTitle = Instance.new("TextLabel")
+    kbTitle.Size = UDim2.new(0.5, 0, 1, 0)
+    kbTitle.BackgroundTransparency = 1
+    kbTitle.Text = "KEY"
+    kbTitle.TextColor3 = COLOR_LABEL
+    kbTitle.Font = FONT_MAIN
+    kbTitle.TextSize = 18
+    kbTitle.TextXAlignment = Enum.TextXAlignment.Left
+    kbTitle.Parent = keybindRow
+
+    -- Correção 2: Valuebox KEY com tamanho proporcional (130x32) e texto NONE vermelho sangue
+    local kbBtnBg = Instance.new("Frame")
+    kbBtnBg.Size = UDim2.new(0, 130, 0, 32) 
+    kbBtnBg.AnchorPoint = Vector2.new(1, 0.5)
+    kbBtnBg.Position = UDim2.new(1, 0, 0.5, 0)
+    kbBtnBg.BackgroundColor3 = COLOR_BG
+    kbBtnBg.Parent = keybindRow
+
+    local kbCorner = Instance.new("UICorner")
+    kbCorner.CornerRadius = UDim.new(0, 4)
+    kbCorner.Parent = kbBtnBg
+
+    local kbStroke = Instance.new("UIStroke")
+    kbStroke.Color = COLOR_STROKE
+    kbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    kbStroke.Parent = kbBtnBg
+
+    local kbBtn = Instance.new("TextButton")
+    kbBtn.Size = UDim2.fromScale(1, 1)
+    kbBtn.BackgroundTransparency = 1
+    kbBtn.Text = "NONE"
+    kbBtn.TextColor3 = COLOR_ACCENT 
+    kbBtn.Font = FONT_MAIN
+    kbBtn.TextSize = 14
+    kbBtn.Parent = kbBtnBg
+
+    local isListening = false
+    local currentKey: Enum.KeyCode? = nil
+    maid:GiveTask(kbBtn.Activated:Connect(function()
+        if isListening then return end
+        isListening = true
+        kbBtn.Text = "...?"
+        kbBtn.TextColor3 = COLOR_ACCENT
+        kbStroke.Color = COLOR_ACCENT
+    end))
+    maid:GiveTask(UserInputService.InputBegan:Connect(function(input)
+        if not isListening then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.Backspace then
+                currentKey = nil
+                kbBtn.Text = "NONE"
+                kbBtn.TextColor3 = COLOR_ACCENT
+            else
+                currentKey = input.KeyCode
+                kbBtn.Text = currentKey.Name:upper()
+                kbBtn.TextColor3 = COLOR_TEXT_WHITE
+            end
+            isListening = false
+            kbStroke.Color = COLOR_STROKE
+        elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseButton2 then
+            isListening = false
+            kbStroke.Color = COLOR_STROKE
+            kbBtn.Text = currentKey and currentKey.Name:upper() or "NONE"
+            kbBtn.TextColor3 = currentKey and COLOR_TEXT_WHITE or COLOR_ACCENT
+        end
+    end))
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -230,8 +291,34 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     inputsPadding.PaddingRight = UDim.new(0, 25)
     inputsPadding.Parent = inputsScroll
 
-    -- 2.1 Key Hold
-    safeLoadSection(KeyHoldSection, 1, inputsScroll)
+    -- Correção 1: Key Hold alinhado à direita de forma simétrica
+    local keyHoldRow = Instance.new("Frame")
+    keyHoldRow.Size = UDim2.new(1, 0, 0, 45)
+    keyHoldRow.BackgroundTransparency = 1
+    keyHoldRow.LayoutOrder = 1
+    keyHoldRow.Parent = inputsScroll
+
+    local khPad = Instance.new("UIPadding")
+    khPad.PaddingLeft = UDim.new(0, 20)
+    khPad.Parent = keyHoldRow
+
+    local khTitle = Instance.new("TextLabel")
+    khTitle.Size = UDim2.new(0.5, 0, 1, 0)
+    khTitle.BackgroundTransparency = 1
+    khTitle.Text = "Key Hold"
+    khTitle.TextColor3 = COLOR_LABEL
+    khTitle.Font = FONT_MAIN
+    khTitle.TextSize = 18
+    khTitle.TextXAlignment = Enum.TextXAlignment.Left
+    khTitle.Parent = keyHoldRow
+
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        local khToggle = ToggleButton.new()
+        khToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        khToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        khToggle.Instance.Parent = keyHoldRow
+        maid:GiveTask(khToggle)
+    end
 
     -- 2.2 Fly Speed Toggle
     local flySpeedToggleRow = Instance.new("Frame")
@@ -301,7 +388,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     trackCorner.Parent = track
 
     local fill = Instance.new("Frame")
-    fill.Size = UDim2.fromScale(32 / 300, 1) -- Inicial 32 de 300
+    fill.Size = UDim2.fromScale(32 / 300, 1)
     fill.BackgroundColor3 = COLOR_ACCENT
     fill.Parent = track
 
@@ -349,7 +436,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end))
     end
 
-    -- 2.4 Animation Dropdown (Clean, sem seta, opções puras)
+    -- Correção 3: Dropdown Animation alinhado com o padrão COMBAT
     local animContainer = Instance.new("Frame")
     animContainer.Name = "AnimationContainer"
     animContainer.Size = UDim2.new(1, 0, 0, 45)
@@ -378,24 +465,44 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     animTitle.Parent = animHeaderRow
 
     local animBtn = Instance.new("TextButton")
-    animBtn.Size = UDim2.new(0, 120, 0, 28)
+    animBtn.Size = UDim2.new(0, 130, 0, 32)
     animBtn.AnchorPoint = Vector2.new(1, 0.5)
     animBtn.Position = UDim2.new(1, 0, 0.5, 0)
     animBtn.BackgroundColor3 = COLOR_BG
-    animBtn.Text = "None"
-    animBtn.TextColor3 = COLOR_TEXT_WHITE
-    animBtn.Font = FONT_MAIN
-    animBtn.TextSize = 14
+    animBtn.Text = ""
+    animBtn.AutoButtonColor = false
     animBtn.Parent = animHeaderRow
 
     local animCorner = Instance.new("UICorner")
-    animCorner.CornerRadius = UDim.new(0, 4)
+    animCorner.CornerRadius = UDim.new(0, 6) 
     animCorner.Parent = animBtn
 
     local animStroke = Instance.new("UIStroke")
     animStroke.Color = COLOR_STROKE
+    animStroke.Thickness = 1
     animStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     animStroke.Parent = animBtn
+
+    local animText = Instance.new("TextLabel")
+    animText.Size = UDim2.new(1, -30, 1, 0)
+    animText.Position = UDim2.fromOffset(10, 0)
+    animText.BackgroundTransparency = 1
+    animText.Text = "None"
+    animText.TextColor3 = COLOR_TEXT_WHITE
+    animText.Font = FONT_MAIN
+    animText.TextSize = 14
+    animText.TextXAlignment = Enum.TextXAlignment.Left
+    animText.Parent = animBtn
+
+    local animArrow = Instance.new("TextLabel")
+    animArrow.Size = UDim2.new(0, 20, 1, 0)
+    animArrow.Position = UDim2.new(1, -25, 0, 0)
+    animArrow.BackgroundTransparency = 1
+    animArrow.Text = ">"
+    animArrow.TextColor3 = COLOR_TEXT_WHITE
+    animArrow.Font = FONT_MAIN
+    animArrow.TextSize = 14
+    animArrow.Parent = animBtn
 
     local animList = Instance.new("Frame")
     animList.Size = UDim2.new(1, 0, 0, 0)
@@ -431,7 +538,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     for i, opt in ipairs(options) do
         local optBtn = Instance.new("TextButton")
-        optBtn.Size = UDim2.new(0, 120, 0, 28)
+        optBtn.Size = UDim2.new(0, 130, 0, 28)
         optBtn.BackgroundColor3 = COLOR_BG
         optBtn.Text = opt.name
         optBtn.TextColor3 = (i == 1) and COLOR_ACCENT or COLOR_LABEL
@@ -445,7 +552,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         optCorner.Parent = optBtn
 
         maid:GiveTask(optBtn.Activated:Connect(function()
-            animBtn.Text = opt.name
+            animText.Text = opt.name
             isAnimOpen = false
             animList.Visible = false
             animStroke.Color = COLOR_STROKE
@@ -458,7 +565,6 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end))
     end
 
-    -- GlowBar Sync Principal
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
@@ -466,28 +572,45 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     end
 
     local isExpanded = false
-    if arrow then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            isExpanded = state
-            subFrame.Visible = state
-        end))
-    end
+    
+    -- Correção 4: Hitboxes separadas para evitar conflito (Toggle Fly x Expandir Subframe)
+    local arrowHitbox = Instance.new("TextButton")
+    arrowHitbox.Name = "ArrowHitbox"
+    arrowHitbox.Size = UDim2.new(0, 50, 1, 0)
+    arrowHitbox.AnchorPoint = Vector2.new(1, 0)
+    arrowHitbox.Position = UDim2.fromScale(1, 0)
+    arrowHitbox.BackgroundTransparency = 1
+    arrowHitbox.Text = ""
+    arrowHitbox.ZIndex = 10 
+    arrowHitbox.Parent = header
 
-    local headerBtn = Instance.new("TextButton")
-    headerBtn.Name = "HeaderClick"
-    headerBtn.Size = UDim2.new(1, -100, 1, 0) 
-    headerBtn.Position = UDim2.fromScale(0, 0)
-    headerBtn.BackgroundTransparency = 1
-    headerBtn.Text = ""
-    headerBtn.ZIndex = 5
-    headerBtn.Parent = header
-
-    maid:GiveTask(headerBtn.MouseButton1Click:Connect(function()
+    maid:GiveTask(arrowHitbox.MouseButton1Click:Connect(function()
         isExpanded = not isExpanded
-        if arrow then
+        subFrame.Visible = isExpanded
+        if arrow and type(arrow.SetState) == "function" then
             arrow:SetState(isExpanded)
         end
-        subFrame.Visible = isExpanded
+    end))
+
+    local headerHitbox = Instance.new("TextButton")
+    headerHitbox.Name = "HeaderToggleClick"
+    headerHitbox.Size = UDim2.new(1, -50, 1, 0) 
+    headerHitbox.Position = UDim2.fromScale(0, 0)
+    headerHitbox.BackgroundTransparency = 1
+    headerHitbox.Text = ""
+    headerHitbox.ZIndex = 1 
+    headerHitbox.Parent = header
+
+    maid:GiveTask(headerHitbox.MouseButton1Click:Connect(function()
+        if toggleBtn then
+            pcall(function()
+                if type(toggleBtn.Toggle) == "function" then
+                    toggleBtn:Toggle()
+                elseif type(toggleBtn.SetState) == "function" and toggleBtn.State ~= nil then
+                    toggleBtn:SetState(not toggleBtn.State)
+                end
+            end)
+        end
     end))
 
     maid:GiveTask(container)
