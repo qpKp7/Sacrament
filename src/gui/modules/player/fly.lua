@@ -180,6 +180,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Padding = UDim.new(0, 15) -- Espaçamento igual ao Trigger Bot
     rightLayout.Parent = rightContent
 
     local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
@@ -194,6 +195,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end
     end
 
+    -- 1. Cabecalho Fixo: Keybind + Linha Horizontal
     safeLoadSection(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
@@ -202,9 +204,10 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         maid:GiveTask(hLine)
     end
 
+    -- 2. Area Rolável (InputsScroll)
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
-    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57) -- Altura ajustada
     inputsScroll.BackgroundTransparency = 1
     inputsScroll.BorderSizePixel = 0
     inputsScroll.ScrollBarThickness = 0
@@ -219,12 +222,12 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     inputsLayout.Parent = inputsScroll
 
     local inputsPadding = Instance.new("UIPadding")
-    inputsPadding.PaddingTop = UDim.new(0, 20)
+    inputsPadding.PaddingTop = UDim.new(0, 20) -- Padding superior para espaçamento
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(SpeedSection, 2, inputsScroll)
+    safeLoadSection(SpeedSection, 2, inputsScroll) -- Speed reintroduzido
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
     if toggleBtn and glowBar then
@@ -235,6 +238,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local isExpanded = false
     
+    -- Hitbox da Seta (apenas expande/colapsa)
     local arrowHitbox = Instance.new("TextButton")
     arrowHitbox.Name = "ArrowHitbox"
     arrowHitbox.Size = UDim2.new(0, 50, 1, 0)
@@ -253,26 +257,8 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end
     end))
 
-    local headerHitbox = Instance.new("TextButton")
-    headerHitbox.Name = "HeaderToggleClick"
-    headerHitbox.Size = UDim2.new(1, -50, 1, 0) 
-    headerHitbox.Position = UDim2.fromScale(0, 0)
-    headerHitbox.BackgroundTransparency = 1
-    headerHitbox.Text = ""
-    headerHitbox.ZIndex = 5 
-    headerHitbox.Parent = header
-
-    maid:GiveTask(headerHitbox.MouseButton1Click:Connect(function()
-        if toggleBtn then
-            pcall(function()
-                if type(toggleBtn.Toggle) == "function" then
-                    toggleBtn:Toggle()
-                elseif type(toggleBtn.SetState) == "function" and toggleBtn.State ~= nil then
-                    toggleBtn:SetState(not toggleBtn.State)
-                end
-            end)
-        end
-    end))
+    -- Removida a hitbox do header para o toggle funcionar corretamente
+    -- O ToggleButton já tem sua própria área clicável no 'controls' frame.
 
     maid:GiveTask(container)
     local self = {}
