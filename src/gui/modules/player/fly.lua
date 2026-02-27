@@ -35,86 +35,15 @@ local FlyFactory = {}
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
-local function asGuiObject(inst: any): GuiObject?
-	if typeof(inst) == "Instance" and inst:IsA("GuiObject") then
-		return inst :: GuiObject
+local function findGuiButton(root: Instance): GuiButton?
+	if root:IsA("GuiButton") then
+		return root :: GuiButton
+	end
+	local found = root:FindFirstChildWhichIsA("GuiButton", true)
+	if found and found:IsA("GuiButton") then
+		return found :: GuiButton
 	end
 	return nil
-end
-
-local function isRenderableGuiObject(obj: GuiObject): boolean
-	if not obj.Visible then
-		return false
-	end
-	local abs = obj.AbsoluteSize
-	if abs.X <= 0 or abs.Y <= 0 then
-		return false
-	end
-
-	if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-		local t = (obj :: TextLabel).Text
-		if t ~= "" and (obj :: TextLabel).TextTransparency < 1 then
-			return true
-		end
-	end
-
-	if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
-		local img = (obj :: ImageLabel).Image
-		if img ~= "" and (obj :: ImageLabel).ImageTransparency < 1 then
-			return true
-		end
-	end
-
-	if obj.BackgroundTransparency < 1 then
-		return true
-	end
-
-	local stroke = obj:FindFirstChildWhichIsA("UIStroke", true)
-	if stroke and stroke.Enabled and stroke.Transparency < 1 then
-		return true
-	end
-
-	return false
-end
-
-local function computeVisualBounds(root: GuiObject, ignoreName: string): (Vector2, Vector2)
-	local minX = math.huge
-	local minY = math.huge
-	local maxX = -math.huge
-	local maxY = -math.huge
-
-	for _, d in ipairs(root:GetDescendants()) do
-		if typeof(d) == "Instance" and d:IsA("GuiObject") then
-			local g = d :: GuiObject
-			if g ~= root and g.Name ~= ignoreName and isRenderableGuiObject(g) then
-				local p = g.AbsolutePosition
-				local s = g.AbsoluteSize
-				minX = math.min(minX, p.X)
-				minY = math.min(minY, p.Y)
-				maxX = math.max(maxX, p.X + s.X)
-				maxY = math.max(maxY, p.Y + s.Y)
-			end
-		end
-	end
-
-	if minX == math.huge then
-		return Vector2.new(0, 0), root.AbsoluteSize
-	end
-
-	local rootPos = root.AbsolutePosition
-	local rootSize = root.AbsoluteSize
-
-	local localX = minX - rootPos.X
-	local localY = minY - rootPos.Y
-	local w = maxX - minX
-	local h = maxY - minY
-
-	localX = math.clamp(localX, 0, rootSize.X)
-	localY = math.clamp(localY, 0, rootSize.Y)
-	w = math.clamp(w, 0, rootSize.X - localX)
-	h = math.clamp(h, 0, rootSize.Y - localY)
-
-	return Vector2.new(localX, localY), Vector2.new(w, h)
 end
 
 function FlyFactory.new(layoutOrder: number?): FlyUI
@@ -196,6 +125,8 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 	glowWrapper.Name = "GlowWrapper"
 	glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
 	glowWrapper.BackgroundTransparency = 1
+	glowWrapper.Active = false
+	glowWrapper.Selectable = false
 	glowWrapper.Parent = header
 
 	local glowBar = nil
@@ -206,6 +137,12 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 		glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
 		glowBar.Instance.Size = UDim2.fromScale(1, 1)
 		glowBar.Instance.Parent = glowWrapper
+
+		local gObj = glowBar.Instance
+		if gObj:IsA("GuiObject") then
+			gObj.Active = false
+			gObj.Selectable = false
+		end
 
 		local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
 		if c1 then
@@ -315,97 +252,47 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 	safeLoadSection(SpeedSection, 2, inputsScroll)
 	safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-	-- === HITBOXES ISOLADAS === --
-
-	if glowBar and typeof(glowBar.Instance) == "Instance" then
-		local g = asGuiObject(glowBar.Instance)
-		if g then
-			g.Active = false
-			g.Selectable = false
+	if toggleBtn and glowBar then
+		local toggledSignal = (toggleBtn :: any).Toggled
+		if toggledSignal and typeof(toggledSignal) == "RBXScriptSignal" then
+			maid:GiveTask(toggledSignal:Connect(function(state: boolean)
+				(glowBar :: any):SetState(state)
+			end))
 		end
 	end
 
 	local isExpanded = false
 
-	if toggleBtn and typeof(toggleBtn.Instance) == "Instance" then
-		local toggleRoot = asGuiObject(toggleBtn.Instance)
-		if toggleRoot then
-			toggleRoot.ZIndex = 10
-
-			local toggleHitbox = Instance.new("TextButton")
-			toggleHitbox.Name = "ToggleHitbox"
-			toggleHitbox.AnchorPoint = Vector2.new(0, 0)
-			toggleHitbox.BackgroundTransparency = 1
-			toggleHitbox.Text = ""
-			toggleHitbox.AutoButtonColor = false
-			toggleHitbox.ZIndex = 20
-			toggleHitbox.Parent = toggleRoot
-
-			local function updateToggleHitbox()
-				local p, s = computeVisualBounds(toggleRoot, "ToggleHitbox")
-				toggleHitbox.Position = UDim2.fromOffset(p.X, p.Y)
-				toggleHitbox.Size = UDim2.fromOffset(s.X, s.Y)
-			end
-
-			maid:GiveTask(toggleRoot:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateToggleHitbox))
-			maid:GiveTask(toggleRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateToggleHitbox))
-			task.defer(updateToggleHitbox)
-
-			maid:GiveTask(toggleHitbox.MouseButton1Click:Connect(function()
-				if type((toggleBtn :: any).Toggle) == "function" then
-					(toggleBtn :: any):Toggle()
-				elseif type((toggleBtn :: any).SetState) == "function" then
-					local current = (toggleBtn :: any).State
-					if type(current) == "boolean" then
-						(toggleBtn :: any):SetState(not current)
-					else
-						(toggleBtn :: any):SetState(true)
-					end
-				end
-			end))
-
-			if glowBar then
-				local toggledSignal = (toggleBtn :: any).Toggled
-				if toggledSignal and typeof(toggledSignal) == "RBXScriptSignal" then
-					maid:GiveTask(toggledSignal:Connect(function(state: boolean)
-						(glowBar :: any):SetState(state)
-					end))
-				end
-			end
-		end
-	end
-
-	if arrow and typeof(arrow.Instance) == "Instance" then
-		local arrowRoot = asGuiObject(arrow.Instance)
-		if arrowRoot then
-			arrowRoot.ZIndex = 10
-
-			local arrowHitbox = Instance.new("TextButton")
-			arrowHitbox.Name = "ArrowHitbox"
-			arrowHitbox.AnchorPoint = Vector2.new(0, 0)
-			arrowHitbox.BackgroundTransparency = 1
-			arrowHitbox.Text = ""
-			arrowHitbox.AutoButtonColor = false
-			arrowHitbox.ZIndex = 20
-			arrowHitbox.Parent = arrowRoot
-
-			local function updateArrowHitbox()
-				local p, s = computeVisualBounds(arrowRoot, "ArrowHitbox")
-				arrowHitbox.Position = UDim2.fromOffset(p.X, p.Y)
-				arrowHitbox.Size = UDim2.fromOffset(s.X, s.Y)
-			end
-
-			maid:GiveTask(arrowRoot:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateArrowHitbox))
-			maid:GiveTask(arrowRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateArrowHitbox))
-			task.defer(updateArrowHitbox)
-
-			maid:GiveTask(arrowHitbox.MouseButton1Click:Connect(function()
+	if arrow then
+		local arrowButton = findGuiButton((arrow :: any).Instance)
+		if arrowButton then
+			maid:GiveTask(arrowButton.MouseButton1Click:Connect(function()
 				isExpanded = not isExpanded
 				subFrame.Visible = isExpanded
 				if type((arrow :: any).SetState) == "function" then
 					(arrow :: any):SetState(isExpanded)
 				end
 			end))
+		else
+			local root = (arrow :: any).Instance
+			if typeof(root) == "Instance" and root:IsA("GuiObject") then
+				local arrowFallback = Instance.new("TextButton")
+				arrowFallback.Name = "ArrowHitbox"
+				arrowFallback.Size = UDim2.fromScale(1, 1)
+				arrowFallback.Position = UDim2.fromScale(0, 0)
+				arrowFallback.BackgroundTransparency = 1
+				arrowFallback.Text = ""
+				arrowFallback.AutoButtonColor = false
+				arrowFallback.Parent = root
+
+				maid:GiveTask(arrowFallback.MouseButton1Click:Connect(function()
+					isExpanded = not isExpanded
+					subFrame.Visible = isExpanded
+					if type((arrow :: any).SetState) == "function" then
+						(arrow :: any):SetState(isExpanded)
+					end
+				end))
+			end
 		end
 	end
 
