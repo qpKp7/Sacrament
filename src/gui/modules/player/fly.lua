@@ -22,7 +22,7 @@ local Sidebar = SafeImport("gui/modules/components/sidebar")
 
 local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
 local KeyHoldSection = SafeImport("gui/modules/player/sections/shared/keyhold")
-local SpeedSection = SafeImport("gui/modules/player/sections/shared/speed")
+local SpeedSection = SafeImport("gui/modules/player/sections/fly/speed")
 local AnimationsSection = SafeImport("gui/modules/player/sections/fly/animations")
 
 export type FlyUI = {
@@ -180,6 +180,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Padding = UDim.new(0, 15)
     rightLayout.Parent = rightContent
 
     local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
@@ -194,7 +195,6 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end
     end
 
-    -- 1. Cabecalho Fixo: Keybind + Linha Horizontal
     safeLoadSection(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
@@ -203,7 +203,6 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         maid:GiveTask(hLine)
     end
 
-    -- 2. Area Rolável (InputsScroll)
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
     inputsScroll.Size = UDim2.new(1, 0, 1, -57)
@@ -229,20 +228,24 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-    -- === HITBOXES ISOLADAS === --
-    -- Nenhuma hitbox global foi ancorada no Header. O título e a Glowbar são pass-through.
-    
-    -- Hitbox exclusiva para o ToggleButton (100% da área, restrita ao componente)
+    -- === SEPARAÇÃO EXATA DAS HITBOXES ===
+
+    -- GlowBar atrelada estritamente ao evento do Toggle
+    if toggleBtn and glowBar then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            glowBar:SetState(state)
+        end))
+    end
+
+    -- Hitbox exclusiva e isolada para 100% da área do ToggleButton (Ativa/Desativa Fly)
     if toggleBtn then
-        toggleBtn.Instance.ZIndex = 10
-        
         local toggleHitbox = Instance.new("TextButton")
         toggleHitbox.Name = "ToggleHitbox"
         toggleHitbox.Size = UDim2.fromScale(1, 1)
         toggleHitbox.Position = UDim2.fromScale(0, 0)
         toggleHitbox.BackgroundTransparency = 1
         toggleHitbox.Text = ""
-        toggleHitbox.ZIndex = 20
+        toggleHitbox.ZIndex = 10
         toggleHitbox.Parent = toggleBtn.Instance
 
         maid:GiveTask(toggleHitbox.MouseButton1Click:Connect(function()
@@ -252,27 +255,19 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
                 toggleBtn:SetState(not toggleBtn.State)
             end
         end))
-
-        if glowBar then
-            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-                glowBar:SetState(state)
-            end))
-        end
     end
 
     local isExpanded = false
     
-    -- Hitbox exclusiva para a Arrow (100% da área, restrita ao componente)
+    -- Hitbox exclusiva e isolada para 100% da área da Arrow (Expande/Colapsa subframe)
     if arrow then
-        arrow.Instance.ZIndex = 10
-        
         local arrowHitbox = Instance.new("TextButton")
         arrowHitbox.Name = "ArrowHitbox"
         arrowHitbox.Size = UDim2.fromScale(1, 1)
         arrowHitbox.Position = UDim2.fromScale(0, 0)
         arrowHitbox.BackgroundTransparency = 1
         arrowHitbox.Text = ""
-        arrowHitbox.ZIndex = 20
+        arrowHitbox.ZIndex = 10
         arrowHitbox.Parent = arrow.Instance
 
         maid:GiveTask(arrowHitbox.MouseButton1Click:Connect(function()
