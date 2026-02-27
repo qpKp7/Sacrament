@@ -71,33 +71,26 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Active = false
     title.Parent = header
 
+    -- Gaiola direita estática (SEM UIListLayout e SEM AutomaticSize)
+    -- Impede matematicamente qualquer vazamento para a esquerda.
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
-    controls.Size = UDim2.fromOffset(0, 50)
-    controls.AutomaticSize = Enum.AutomaticSize.X
-    controls.Position = UDim2.fromScale(1, 0)
+    controls.Size = UDim2.fromOffset(90, 50) -- Tamanho cravado
     controls.AnchorPoint = Vector2.new(1, 0)
+    controls.Position = UDim2.new(1, -5, 0, 0) -- Margem de 5px da direita
     controls.BackgroundTransparency = 1
+    controls.Active = false
     controls.Parent = header
-
-    local ctrlLayout = Instance.new("UIListLayout")
-    ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
-    ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ctrlLayout.Padding = UDim.new(0, 15)
-    ctrlLayout.Parent = controls
-
-    local ctrlPadding = Instance.new("UIPadding")
-    ctrlPadding.PaddingRight = UDim.new(0, 20)
-    ctrlPadding.Parent = controls
     
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
-        toggleBtn.Instance.LayoutOrder = 1
+        -- Posicionado fixo na esquerda da gaiola
+        toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
+        toggleBtn.Instance.Position = UDim2.new(0, 5, 0.5, 0)
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -105,7 +98,9 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     local arrow = nil
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
-        arrow.Instance.LayoutOrder = 2
+        -- Posicionado fixo na direita da gaiola
+        arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        arrow.Instance.Position = UDim2.new(1, -10, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -114,6 +109,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Active = false
     glowWrapper.Parent = header
 
     local glowBar = nil
@@ -124,6 +120,11 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
         glowBar.Instance.Parent = glowWrapper
+
+        local gObj = glowBar.Instance
+        if gObj:IsA("GuiObject") then
+            gObj.Active = false
+        end
 
         local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
         if c1 then c1:Destroy() end
@@ -227,7 +228,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-    -- Delegação pura e exclusiva de eventos (Sem hitboxes sobrepostas)
+    -- Apenas os eventos nativos operam. O clique em Toggle não aciona Arrow e vice-versa.
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
