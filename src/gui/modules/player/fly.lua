@@ -75,12 +75,11 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     title.Parent = header
 
     -- Gaiola direita estática (SEM UIListLayout e SEM AutomaticSize)
-    -- Impede matematicamente qualquer vazamento para a esquerda.
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
     controls.Size = UDim2.fromOffset(90, 50) -- Tamanho cravado
     controls.AnchorPoint = Vector2.new(1, 0)
-    controls.Position = UDim2.new(1, -5, 0, 0) -- Margem de 5px da direita
+    controls.Position = UDim2.new(1, -5, 0, 0) -- Margem de 5px da direita global
     controls.BackgroundTransparency = 1
     controls.Active = false
     controls.Parent = header
@@ -98,9 +97,10 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     local arrow = nil
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
-        -- Posicionado fixo na direita da gaiola
+        -- Posicionado fixo na direita da gaiola com ajuste visual
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, -10, 0.5, 0)
+        -- ALTERAÇÃO AQUI: Mudado de -10 para -20 para centralizar melhor
+        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0) 
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -228,7 +228,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-    -- Apenas os eventos nativos operam. O clique em Toggle não aciona Arrow e vice-versa.
+    -- Apenas os eventos nativos operam.
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
