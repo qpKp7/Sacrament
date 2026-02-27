@@ -158,14 +158,12 @@ function CombatModuleFactory.new(): CombatModule
         if glyph then
             ensureArrowOrder(controls, glyph)
             
-            -- Ocultar a seta original para assumir controlo absoluto [cite: 2026-02-24]
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
                 textObj.TextStrokeTransparency = 1
             end
 
-            -- Fake Arrow limpa [cite: 2026-02-24]
             local fake = Instance.new("TextLabel")
             fake.Name = "FakeArrowClean"
             fake.BackgroundTransparency = 1
@@ -190,7 +188,6 @@ function CombatModuleFactory.new(): CombatModule
             item.fakeStroke = stroke
             maid:GiveTask(fake)
 
-            -- Hitbox isolada e sobreposta para garantir clique prioritário (ZIndex 100) [cite: 2026-02-24]
             local arrowHit = Instance.new("TextButton")
             arrowHit.Name = "CombatArrowHitbox"
             arrowHit.Size = UDim2.fromScale(2, 2)
@@ -204,20 +201,11 @@ function CombatModuleFactory.new(): CombatModule
             item.arrowHit = arrowHit
         end
 
-        -- Destruir lógicas internas antigas que causavam o bug do clique duplo [cite: 2026-02-24]
         local oldClick = item.header:FindFirstChild("HeaderClick")
         if oldClick then oldClick:Destroy() end
+        local oldCombatClick = item.header:FindFirstChild("CombatHeaderClick")
+        if oldCombatClick then oldCombatClick:Destroy() end
 
-        local newHeaderClick = Instance.new("TextButton")
-        newHeaderClick.Name = "CombatHeaderClick"
-        newHeaderClick.Size = UDim2.new(1, -80, 1, 0)
-        newHeaderClick.Position = UDim2.fromScale(0, 0)
-        newHeaderClick.BackgroundTransparency = 1
-        newHeaderClick.Text = ""
-        newHeaderClick.ZIndex = 50
-        newHeaderClick.Parent = item.header
-
-        -- Orquestrador Direto: Ignora `.Visible` mutável e atua com base no estado nativo
         local function onToggle()
             local isOpening = not item.subFrame.Visible
             if isOpening then
@@ -234,8 +222,7 @@ function CombatModuleFactory.new(): CombatModule
             end
         end
 
-        maid:GiveTask(newHeaderClick.Activated:Connect(onToggle))
-        
+        -- Expansão delegada unicamente à hitbox da seta
         if item.arrowHit then
             maid:GiveTask(item.arrowHit.Activated:Connect(onToggle))
         end
