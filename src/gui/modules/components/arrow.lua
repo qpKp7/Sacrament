@@ -22,13 +22,13 @@ local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirectio
 function ArrowFactory.new(): ArrowUI
     local maid = Maid.new()
     
-    -- Contêiner estrutural fixo de 30px (salva o UIListLayout sem esticar a hitbox)
+    -- Gaiola estrutural: impede que a Seta quebre o layout de outros módulos e impede que estique.
     local container = Instance.new("Frame")
     container.Name = "ArrowContainer"
-    container.Size = UDim2.new(0, 30, 1, 0)
+    container.Size = UDim2.fromOffset(30, 30)
     container.BackgroundTransparency = 1
     
-    -- Botão real da seta com hitbox fisicamente cravada em 24x24 pixels
+    -- Hitbox real: 24x24 pixels absolutos no centro da gaiola.
     local btn = Instance.new("TextButton")
     btn.Name = "ArrowButton"
     btn.Size = UDim2.fromOffset(24, 24)
@@ -40,6 +40,7 @@ function ArrowFactory.new(): ArrowUI
     btn.Font = FONT_MAIN
     btn.TextSize = 16
     btn.AutoButtonColor = false
+    btn.ZIndex = 5
     btn.Parent = container
     
     local toggledEvent = Instance.new("BindableEvent")
@@ -63,7 +64,6 @@ function ArrowFactory.new(): ArrowUI
         animate()
     end
     
-    -- Apenas cliques cirúrgicos dentro dos 24x24 pixels disparam o evento
     maid:GiveTask(btn.MouseButton1Click:Connect(function()
         self:SetState(not self.State)
         toggledEvent:Fire(self.State)
