@@ -27,7 +27,7 @@ local AnimationsSection = SafeImport("gui/modules/player/sections/fly/animations
 
 export type FlyUI = {
     Instance: Frame,
-    Destroy: (self: FlyUI) -> ()
+    Destroy: (self: FlyUI) -> (),
 }
 
 local FlyFactory = {}
@@ -73,20 +73,31 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
 
-    -- Gaiola física de hitboxes (sem UIListLayout)
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
-    controls.Size = UDim2.new(0, 90, 1, 0) -- 90 pixels cravados
+    controls.Size = UDim2.fromOffset(0, 50)
+    controls.AutomaticSize = Enum.AutomaticSize.X
+    controls.Position = UDim2.fromScale(1, 0)
     controls.AnchorPoint = Vector2.new(1, 0)
-    controls.Position = UDim2.new(1, -20, 0, 0) -- 20px de margem da direita
     controls.BackgroundTransparency = 1
     controls.Parent = header
+
+    local ctrlLayout = Instance.new("UIListLayout")
+    ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
+    ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ctrlLayout.Padding = UDim.new(0, 15)
+    ctrlLayout.Parent = controls
+
+    local ctrlPadding = Instance.new("UIPadding")
+    ctrlPadding.PaddingRight = UDim.new(0, 20)
+    ctrlPadding.Parent = controls
     
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
-        toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
-        toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0) -- Lado esquerdo da gaiola
+        toggleBtn.Instance.LayoutOrder = 1
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -94,8 +105,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     local arrow = nil
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
-        arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0) -- Lado direito da gaiola
+        arrow.Instance.LayoutOrder = 2
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -217,7 +227,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-    -- Eventos atrelados apenas aos disparadores nativos blindados
+    -- Delegação pura e exclusiva de eventos (Sem hitboxes sobrepostas)
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
