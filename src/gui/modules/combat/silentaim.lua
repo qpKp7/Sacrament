@@ -74,33 +74,24 @@ function SilentAimFactory.new(): SilentAimUI
     title.Font = FONT_MAIN
     title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Active = false
     title.Parent = header
 
+    -- Gaiola direita estática alinhada perfeitamente (SEM UIListLayout)
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
-    controls.Size = UDim2.fromOffset(0, 50)
-    controls.AutomaticSize = Enum.AutomaticSize.X
-    controls.Position = UDim2.fromScale(1, 0)
+    controls.Size = UDim2.fromOffset(90, 50)
     controls.AnchorPoint = Vector2.new(1, 0)
+    controls.Position = UDim2.new(1, -10, 0, 0)
     controls.BackgroundTransparency = 1
+    controls.Active = false
     controls.Parent = header
-
-    local ctrlLayout = Instance.new("UIListLayout")
-    ctrlLayout.FillDirection = Enum.FillDirection.Horizontal
-    ctrlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    ctrlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    ctrlLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ctrlLayout.Padding = UDim.new(0, 15)
-    ctrlLayout.Parent = controls
-
-    local ctrlPadding = Instance.new("UIPadding")
-    ctrlPadding.PaddingRight = UDim.new(0, 20)
-    ctrlPadding.Parent = controls
 
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
-        toggleBtn.Instance.LayoutOrder = 1
+        toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
+        toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -108,7 +99,8 @@ function SilentAimFactory.new(): SilentAimUI
     local arrow = nil
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
-        arrow.Instance.LayoutOrder = 2
+        arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -117,6 +109,7 @@ function SilentAimFactory.new(): SilentAimUI
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Active = false
     glowWrapper.Parent = header
 
     local glowBar = nil
@@ -127,6 +120,11 @@ function SilentAimFactory.new(): SilentAimUI
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
         glowBar.Instance.Parent = glowWrapper
+
+        local gObj = glowBar.Instance
+        if gObj:IsA("GuiObject") then
+            gObj.Active = false
+        end
 
         local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
         if c1 then c1:Destroy() end
@@ -241,31 +239,14 @@ function SilentAimFactory.new(): SilentAimUI
         end))
     end
 
-    -- Sincronização do Acordeão e Clique no Header
-    local isExpanded = false
+    -- Evento nativo da Arrow é o único responsável pela expansão local
     if arrow then
         maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            isExpanded = state
             subFrame.Visible = state
         end))
     end
 
-    local headerBtn = Instance.new("TextButton")
-    headerBtn.Name = "HeaderClick"
-    headerBtn.Size = UDim2.new(1, -100, 1, 0) 
-    headerBtn.Position = UDim2.fromScale(0, 0)
-    headerBtn.BackgroundTransparency = 1
-    headerBtn.Text = ""
-    headerBtn.ZIndex = 5
-    headerBtn.Parent = header
-
-    maid:GiveTask(headerBtn.MouseButton1Click:Connect(function()
-        isExpanded = not isExpanded
-        if arrow then
-            arrow:SetState(isExpanded)
-        end
-        subFrame.Visible = isExpanded
-    end))
+    -- Remoção definitiva do HeaderClick (o culpado das hitboxes vazadas)
 
     maid:GiveTask(container)
     
