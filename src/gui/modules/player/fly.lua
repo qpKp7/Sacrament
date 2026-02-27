@@ -35,15 +35,112 @@ local FlyFactory = {}
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
-local function findGuiButton(root: Instance): GuiButton?
-	if root:IsA("GuiButton") then
-		return root :: GuiButton
-	end
-	local found = root:FindFirstChildWhichIsA("GuiButton", true)
-	if found and found:IsA("GuiButton") then
-		return found :: GuiButton
+local function asGuiObject(inst: Instance): GuiObject?
+	if inst:IsA("GuiObject") then
+		return inst :: GuiObject
 	end
 	return nil
+end
+
+local function findSmallestGuiButton(root: Instance): GuiButton?
+	local best: GuiButton? = nil
+	local bestArea: number? = nil
+
+	local function consider(inst: Instance)
+		if inst:IsA("GuiButton") then
+			local btn = inst :: GuiButton
+			local s = btn.AbsoluteSize
+			local area = s.X * s.Y
+			if area > 0 then
+				if bestArea == nil or area < bestArea then
+					best = btn
+					bestArea = area
+				end
+			end
+		end
+	end
+
+	consider(root)
+	for _, d in ipairs(root:GetDescendants()) do
+		consider(d)
+	end
+
+	return best
+end
+
+local function isRenderable(obj: GuiObject): boolean
+	if not obj.Visible then
+		return false
+	end
+	local s = obj.AbsoluteSize
+	if s.X <= 0 or s.Y <= 0 then
+		return false
+	end
+
+	if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+		local t = (obj :: TextLabel).Text
+		if t ~= "" and (obj :: TextLabel).TextTransparency < 1 then
+			return true
+		end
+	end
+
+	if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+		local img = (obj :: ImageLabel).Image
+		if img ~= "" and (obj :: ImageLabel).ImageTransparency < 1 then
+			return true
+		end
+	end
+
+	if obj.BackgroundTransparency < 1 then
+		return true
+	end
+
+	local stroke = obj:FindFirstChildWhichIsA("UIStroke", true)
+	if stroke and stroke.Enabled and stroke.Transparency < 1 then
+		return true
+	end
+
+	return false
+end
+
+local function computeRenderableBounds(root: GuiObject, ignoreName: string): (Vector2, Vector2)
+	local minX = math.huge
+	local minY = math.huge
+	local maxX = -math.huge
+	local maxY = -math.huge
+
+	for _, d in ipairs(root:GetDescendants()) do
+		if typeof(d) == "Instance" and d:IsA("GuiObject") then
+			local g = d :: GuiObject
+			if g.Name ~= ignoreName and isRenderable(g) then
+				local p = g.AbsolutePosition
+				local s = g.AbsoluteSize
+				minX = math.min(minX, p.X)
+				minY = math.min(minY, p.Y)
+				maxX = math.max(maxX, p.X + s.X)
+				maxY = math.max(maxY, p.Y + s.Y)
+			end
+		end
+	end
+
+	if minX == math.huge then
+		return Vector2.new(0, 0), root.AbsoluteSize
+	end
+
+	local rootPos = root.AbsolutePosition
+	local rootSize = root.AbsoluteSize
+
+	local localX = minX - rootPos.X
+	local localY = minY - rootPos.Y
+	local w = maxX - minX
+	local h = maxY - minY
+
+	localX = math.clamp(localX, 0, rootSize.X)
+	localY = math.clamp(localY, 0, rootSize.Y)
+	w = math.clamp(w, 0, rootSize.X - localX)
+	h = math.clamp(h, 0, rootSize.Y - localY)
+
+	return Vector2.new(localX, localY), Vector2.new(w, h)
 end
 
 function FlyFactory.new(layoutOrder: number?): FlyUI
@@ -263,8 +360,10 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
 	local isExpanded = false
 
-	if arrow then
-		local arrowButton = findGuiButton((arrow :: any).Instance)
+	if arrow and typeof((arrow :: any).Instance) == "Instance" then
+		local arrowRoot = (arrow :: any).Instance :: Instance
+		local arrowButton = findSmallestGuiButton(arrowRoot)
+
 		if arrowButton then
 			maid:GiveTask(arrowButton.MouseButton1Click:Connect(function()
 				isExpanded = not isExpanded
@@ -274,18 +373,27 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 				end
 			end))
 		else
-			local root = (arrow :: any).Instance
-			if typeof(root) == "Instance" and root:IsA("GuiObject") then
-				local arrowFallback = Instance.new("TextButton")
-				arrowFallback.Name = "ArrowHitbox"
-				arrowFallback.Size = UDim2.fromScale(1, 1)
-				arrowFallback.Position = UDim2.fromScale(0, 0)
-				arrowFallback.BackgroundTransparency = 1
-				arrowFallback.Text = ""
-				arrowFallback.AutoButtonColor = false
-				arrowFallback.Parent = root
+			local arrowGuiRoot = asGuiObject(arrowRoot)
+			if arrowGuiRoot then
+				local clickArea = Instance.new("TextButton")
+				clickArea.Name = "ArrowClickArea"
+				clickArea.BackgroundTransparency = 1
+				clickArea.Text = ""
+				clickArea.AutoButtonColor = false
+				clickArea.ZIndex = arrowGuiRoot.ZIndex + 50
+				clickArea.Parent = arrowGuiRoot
 
-				maid:GiveTask(arrowFallback.MouseButton1Click:Connect(function()
+				local function updateClickArea()
+					local p, s = computeRenderableBounds(arrowGuiRoot, "ArrowClickArea")
+					clickArea.Position = UDim2.fromOffset(p.X, p.Y)
+					clickArea.Size = UDim2.fromOffset(s.X, s.Y)
+				end
+
+				maid:GiveTask(arrowGuiRoot:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateClickArea))
+				maid:GiveTask(arrowGuiRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateClickArea))
+				task.defer(updateClickArea)
+
+				maid:GiveTask(clickArea.MouseButton1Click:Connect(function()
 					isExpanded = not isExpanded
 					subFrame.Visible = isExpanded
 					if type((arrow :: any).SetState) == "function" then
