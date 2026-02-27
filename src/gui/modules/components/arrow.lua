@@ -5,7 +5,7 @@ local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 export type ArrowUI = {
-    Instance: TextButton,
+    Instance: Frame,
     Toggled: RBXScriptSignal,
     State: boolean,
     SetState: (self: ArrowUI, state: boolean) -> (),
@@ -22,22 +22,31 @@ local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirectio
 function ArrowFactory.new(): ArrowUI
     local maid = Maid.new()
     
-    -- Hitbox minúscula e exata: 20x20 pixels. Sem Scale (1, 0), sem frames invisíveis.
+    -- Contêiner estrutural fixo de 30px (salva o UIListLayout sem esticar a hitbox)
+    local container = Instance.new("Frame")
+    container.Name = "ArrowContainer"
+    container.Size = UDim2.new(0, 30, 1, 0)
+    container.BackgroundTransparency = 1
+    
+    -- Botão real da seta com hitbox fisicamente cravada em 24x24 pixels
     local btn = Instance.new("TextButton")
     btn.Name = "ArrowButton"
-    btn.Size = UDim2.fromOffset(20, 20)
+    btn.Size = UDim2.fromOffset(24, 24)
+    btn.AnchorPoint = Vector2.new(0.5, 0.5)
+    btn.Position = UDim2.fromScale(0.5, 0.5)
     btn.BackgroundTransparency = 1
     btn.Text = ">"
     btn.TextColor3 = COLOR_IDLE
     btn.Font = FONT_MAIN
     btn.TextSize = 16
     btn.AutoButtonColor = false
+    btn.Parent = container
     
     local toggledEvent = Instance.new("BindableEvent")
     maid:GiveTask(toggledEvent)
     
     local self = {}
-    self.Instance = btn
+    self.Instance = container
     self.State = false
     self.Toggled = toggledEvent.Event
     
@@ -54,6 +63,7 @@ function ArrowFactory.new(): ArrowUI
         animate()
     end
     
+    -- Apenas cliques cirúrgicos dentro dos 24x24 pixels disparam o evento
     maid:GiveTask(btn.MouseButton1Click:Connect(function()
         self:SetState(not self.State)
         toggledEvent:Fire(self.State)
@@ -63,7 +73,7 @@ function ArrowFactory.new(): ArrowUI
         maid:Destroy()
     end
     
-    maid:GiveTask(btn)
+    maid:GiveTask(container)
     
     return self :: ArrowUI
 end
