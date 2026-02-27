@@ -74,12 +74,12 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     title.Active = false
     title.Parent = header
 
-    -- Gaiola direita estática (SEM UIListLayout e SEM AutomaticSize)
+    -- Gaiola reposicionada para alinhar com a aba Combat
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
-    controls.Size = UDim2.fromOffset(90, 50) -- Tamanho cravado
+    controls.Size = UDim2.fromOffset(90, 50)
     controls.AnchorPoint = Vector2.new(1, 0)
-    controls.Position = UDim2.new(1, -5, 0, 0) -- Margem de 5px da direita global
+    controls.Position = UDim2.new(1, -10, 0, 0) -- Ajuste de margem direita
     controls.BackgroundTransparency = 1
     controls.Active = false
     controls.Parent = header
@@ -87,9 +87,8 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
-        -- Posicionado fixo na esquerda da gaiola
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
-        toggleBtn.Instance.Position = UDim2.new(0, 5, 0.5, 0)
+        toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -97,10 +96,8 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     local arrow = nil
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
-        -- Posicionado fixo na direita da gaiola com ajuste visual
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        -- ALTERAÇÃO AQUI: Mudado de -10 para -20 para centralizar melhor
-        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0) 
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0) -- Cravada no extremo direito da gaiola
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -228,7 +225,6 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-    -- Apenas os eventos nativos operam.
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
