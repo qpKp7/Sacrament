@@ -180,7 +180,6 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
 
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    rightLayout.Padding = UDim.new(0, 15)
     rightLayout.Parent = rightContent
 
     local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
@@ -226,40 +225,64 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    -- Componentes Internos
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(AnimationsSection, 3, inputsScroll)
 
-    -- Lógica Exclusiva do Toggle Principal (Bolinha)
-    if toggleBtn and glowBar then
-        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-            glowBar:SetState(state)
+    -- === HITBOXES ISOLADAS === --
+    -- Nenhuma hitbox global foi ancorada no Header. O título e a Glowbar são pass-through.
+    
+    -- Hitbox exclusiva para o ToggleButton (100% da área, restrita ao componente)
+    if toggleBtn then
+        toggleBtn.Instance.ZIndex = 10
+        
+        local toggleHitbox = Instance.new("TextButton")
+        toggleHitbox.Name = "ToggleHitbox"
+        toggleHitbox.Size = UDim2.fromScale(1, 1)
+        toggleHitbox.Position = UDim2.fromScale(0, 0)
+        toggleHitbox.BackgroundTransparency = 1
+        toggleHitbox.Text = ""
+        toggleHitbox.ZIndex = 20
+        toggleHitbox.Parent = toggleBtn.Instance
+
+        maid:GiveTask(toggleHitbox.MouseButton1Click:Connect(function()
+            if type(toggleBtn.Toggle) == "function" then
+                toggleBtn:Toggle()
+            elseif type(toggleBtn.SetState) == "function" and toggleBtn.State ~= nil then
+                toggleBtn:SetState(not toggleBtn.State)
+            end
         end))
+
+        if glowBar then
+            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+                glowBar:SetState(state)
+            end))
+        end
     end
 
     local isExpanded = false
     
-    -- Lógica Exclusiva da Seta (Expandir/Retrair)
-    local arrowHitbox = Instance.new("TextButton")
-    arrowHitbox.Name = "ArrowHitbox"
-    arrowHitbox.Size = UDim2.new(0, 45, 1, 0) 
-    arrowHitbox.AnchorPoint = Vector2.new(1, 0)
-    arrowHitbox.Position = UDim2.fromScale(1, 0)
-    arrowHitbox.BackgroundTransparency = 1
-    arrowHitbox.Text = ""
-    arrowHitbox.ZIndex = 10 
-    arrowHitbox.Parent = header
+    -- Hitbox exclusiva para a Arrow (100% da área, restrita ao componente)
+    if arrow then
+        arrow.Instance.ZIndex = 10
+        
+        local arrowHitbox = Instance.new("TextButton")
+        arrowHitbox.Name = "ArrowHitbox"
+        arrowHitbox.Size = UDim2.fromScale(1, 1)
+        arrowHitbox.Position = UDim2.fromScale(0, 0)
+        arrowHitbox.BackgroundTransparency = 1
+        arrowHitbox.Text = ""
+        arrowHitbox.ZIndex = 20
+        arrowHitbox.Parent = arrow.Instance
 
-    maid:GiveTask(arrowHitbox.MouseButton1Click:Connect(function()
-        isExpanded = not isExpanded
-        subFrame.Visible = isExpanded
-        if arrow and type(arrow.SetState) == "function" then
-            arrow:SetState(isExpanded)
-        end
-    end))
-
-    -- NOTA: Título e Glowbar não possuem hitboxes, ignorando cliques e permitindo operação nativa.
+        maid:GiveTask(arrowHitbox.MouseButton1Click:Connect(function()
+            isExpanded = not isExpanded
+            subFrame.Visible = isExpanded
+            if type(arrow.SetState) == "function" then
+                arrow:SetState(isExpanded)
+            end
+        end))
+    end
 
     maid:GiveTask(container)
     local self = {}
