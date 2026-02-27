@@ -224,26 +224,21 @@ function PlayerModuleFactory.new(): PlayerModule
             maid:GiveTask(fake)
         end
 
+        -- Limpa botões de clique globais antigos que possam ter vindo do módulo filho
         local oldHeaderClick = item.header:FindFirstChild("HeaderClick")
         if oldHeaderClick then
             oldHeaderClick:Destroy()
         end
-
-        local newHeaderClick = Instance.new("TextButton")
-        newHeaderClick.Name = "PlayerHeaderClick"
-        newHeaderClick.Size = UDim2.new(1, -80, 1, 0)
-        newHeaderClick.Position = UDim2.fromScale(0, 0)
-        newHeaderClick.BackgroundTransparency = 1
-        newHeaderClick.Text = ""
-        newHeaderClick.ZIndex = 50
-        newHeaderClick.Parent = item.header
+        local oldPlayerClick = item.header:FindFirstChild("PlayerHeaderClick")
+        if oldPlayerClick then
+            oldPlayerClick:Destroy()
+        end
 
         local function toggleSubframe()
             item.subFrame.Visible = not item.subFrame.Visible
         end
 
-        maid:GiveTask(newHeaderClick.Activated:Connect(toggleSubframe))
-
+        -- O evento de expandir o subframe é atrelado EXCLUSIVAMENTE à hitbox da Seta
         if item.arrowHit then
             maid:GiveTask(item.arrowHit.Activated:Connect(toggleSubframe))
         end
