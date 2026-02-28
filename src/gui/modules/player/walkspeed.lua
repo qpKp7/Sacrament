@@ -1,5 +1,4 @@
 --!strict
-local TweenService = game:GetService("TweenService")
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
@@ -14,7 +13,7 @@ local Slider = SafeImport("gui/modules/components/slider")
 local Keybind = SafeImport("gui/modules/player/sections/shared/keybind")
 
 export type WalkSpeedUI = {
-    Instance: Frame,
+    Instance: Folder,
     Destroy: (self: WalkSpeedUI) -> ()
 }
 
@@ -23,32 +22,18 @@ local WalkSpeedFactory = {}
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
 
-function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
+function WalkSpeedFactory.new(): WalkSpeedUI
     local maid = Maid.new()
+    
+    local folder = Instance.new("Folder")
+    folder.Name = "WalkSpeedModule"
 
-    local container = Instance.new("Frame")
-    container.Name = "WalkSpeedSection"
-    container.Size = UDim2.new(1, 0, 0, 45)
-    container.BackgroundTransparency = 1
-    container.LayoutOrder = layoutOrder or 1
-    container.ClipsDescendants = true
-
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = container
-
-    -- LINHA PRINCIPAL
-    local mainRow = Instance.new("Frame")
-    mainRow.Name = "MainRow"
-    mainRow.Size = UDim2.new(1, 0, 0, 45)
-    mainRow.BackgroundTransparency = 1
-    mainRow.LayoutOrder = 1
-    mainRow.Parent = container
-
-    local mainPad = Instance.new("UIPadding")
-    mainPad.PaddingLeft = UDim.new(0, 20)
-    mainPad.PaddingRight = UDim.new(0, 25)
-    mainPad.Parent = mainRow
+    -- HEADER (Esquerda)
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 45)
+    header.BackgroundTransparency = 1
+    header.Parent = folder
 
     local title = Instance.new("TextLabel")
     title.Size = UDim2.new(0.5, 0, 1, 0)
@@ -58,58 +43,62 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     title.Font = FONT_MAIN
     title.TextSize = 18
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = mainRow
+    title.Parent = header
 
-    local controlsList = Instance.new("Frame")
-    controlsList.Size = UDim2.new(0, 100, 1, 0)
-    controlsList.AnchorPoint = Vector2.new(1, 0.5)
-    controlsList.Position = UDim2.new(1, 0, 0.5, 0)
-    controlsList.BackgroundTransparency = 1
-    controlsList.Parent = mainRow
+    local controls = Instance.new("Frame")
+    controls.Name = "Controls"
+    controls.Size = UDim2.new(0, 100, 1, 0)
+    controls.AnchorPoint = Vector2.new(1, 0.5)
+    controls.Position = UDim2.new(1, 0, 0.5, 0)
+    controls.BackgroundTransparency = 1
+    controls.Parent = header
 
     local clLayout = Instance.new("UIListLayout")
     clLayout.FillDirection = Enum.FillDirection.Horizontal
     clLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     clLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    clLayout.Padding = UDim.new(0, 10)
+    clLayout.Padding = UDim.new(0, 15)
     clLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    clLayout.Parent = controlsList
-
-    local arrowBtn = Instance.new("TextButton")
-    arrowBtn.Name = "Arrow"
-    arrowBtn.Size = UDim2.fromOffset(20, 20)
-    arrowBtn.BackgroundTransparency = 1
-    arrowBtn.Text = ">"
-    arrowBtn.TextColor3 = COLOR_LABEL
-    arrowBtn.Font = FONT_MAIN
-    arrowBtn.TextSize = 18
-    arrowBtn.LayoutOrder = 2
-    arrowBtn.Parent = controlsList
+    clLayout.Parent = controls
 
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggleObj = ToggleButton.new()
         toggleObj.Instance.LayoutOrder = 1
-        toggleObj.Instance.Parent = controlsList
+        toggleObj.Instance.Parent = controls
         maid:GiveTask(toggleObj)
     end
 
-    -- CONTEÚDO EXPANSÍVEL
-    local expandFrame = Instance.new("Frame")
-    expandFrame.Name = "ExpandableContent"
-    expandFrame.Size = UDim2.new(1, 0, 0, 100) -- 55 (Keybind) + 45 (Slider)
-    expandFrame.BackgroundTransparency = 1
-    expandFrame.LayoutOrder = 2
-    expandFrame.Visible = false
-    expandFrame.Parent = container
+    local arrowGlyph = Instance.new("TextLabel")
+    arrowGlyph.Name = "Arrow"
+    arrowGlyph.Size = UDim2.fromOffset(20, 20)
+    arrowGlyph.BackgroundTransparency = 1
+    arrowGlyph.Text = ">"
+    arrowGlyph.TextColor3 = COLOR_LABEL
+    arrowGlyph.Font = FONT_MAIN
+    arrowGlyph.TextSize = 18
+    arrowGlyph.LayoutOrder = 2
+    arrowGlyph.Parent = controls
 
-    local expandLayout = Instance.new("UIListLayout")
-    expandLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    expandLayout.Parent = expandFrame
+    -- SUBFRAME (Direita)
+    local subFrame = Instance.new("Frame")
+    subFrame.Name = "SubFrame"
+    subFrame.Size = UDim2.fromScale(1, 1)
+    subFrame.BackgroundTransparency = 1
+    subFrame.Visible = false
+    subFrame.Parent = folder
 
-    -- Instanciar o seu Keybind original
+    local subLayout = Instance.new("UIListLayout")
+    subLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    subLayout.Padding = UDim.new(0, 15)
+    subLayout.Parent = subFrame
+
+    local subPad = Instance.new("UIPadding")
+    subPad.PaddingTop = UDim.new(0, 20)
+    subPad.Parent = subFrame
+
     if Keybind and type(Keybind.new) == "function" then
         local keyObj = Keybind.new(1)
-        keyObj.Instance.Parent = expandFrame
+        keyObj.Instance.Parent = subFrame
         maid:GiveTask(keyObj)
     end
 
@@ -118,7 +107,7 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     sliderWrapper.Size = UDim2.new(1, 0, 0, 45)
     sliderWrapper.BackgroundTransparency = 1
     sliderWrapper.LayoutOrder = 2
-    sliderWrapper.Parent = expandFrame
+    sliderWrapper.Parent = subFrame
 
     if Slider and type(Slider.new) == "function" then
         local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
@@ -126,34 +115,14 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
         maid:GiveTask(speedSlider)
     end
 
-    -- ANIMAÇÃO DA SETA E EXPANSÃO
-    local isExpanded = false
-    local tInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-    maid:GiveTask(arrowBtn.MouseButton1Click:Connect(function()
-        isExpanded = not isExpanded
-        if isExpanded then expandFrame.Visible = true end
-        
-        local targetRot = isExpanded and 90 or 0
-        local targetSize = isExpanded and UDim2.new(1, 0, 0, 145) or UDim2.new(1, 0, 0, 45)
-        
-        TweenService:Create(arrowBtn, tInfo, {Rotation = targetRot}):Play()
-        local sizeTween = TweenService:Create(container, tInfo, {Size = targetSize})
-        sizeTween:Play()
-        
-        if not isExpanded then
-            maid:GiveTask(sizeTween.Completed:Connect(function()
-                if not isExpanded then expandFrame.Visible = false end
-            end))
-        end
-    end))
-
-    maid:GiveTask(container)
     local self = {}
-    self.Instance = container
+    self.Instance = folder
+
     function self:Destroy()
         maid:Destroy()
+        folder:Destroy()
     end
+
     return self :: WalkSpeedUI
 end
 
