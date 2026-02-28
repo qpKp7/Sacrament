@@ -12,7 +12,7 @@ export type ContentArea = {
 
 local ContentAreaModule = {}
 
-function ContentAreaModule.new(): ContentArea
+function ContentAreaModule.new(settings: any): ContentArea
     local maid = Maid.new()
 
     local content = Instance.new("Frame")
@@ -49,7 +49,7 @@ function ContentAreaModule.new(): ContentArea
         
         if success and type(result) == "table" and type(result.new) == "function" then
             local successCreate, moduleInstance = pcall(function()
-                return result.new()
+                return result.new(settings)
             end)
 
             if successCreate and moduleInstance and moduleInstance.Instance then
