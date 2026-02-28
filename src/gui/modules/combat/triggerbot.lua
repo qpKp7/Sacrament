@@ -2,7 +2,6 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
--- Proteção de Módulo: Isolamento de dependências via pcall
 local function SafeImport(path: string): any?
     local success, result = pcall(function()
         return Import(path)
@@ -173,7 +172,6 @@ function TriggerBotFactory.new(): TriggerBotUI
     title.Active = false
     title.Parent = header
 
-    -- Gaiola rígida para hitboxes (SEM UIListLayout)
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
     controls.Size = UDim2.fromOffset(90, 50)
@@ -196,7 +194,7 @@ function TriggerBotFactory.new(): TriggerBotUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -316,7 +314,7 @@ function TriggerBotFactory.new(): TriggerBotUI
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
-    inputsPadding.PaddingRight = UDim.new(0, 25)
+    -- PaddingRight removido para alinhar perfeitamente com o Fly
     inputsPadding.Parent = inputsScroll
 
     local delayRow = createDelayRow(maid, 1)
@@ -346,8 +344,6 @@ function TriggerBotFactory.new(): TriggerBotUI
             subFrame.Visible = state
         end))
     end
-
-    -- O botão parasitário "HeaderClick" foi deletado.
 
     maid:GiveTask(container)
     
