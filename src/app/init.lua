@@ -3,6 +3,7 @@ local Import = (_G :: any).SacramentImport
 
 local InputHandler = Import("input/inputhandler")
 local UIManager = Import("gui/uimanager")
+local Settings = Import("logic/settings")
 
 export type Adapter = {
     mountGui: (gui: ScreenGui) -> (),
@@ -14,7 +15,7 @@ local App = {}
 
 function App.Start(adapter: Adapter)
     InputHandler.Init(adapter)
-    UIManager.Init(adapter)
+    UIManager.Init(adapter, Settings)
 end
 
 function App.Stop()
