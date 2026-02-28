@@ -7,7 +7,7 @@ local MainFrameModule = Import("gui/components/mainframe")
 local UIManager = {}
 local uiMaid = Maid.new()
 
-function UIManager.Init(adapter: any?)
+function UIManager.Init(adapter: any?, settings: any)
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "SacramentUI"
     screenGui.ResetOnSpawn = false
@@ -15,7 +15,7 @@ function UIManager.Init(adapter: any?)
     screenGui.Enabled = UIState.IsVisible
     uiMaid:GiveTask(screenGui)
 
-    local mainFrame = MainFrameModule.new()
+    local mainFrame = MainFrameModule.new(settings)
     mainFrame.Instance.Parent = screenGui
     uiMaid:GiveTask(mainFrame)
 
