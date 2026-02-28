@@ -14,7 +14,7 @@ export type MainFrame = {
 
 local MainFrameModule = {}
 
-function MainFrameModule.new(): MainFrame
+function MainFrameModule.new(settings: any): MainFrame
     local maid = Maid.new()
 
     local mainFrame = Instance.new("Frame")
@@ -38,7 +38,7 @@ function MainFrameModule.new(): MainFrame
     verticalDivider.Active = false
     verticalDivider.Parent = mainFrame
 
-    local contentArea = ContentAreaModule.new()
+    local contentArea = ContentAreaModule.new(settings)
     contentArea.Instance.Parent = mainFrame
     maid:GiveTask(contentArea)
 
