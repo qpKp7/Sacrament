@@ -9,106 +9,185 @@ local function SafeImport(path: string): any?
 end
 
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
-local Keybind = SafeImport("gui/modules/player/sections/shared/keybind")
+local Arrow = SafeImport("gui/modules/components/arrow")
+local GlowBar = SafeImport("gui/modules/components/glowbar")
+local Sidebar = SafeImport("gui/modules/components/sidebar")
+local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
 
 export type NoclipUI = {
-    Instance: Folder,
-    Destroy: (self: NoclipUI) -> ()
+    Instance: Frame,
+    Destroy: (self: NoclipUI) -> (),
 }
 
 local NoclipFactory = {}
 
-local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
+local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
-function NoclipFactory.new(): NoclipUI
+function NoclipFactory.new(layoutOrder: number?): NoclipUI
     local maid = Maid.new()
-    
-    local folder = Instance.new("Folder")
-    folder.Name = "NoclipModule"
 
-    -- HEADER (Esquerda)
+    local container = Instance.new("Frame")
+    container.Name = "NoclipContainer"
+    container.Size = UDim2.new(1, 0, 0, 0)
+    container.BackgroundTransparency = 1 
+    container.BorderSizePixel = 0
+    container.AutomaticSize = Enum.AutomaticSize.Y
+    container.LayoutOrder = layoutOrder or 4
+
+    local containerLayout = Instance.new("UIListLayout")
+    containerLayout.FillDirection = Enum.FillDirection.Vertical
+    containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    containerLayout.Parent = container
+
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 45)
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundTransparency = 1
-    header.Parent = folder
+    header.BorderSizePixel = 0
+    header.LayoutOrder = 1
+    header.ClipsDescendants = true
+    header.Parent = container
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(0.5, 0, 1, 0)
+    title.Name = "Title"
+    title.Size = UDim2.fromOffset(0, 50)
+    title.AutomaticSize = Enum.AutomaticSize.X
+    title.Position = UDim2.fromOffset(20, 0)
     title.BackgroundTransparency = 1
     title.Text = "Noclip"
-    title.TextColor3 = COLOR_LABEL
+    title.TextColor3 = COLOR_WHITE
     title.Font = FONT_MAIN
-    title.TextSize = 18
+    title.TextSize = 22
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Active = false
     title.Parent = header
 
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
-    controls.Size = UDim2.new(0, 100, 1, 0)
-    controls.AnchorPoint = Vector2.new(1, 0.5)
-    controls.Position = UDim2.new(1, 0, 0.5, 0)
+    controls.Size = UDim2.fromOffset(90, 50)
+    controls.AnchorPoint = Vector2.new(1, 0)
+    controls.Position = UDim2.new(1, -10, 0, 0)
     controls.BackgroundTransparency = 1
+    controls.Active = false
     controls.Parent = header
-
-    local clLayout = Instance.new("UIListLayout")
-    clLayout.FillDirection = Enum.FillDirection.Horizontal
-    clLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    clLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    clLayout.Padding = UDim.new(0, 15)
-    clLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    clLayout.Parent = controls
-
+    
+    local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
-        local toggleObj = ToggleButton.new()
-        toggleObj.Instance.LayoutOrder = 1
-        toggleObj.Instance.Parent = controls
-        maid:GiveTask(toggleObj)
+        toggleBtn = ToggleButton.new()
+        toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
+        toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        toggleBtn.Instance.Parent = controls
+        maid:GiveTask(toggleBtn)
     end
 
-    local arrowGlyph = Instance.new("TextLabel")
-    arrowGlyph.Name = "Arrow"
-    arrowGlyph.Size = UDim2.fromOffset(20, 20)
-    arrowGlyph.BackgroundTransparency = 1
-    arrowGlyph.Text = ">"
-    arrowGlyph.TextColor3 = COLOR_LABEL
-    arrowGlyph.Font = FONT_MAIN
-    arrowGlyph.TextSize = 18
-    arrowGlyph.LayoutOrder = 2
-    arrowGlyph.Parent = controls
+    local arrow = nil
+    if Arrow and type(Arrow.new) == "function" then
+        arrow = Arrow.new()
+        arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        arrow.Instance.Parent = controls
+        maid:GiveTask(arrow)
+    end
 
-    -- SUBFRAME (Direita)
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Active = false
+    glowWrapper.Parent = header
+
+    local glowBar = nil
+    if GlowBar and type(GlowBar.new) == "function" then
+        glowBar = GlowBar.new()
+        glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+        glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
+        glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        glowBar.Instance.Parent = glowWrapper
+
+        local gObj = glowBar.Instance
+        if gObj:IsA("GuiObject") then gObj.Active = false end
+
+        local c1 = glowBar.Instance:FindFirstChildWhichIsA("UISizeConstraint", true)
+        if c1 then c1:Destroy() end
+        local c2 = glowBar.Instance:FindFirstChildWhichIsA("UIAspectRatioConstraint", true)
+        if c2 then c2:Destroy() end
+        maid:GiveTask(glowBar)
+    end
+
+    local function updateGlowBar()
+        if header.AbsoluteSize.X == 0 then return end
+        local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeftAbsolute = controls.AbsolutePosition.X
+        local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
+        local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
+        local width = math.max(0, endX - startX)
+        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
+        glowWrapper.Size = UDim2.fromOffset(width, 32)
+    end
+
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
+    task.defer(updateGlowBar)
+
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.fromScale(1, 1)
+    subFrame.Size = UDim2.new(1, 0, 0, 0)
+    subFrame.AutomaticSize = Enum.AutomaticSize.Y
     subFrame.BackgroundTransparency = 1
+    subFrame.BorderSizePixel = 0
     subFrame.Visible = false
-    subFrame.Parent = folder
+    subFrame.LayoutOrder = 2
+    subFrame.Parent = container
 
-    local subLayout = Instance.new("UIListLayout")
-    subLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    subLayout.Padding = UDim.new(0, 15)
-    subLayout.Parent = subFrame
+    if Sidebar and type(Sidebar.createVertical) == "function" then
+        local vLine = Sidebar.createVertical()
+        vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+        vLine.Instance.Position = UDim2.fromScale(0, 0)
+        vLine.Instance.Parent = subFrame
+        maid:GiveTask(vLine)
+    end
 
-    local subPad = Instance.new("UIPadding")
-    subPad.PaddingTop = UDim.new(0, 20)
-    subPad.Parent = subFrame
+    local rightContent = Instance.new("Frame")
+    rightContent.Name = "RightContent"
+    rightContent.Size = UDim2.new(1, -2, 0, 0)
+    rightContent.AutomaticSize = Enum.AutomaticSize.Y
+    rightContent.Position = UDim2.fromOffset(2, 0)
+    rightContent.BackgroundTransparency = 1
+    rightContent.BorderSizePixel = 0
+    rightContent.Parent = subFrame
 
-    if Keybind and type(Keybind.new) == "function" then
-        local keyObj = Keybind.new(1)
-        keyObj.Instance.Parent = subFrame
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Parent = rightContent
+
+    if KeybindSection and type(KeybindSection.new) == "function" then
+        local keyObj = KeybindSection.new(1)
+        keyObj.Instance.Parent = rightContent
         maid:GiveTask(keyObj)
     end
 
-    local self = {}
-    self.Instance = folder
-
-    function self:Destroy()
-        maid:Destroy()
-        folder:Destroy()
+    if toggleBtn and glowBar then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            glowBar:SetState(state)
+        end))
     end
 
+    if arrow then
+        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+            subFrame.Visible = state
+        end))
+    end
+
+    maid:GiveTask(container)
+    local self = {}
+    self.Instance = container
+    function self:Destroy() maid:Destroy() end
     return self :: NoclipUI
 end
 
