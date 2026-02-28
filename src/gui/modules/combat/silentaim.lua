@@ -2,7 +2,6 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
--- Proteção de Módulo: Evita que o SilentAim falhe se uma dependência externa quebrar.
 local function SafeImport(path: string): any?
     local success, result = pcall(function()
         return Import(path)
@@ -77,7 +76,6 @@ function SilentAimFactory.new(): SilentAimUI
     title.Active = false
     title.Parent = header
 
-    -- Gaiola direita estática alinhada perfeitamente (SEM UIListLayout)
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
     controls.Size = UDim2.fromOffset(90, 50)
@@ -100,7 +98,7 @@ function SilentAimFactory.new(): SilentAimUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -221,7 +219,7 @@ function SilentAimFactory.new(): SilentAimUI
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
-    inputsPadding.PaddingRight = UDim.new(0, 25)
+    -- PaddingRight removido para alinhar perfeitamente com o Fly
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
@@ -239,14 +237,11 @@ function SilentAimFactory.new(): SilentAimUI
         end))
     end
 
-    -- Evento nativo da Arrow é o único responsável pela expansão local
     if arrow then
         maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
             subFrame.Visible = state
         end))
     end
-
-    -- Remoção definitiva do HeaderClick (o culpado das hitboxes vazadas)
 
     maid:GiveTask(container)
     
