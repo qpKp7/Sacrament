@@ -2,7 +2,6 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
--- Proteção de Módulo: Isolamento de dependências via pcall
 local function SafeImport(path: string): any?
     local success, result = pcall(function()
         return Import(path)
@@ -75,7 +74,6 @@ function AimlockFactory.new(): AimlockUI
     title.Active = false
     title.Parent = header
 
-    -- Gaiola direita estática alinhada perfeitamente ao Fly
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
     controls.Size = UDim2.fromOffset(90, 50)
@@ -98,7 +96,7 @@ function AimlockFactory.new(): AimlockUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -223,7 +221,7 @@ function AimlockFactory.new(): AimlockUI
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
-    inputsPadding.PaddingRight = UDim.new(0, 25)
+    -- PaddingRight removido para alinhar perfeitamente com o Fly
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
@@ -239,14 +237,11 @@ function AimlockFactory.new(): AimlockUI
         end))
     end
 
-    -- Evento nativo da Arrow é o único responsável pela expansão local
     if arrow then
         maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
             subFrame.Visible = state
         end))
     end
-
-    -- O botão "HeaderClick" que vazava hitboxes foi removido definitivamente.
 
     maid:GiveTask(container)
     
