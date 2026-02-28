@@ -43,19 +43,12 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     layout.Padding = UDim.new(0, 5)
     layout.Parent = container
 
-    if Slider and type(Slider.new) == "function" then
-        local slider = Slider.new("FOV Limit", 0, 500, 150, 1)
-        slider.Instance.LayoutOrder = 1
-        slider.Instance.Parent = container
-        maid:GiveTask(slider)
-    end
-
     local toggleRow = Instance.new("Frame")
     toggleRow.Name = "ShowFovRow"
     toggleRow.Size = UDim2.new(1, 0, 0, 40)
     toggleRow.BackgroundTransparency = 1
     toggleRow.BorderSizePixel = 0
-    toggleRow.LayoutOrder = 2
+    toggleRow.LayoutOrder = 1 -- Movido para cima (ordem primária)
     toggleRow.Parent = container
 
     local toggleLayout = Instance.new("UIListLayout")
@@ -87,12 +80,29 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = toggleRow
 
+    local toggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
-        local toggle = ToggleButton.new()
+        toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = toggleCont
         maid:GiveTask(toggle)
+    end
+
+    local fovSlider = nil
+    if Slider and type(Slider.new) == "function" then
+        fovSlider = Slider.new("FOV Limit", 0, 300, 150, 1) -- Range ajustado (0 a 300)
+        fovSlider.Instance.LayoutOrder = 2 -- Aparece abaixo do Toggle
+        fovSlider.Instance.Visible = false -- Oculto por padrão
+        fovSlider.Instance.Parent = container
+        maid:GiveTask(fovSlider)
+    end
+
+    -- Evento para exibir/ocultar o Slider dinamicamente
+    if toggle and fovSlider then
+        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
+            fovSlider.Instance.Visible = state
+        end))
     end
 
     maid:GiveTask(container)
