@@ -141,8 +141,7 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
 
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, 0, 0, 0)
-    subFrame.AutomaticSize = Enum.AutomaticSize.Y
+    subFrame.Size = UDim2.new(1, 0, 0, 420)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.Visible = false
@@ -159,8 +158,7 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
 
     local rightContent = Instance.new("Frame")
     rightContent.Name = "RightContent"
-    rightContent.Size = UDim2.new(1, -2, 0, 0)
-    rightContent.AutomaticSize = Enum.AutomaticSize.Y
+    rightContent.Size = UDim2.new(1, -2, 1, 0)
     rightContent.Position = UDim2.fromOffset(2, 0)
     rightContent.BackgroundTransparency = 1
     rightContent.BorderSizePixel = 0
@@ -204,7 +202,6 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     inputsLayout.Padding = UDim.new(0, 15)
     inputsLayout.Parent = inputsScroll
 
-    -- Padding apenas vertical (idêntico ao fly.lua)
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
@@ -219,10 +216,9 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     speedOuter.LayoutOrder = 2
     speedOuter.Parent = inputsScroll
 
-    -- Padding horizontal exato embutido na linha
     local speedPad = Instance.new("UIPadding")
     speedPad.PaddingLeft = UDim.new(0, 20)
-    speedPad.PaddingRight = UDim.new(0, 25)
+    speedPad.PaddingRight = UDim.new(0, 50)
     speedPad.Parent = speedOuter
 
     if Slider and type(Slider.new) == "function" then
