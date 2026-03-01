@@ -63,12 +63,12 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
         trailToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        trailToggle.Instance.Position = UDim2.fromScale(1, 0.5)
+        trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         trailToggle.Instance.Parent = trailRow
         maid:GiveTask(trailToggle)
     end
 
-    -- ROW DRIFT STRENGTH (Slider Decimal)
+    -- ROW DRIFT STRENGTH (Slider Decimal 0.0 a 10.0)
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
     driftRow.Size = UDim2.new(1, 0, 0, 55)
@@ -79,8 +79,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
 
     local driftSlider = nil
     if Slider and type(Slider.new) == "function" then
-        -- Min 0.0, Max 1.0, Default 0.3, Step 0.1
-        driftSlider = Slider.new("Drift Strength", 0.0, 1.0, 0.3, 0.1)
+        driftSlider = Slider.new("Drift Strength", 0.0, 10.0, 0.3, 0.1)
         driftSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
         driftSlider.Instance.Position = UDim2.fromScale(0, 0.5)
         driftSlider.Instance.Size = UDim2.fromScale(1, 1)
