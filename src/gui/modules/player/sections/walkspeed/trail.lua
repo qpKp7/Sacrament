@@ -34,8 +34,10 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 15)
     layout.Parent = container
 
+    -- ROW GHOST TRAIL (Padrão Grande)
     local trailRow = Instance.new("Frame")
     trailRow.Name = "GhostTrailRow"
     trailRow.Size = UDim2.new(1, 0, 0, 55)
@@ -51,7 +53,6 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local trailLabel = Instance.new("TextLabel")
     trailLabel.Name = "Label"
     trailLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    trailLabel.Position = UDim2.fromScale(0, 0)
     trailLabel.BackgroundTransparency = 1
     trailLabel.Text = "Ghost Trail"
     trailLabel.TextColor3 = COLOR_LABEL
@@ -63,12 +64,14 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local trailToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
+        -- Alinhamento perfeito com o Key Hold ditado unicamente pelo UIPadding do pai
         trailToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         trailToggle.Instance.Parent = trailRow
         maid:GiveTask(trailToggle)
     end
 
+    -- ROW DRIFT STRENGTH (Padrão Grande)
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
     driftRow.Size = UDim2.new(1, 0, 0, 55)
@@ -85,7 +88,6 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local driftLabel = Instance.new("TextLabel")
     driftLabel.Name = "Label"
     driftLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    driftLabel.Position = UDim2.fromScale(0, 0)
     driftLabel.BackgroundTransparency = 1
     driftLabel.Text = "Drift Strength"
     driftLabel.TextColor3 = COLOR_LABEL
@@ -96,7 +98,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
 
     local inputCont = Instance.new("Frame")
     inputCont.Name = "InputWrapper"
-    inputCont.Size = UDim2.new(0, 50, 0, 32)
+    inputCont.Size = UDim2.new(0, 50, 0, 32) -- Largura 50px, Altura padronizada 32px
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
     inputCont.Position = UDim2.new(1, 0, 0.5, 0)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
