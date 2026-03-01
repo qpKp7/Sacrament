@@ -207,6 +207,7 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
+    -- Injeção limpa e direta na ordem exigida
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
     safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(TrailSection, 3, inputsScroll)
