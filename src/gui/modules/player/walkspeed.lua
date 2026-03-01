@@ -12,10 +12,10 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
 local Sidebar = SafeImport("gui/modules/components/sidebar")
-local Slider = SafeImport("gui/modules/components/slider")
 
 local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
 local KeyHoldSection = SafeImport("gui/modules/player/sections/shared/keyhold")
+local SpeedSection = SafeImport("gui/modules/player/sections/shared/speed")
 local TrailSection = SafeImport("gui/modules/player/sections/walkspeed/trail")
 
 export type WalkSpeedUI = {
@@ -208,29 +208,7 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
-
-    local speedOuter = Instance.new("Frame")
-    speedOuter.Name = "SpeedOuter"
-    speedOuter.Size = UDim2.new(1, 0, 0, 45)
-    speedOuter.BackgroundTransparency = 1
-    speedOuter.LayoutOrder = 2
-    speedOuter.Parent = inputsScroll
-
-    local speedInner = Instance.new("Frame")
-    speedInner.Name = "SpeedInner"
-    speedInner.Size = UDim2.new(1, -70, 1, 0) -- -20px esq e -50px dir
-    speedInner.Position = UDim2.fromOffset(20, 0) -- Cravado 20px pra direita
-    speedInner.BackgroundTransparency = 1
-    speedInner.Parent = speedOuter
-
-    if Slider and type(Slider.new) == "function" then
-        local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
-        speedSlider.Instance.Size = UDim2.fromScale(1, 1)
-        speedSlider.Instance.Position = UDim2.fromScale(0, 0)
-        speedSlider.Instance.Parent = speedInner
-        maid:GiveTask(speedSlider)
-    end
-
+    safeLoadSection(SpeedSection, 2, inputsScroll)
     safeLoadSection(TrailSection, 3, inputsScroll)
 
     if toggleBtn and glowBar then
