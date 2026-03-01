@@ -55,7 +55,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     trailLabel.Text = "Ghost Trail"
     trailLabel.TextColor3 = COLOR_LABEL
     trailLabel.Font = FONT_MAIN
-    trailLabel.TextSize = 20
+    trailLabel.TextSize = 18
     trailLabel.TextXAlignment = Enum.TextXAlignment.Left
     trailLabel.Parent = trailRow
 
