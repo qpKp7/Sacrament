@@ -205,11 +205,10 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     inputsLayout.Padding = UDim.new(0, 15)
     inputsLayout.Parent = inputsScroll
 
+    -- PADDING GLOBAL REMOVIDO PARA EVITAR ESMAGAMENTO DO KEYHOLD
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
-    inputsPadding.PaddingLeft = UDim.new(0, 15) -- Padding lateral adicionado
-    inputsPadding.PaddingRight = UDim.new(0, 15) -- Padding lateral adicionado
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
@@ -221,8 +220,13 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     speedWrapper.LayoutOrder = 2
     speedWrapper.Parent = inputsScroll
 
+    -- PADDING ISOLADO PARA O SLIDER
+    local speedPadding = Instance.new("UIPadding")
+    speedPadding.PaddingLeft = UDim.new(0, 20)
+    speedPadding.PaddingRight = UDim.new(0, 25)
+    speedPadding.Parent = speedWrapper
+
     if Slider and type(Slider.new) == "function" then
-        -- Nome mudado de "Walk Speed" para "Speed"
         local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
         speedSlider.Instance.Parent = speedWrapper
         maid:GiveTask(speedSlider)
