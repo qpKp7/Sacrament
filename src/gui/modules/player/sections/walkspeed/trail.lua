@@ -21,6 +21,10 @@ local TrailFactory = {}
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
 local FONT_MAIN = Enum.Font.GothamBold
 
+-- VARIÁVEL PARA VOCÊ AFINAR O ALINHAMENTO DO TOGGLE MANUALMENTE
+-- Se precisar empurrar para a esquerda, use valores negativos (ex: -5)
+local TOGGLE_OFFSET_X = 0
+
 function TrailFactory.new(layoutOrder: number?): TrailUI
     local maid = Maid.new()
 
@@ -62,14 +66,14 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local trailToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
-        -- Sem wrapper: o botão obedece exclusivamente ao padding de 50px do trailRow
         trailToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        -- O TOGGLE_OFFSET_X permite-lhe cravar os píxeis exatos do Key Hold
+        trailToggle.Instance.Position = UDim2.new(1, TOGGLE_OFFSET_X, 0.5, 0)
         trailToggle.Instance.Parent = trailRow
         maid:GiveTask(trailToggle)
     end
 
-    -- ROW DRIFT STRENGTH (Convertida para Slider)
+    -- ROW DRIFT STRENGTH (Convertida para Slider Decimal)
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
     driftRow.Size = UDim2.new(1, 0, 0, 55)
@@ -78,10 +82,14 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     driftRow.Visible = false
     driftRow.Parent = container
 
+    -- O Slider.new nativo já injeta as suas próprias margens.
+    -- Sem UIPadding aqui para evitar o bug do "duplo recuo".
+
     local driftSlider = nil
     if Slider and type(Slider.new) == "function" then
-        -- Slider indo de 0.0 a 1.0 (Título, Mínimo, Máximo, Padrão, Incremento)
-        driftSlider = Slider.new("Drift Strength", 0, 1, 0.5, 0.1)
+        -- Slider.new(Title, Min, Max, Default, Step)
+        -- Intervalo de 0 a 1, a começar em 0.3, a subir de 0.1 em 0.1
+        driftSlider = Slider.new("Drift Strength", 0, 1, 0.3, 0.1)
         driftSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
         driftSlider.Instance.Position = UDim2.new(0, 0, 0.5, 0)
         driftSlider.Instance.Size = UDim2.fromScale(1, 1)
