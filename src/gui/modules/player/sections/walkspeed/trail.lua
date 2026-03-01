@@ -44,15 +44,20 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     trailRow.LayoutOrder = 1
     trailRow.Parent = container
 
+    local trailPad = Instance.new("UIPadding")
+    trailPad.PaddingLeft = UDim.new(0, 20)
+    trailPad.PaddingRight = UDim.new(0, 25)
+    trailPad.Parent = trailRow
+
     local trailLabel = Instance.new("TextLabel")
     trailLabel.Name = "Label"
     trailLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    trailLabel.Position = UDim2.fromOffset(20, 0) -- Margem esquerda de 20px cravada
+    trailLabel.Position = UDim2.fromScale(0, 0)
     trailLabel.BackgroundTransparency = 1
     trailLabel.Text = "Ghost Trail"
     trailLabel.TextColor3 = COLOR_LABEL
     trailLabel.Font = FONT_MAIN
-    trailLabel.TextSize = 14
+    trailLabel.TextSize = 16
     trailLabel.TextXAlignment = Enum.TextXAlignment.Left
     trailLabel.Parent = trailRow
 
@@ -60,7 +65,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     toggleWrapper.Name = "ToggleWrapper"
     toggleWrapper.Size = UDim2.new(0, 40, 1, 0)
     toggleWrapper.AnchorPoint = Vector2.new(1, 0.5)
-    toggleWrapper.Position = UDim2.new(1, -25, 0.5, 0) -- Margem direita de 25px cravada
+    toggleWrapper.Position = UDim2.new(1, 0, 0.5, 0)
     toggleWrapper.BackgroundTransparency = 1
     toggleWrapper.Parent = trailRow
 
@@ -81,15 +86,20 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     driftRow.Visible = false
     driftRow.Parent = container
 
+    local driftPad = Instance.new("UIPadding")
+    driftPad.PaddingLeft = UDim.new(0, 20)
+    driftPad.PaddingRight = UDim.new(0, 25)
+    driftPad.Parent = driftRow
+
     local driftLabel = Instance.new("TextLabel")
     driftLabel.Name = "Label"
     driftLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    driftLabel.Position = UDim2.fromOffset(20, 0) -- Margem esquerda de 20px cravada
+    driftLabel.Position = UDim2.fromScale(0, 0)
     driftLabel.BackgroundTransparency = 1
     driftLabel.Text = "Drift Strength"
     driftLabel.TextColor3 = COLOR_LABEL
     driftLabel.Font = FONT_MAIN
-    driftLabel.TextSize = 14
+    driftLabel.TextSize = 16
     driftLabel.TextXAlignment = Enum.TextXAlignment.Left
     driftLabel.Parent = driftRow
 
@@ -97,7 +107,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     inputCont.Name = "InputWrapper"
     inputCont.Size = UDim2.new(0, 50, 1, 0)
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
-    inputCont.Position = UDim2.new(1, -25, 0.5, 0) -- Margem direita de 25px cravada
+    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
     inputCont.Parent = driftRow
 
@@ -116,7 +126,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     driftInput.Text = "0.5"
     driftInput.TextColor3 = COLOR_LABEL
     driftInput.Font = FONT_MAIN
-    driftInput.TextSize = 12
+    driftInput.TextSize = 14
     driftInput.Parent = inputCont
 
     if trailToggle then
