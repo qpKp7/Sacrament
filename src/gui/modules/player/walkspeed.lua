@@ -12,8 +12,11 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
 local Sidebar = SafeImport("gui/modules/components/sidebar")
-local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
 local Slider = SafeImport("gui/modules/components/slider")
+
+local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
+local KeyHoldSection = SafeImport("gui/modules/player/sections/shared/keyhold")
+local TrailSection = SafeImport("gui/modules/player/sections/walkspeed/trail")
 
 export type WalkSpeedUI = {
     Instance: Frame,
@@ -136,7 +139,6 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME RECONSTRUÍDO NO PADRÃO FLY
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 0)
@@ -168,11 +170,17 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    if KeybindSection and type(KeybindSection.new) == "function" then
-        local keyObj = KeybindSection.new(1)
-        keyObj.Instance.Parent = rightContent
-        maid:GiveTask(keyObj)
+    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+        if type(moduleType) == "table" and type(moduleType.new) == "function" then
+            local success, instance = pcall(function() return moduleType.new(order) end)
+            if success and instance and instance.Instance then
+                instance.Instance.Parent = parentInstance
+                maid:GiveTask(instance)
+            end
+        end
     end
+
+    safeLoadSection(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -202,12 +210,22 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
+    safeLoadSection(KeyHoldSection, 1, inputsScroll)
+
+    local speedWrapper = Instance.new("Frame")
+    speedWrapper.Name = "SpeedWrapper"
+    speedWrapper.Size = UDim2.new(1, 0, 0, 45)
+    speedWrapper.BackgroundTransparency = 1
+    speedWrapper.LayoutOrder = 2
+    speedWrapper.Parent = inputsScroll
+
     if Slider and type(Slider.new) == "function" then
-        local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
-        speedSlider.Instance.LayoutOrder = 1
-        speedSlider.Instance.Parent = inputsScroll
+        local speedSlider = Slider.new("Walk Speed", 16, 300, 16, 1)
+        speedSlider.Instance.Parent = speedWrapper
         maid:GiveTask(speedSlider)
     end
+
+    safeLoadSection(TrailSection, 3, inputsScroll)
 
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
