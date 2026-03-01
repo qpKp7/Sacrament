@@ -57,7 +57,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local toggleWrapper = Instance.new("Frame")
     toggleWrapper.Size = UDim2.new(0, 40, 1, 0)
     toggleWrapper.AnchorPoint = Vector2.new(1, 0.5)
-    toggleWrapper.Position = UDim2.new(1, 0, 0.5, 0)
+    toggleWrapper.Position = UDim2.new(1, 0, 0.5, 0) -- Cravado na extrema direita
     toggleWrapper.BackgroundTransparency = 1
     toggleWrapper.Parent = trailRow
 
