@@ -74,12 +74,11 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     title.Active = false
     title.Parent = header
 
-    -- Gaiola reposicionada para alinhar com a aba Combat
     local controls = Instance.new("Frame")
     controls.Name = "Controls"
     controls.Size = UDim2.fromOffset(90, 50)
     controls.AnchorPoint = Vector2.new(1, 0)
-    controls.Position = UDim2.new(1, -10, 0, 0) -- Ajuste de margem direita
+    controls.Position = UDim2.new(1, -10, 0, 0)
     controls.BackgroundTransparency = 1
     controls.Active = false
     controls.Parent = header
@@ -97,7 +96,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0) -- Cravada no extremo direito da gaiola
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -231,11 +230,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         end))
     end
 
-    if arrow then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
-        end))
-    end
+    -- CORREÇÃO DO DUPLO CLIQUE: A conexão de arrow.Toggled que forçava subFrame.Visible foi removida.
 
     maid:GiveTask(container)
     local self = {}
