@@ -208,6 +208,8 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
+    inputsPadding.PaddingLeft = UDim.new(0, 15) -- Padding lateral adicionado
+    inputsPadding.PaddingRight = UDim.new(0, 15) -- Padding lateral adicionado
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
@@ -220,7 +222,8 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     speedWrapper.Parent = inputsScroll
 
     if Slider and type(Slider.new) == "function" then
-        local speedSlider = Slider.new("Walk Speed", 16, 300, 16, 1)
+        -- Nome mudado de "Walk Speed" para "Speed"
+        local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
         speedSlider.Instance.Parent = speedWrapper
         maid:GiveTask(speedSlider)
     end
