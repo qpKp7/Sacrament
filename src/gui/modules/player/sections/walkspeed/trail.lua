@@ -64,7 +64,6 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local trailToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
-        -- Alinhamento perfeito com o Key Hold ditado unicamente pelo UIPadding do pai
         trailToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         trailToggle.Instance.Parent = trailRow
@@ -92,13 +91,13 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     driftLabel.Text = "Drift Strength"
     driftLabel.TextColor3 = COLOR_LABEL
     driftLabel.Font = FONT_MAIN
-    driftLabel.TextSize = 20
+    driftLabel.TextSize = 16
     driftLabel.TextXAlignment = Enum.TextXAlignment.Left
     driftLabel.Parent = driftRow
 
     local inputCont = Instance.new("Frame")
     inputCont.Name = "InputWrapper"
-    inputCont.Size = UDim2.new(0, 50, 0, 32) -- Largura 50px, Altura padronizada 32px
+    inputCont.Size = UDim2.new(0, 50, 0, 32)
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
     inputCont.Position = UDim2.new(1, 0, 0.5, 0)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
@@ -131,19 +130,54 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     maid:GiveTask(driftInput:GetPropertyChangedSignal("Text"):Connect(function()
         local text = driftInput.Text
         local filtered = text:gsub("[^%d%.]", "")
+        
+        -- Garante no máximo 1 ponto
         local _, dotCount = filtered:gsub("%.", "%.")
-        if dotCount > 1 then filtered = text:sub(1, text:len() - 1) end
-        if filtered:len() > 3 then filtered = filtered:sub(1, 3) end
+        if dotCount > 1 then
+            local firstDot = filtered:find("%.")
+            if firstDot then
+                filtered = filtered:sub(1, firstDot) .. filtered:sub(firstDot + 1):gsub("%.", "")
+            end
+        end
+        
+        -- Limita a 3 caracteres no total
+        if filtered:len() > 3 then
+            filtered = filtered:sub(1, 3)
+        end
+        
+        -- Clamp visual em tempo real para "1.0"
         local num = tonumber(filtered)
-        if num and num > 1.0 then filtered = "1.0" end
-        if driftInput.Text ~= filtered then driftInput.Text = filtered end
+        if num and num > 1.0 then
+            filtered = "1.0"
+        end
+        
+        if driftInput.Text ~= filtered then
+            driftInput.Text = filtered
+        end
     end))
 
     maid:GiveTask(driftInput.FocusLost:Connect(function()
-        local num = tonumber(driftInput.Text)
-        if not num then driftInput.Text = "0.5"
-        elseif num < 0 then driftInput.Text = "0.0"
-        elseif num > 1.0 then driftInput.Text = "1.0" end
+        local text = driftInput.Text
+        local num = tonumber(text)
+        
+        if not num then
+            driftInput.Text = "0.5"
+        else
+            if num < 0 then
+                driftInput.Text = "0.0"
+            elseif num > 1.0 then
+                driftInput.Text = "1.0"
+            else
+                -- Formata para manter 1 casa decimal quando necessário
+                if text == "0" or text == "1" then
+                    driftInput.Text = text .. ".0"
+                elseif text == "0." then
+                    driftInput.Text = "0.0"
+                elseif text == "1." then
+                    driftInput.Text = "1.0"
+                end
+            end
+        end
     end))
 
     maid:GiveTask(container)
