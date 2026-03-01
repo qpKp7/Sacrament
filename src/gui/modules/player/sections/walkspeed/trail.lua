@@ -9,6 +9,7 @@ local function SafeImport(path: string): any?
 end
 
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local Slider = SafeImport("gui/modules/components/slider")
 
 export type TrailUI = {
     Instance: Frame,
@@ -18,8 +19,6 @@ export type TrailUI = {
 local TrailFactory = {}
 
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
-local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
-local COLOR_BOX_BORDER = Color3.fromHex("333333")
 local FONT_MAIN = Enum.Font.GothamBold
 
 function TrailFactory.new(layoutOrder: number?): TrailUI
@@ -34,7 +33,6 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 15)
     layout.Parent = container
 
     -- ROW GHOST TRAIL (Padrão Grande)
@@ -64,13 +62,14 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     local trailToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
+        -- Sem wrapper: o botão obedece exclusivamente ao padding de 50px do trailRow
         trailToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         trailToggle.Instance.Parent = trailRow
         maid:GiveTask(trailToggle)
     end
 
-    -- ROW DRIFT STRENGTH (Padrão Grande)
+    -- ROW DRIFT STRENGTH (Convertida para Slider)
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
     driftRow.Size = UDim2.new(1, 0, 0, 55)
@@ -79,106 +78,22 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     driftRow.Visible = false
     driftRow.Parent = container
 
-    local driftPad = Instance.new("UIPadding")
-    driftPad.PaddingLeft = UDim.new(0, 20)
-    driftPad.PaddingRight = UDim.new(0, 50)
-    driftPad.Parent = driftRow
-
-    local driftLabel = Instance.new("TextLabel")
-    driftLabel.Name = "Label"
-    driftLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    driftLabel.BackgroundTransparency = 1
-    driftLabel.Text = "Drift Strength"
-    driftLabel.TextColor3 = COLOR_LABEL
-    driftLabel.Font = FONT_MAIN
-    driftLabel.TextSize = 16
-    driftLabel.TextXAlignment = Enum.TextXAlignment.Left
-    driftLabel.Parent = driftRow
-
-    local inputCont = Instance.new("Frame")
-    inputCont.Name = "InputWrapper"
-    inputCont.Size = UDim2.new(0, 50, 0, 32)
-    inputCont.AnchorPoint = Vector2.new(1, 0.5)
-    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
-    inputCont.BackgroundColor3 = COLOR_BOX_BG
-    inputCont.Parent = driftRow
-
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 4)
-    inputCorner.Parent = inputCont
-
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = COLOR_BOX_BORDER
-    inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    inputStroke.Parent = inputCont
-
-    local driftInput = Instance.new("TextBox")
-    driftInput.Size = UDim2.fromScale(1, 1)
-    driftInput.BackgroundTransparency = 1
-    driftInput.Text = "0.5"
-    driftInput.TextColor3 = COLOR_LABEL
-    driftInput.Font = FONT_MAIN
-    driftInput.TextSize = 14
-    driftInput.Parent = inputCont
+    local driftSlider = nil
+    if Slider and type(Slider.new) == "function" then
+        -- Slider indo de 0.0 a 1.0 (Título, Mínimo, Máximo, Padrão, Incremento)
+        driftSlider = Slider.new("Drift Strength", 0, 1, 0.5, 0.1)
+        driftSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
+        driftSlider.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        driftSlider.Instance.Size = UDim2.fromScale(1, 1)
+        driftSlider.Instance.Parent = driftRow
+        maid:GiveTask(driftSlider)
+    end
 
     if trailToggle then
         maid:GiveTask(trailToggle.Toggled:Connect(function(state: boolean)
             driftRow.Visible = state
         end))
     end
-
-    maid:GiveTask(driftInput:GetPropertyChangedSignal("Text"):Connect(function()
-        local text = driftInput.Text
-        local filtered = text:gsub("[^%d%.]", "")
-        
-        -- Garante no máximo 1 ponto
-        local _, dotCount = filtered:gsub("%.", "%.")
-        if dotCount > 1 then
-            local firstDot = filtered:find("%.")
-            if firstDot then
-                filtered = filtered:sub(1, firstDot) .. filtered:sub(firstDot + 1):gsub("%.", "")
-            end
-        end
-        
-        -- Limita a 3 caracteres no total
-        if filtered:len() > 3 then
-            filtered = filtered:sub(1, 3)
-        end
-        
-        -- Clamp visual em tempo real para "1.0"
-        local num = tonumber(filtered)
-        if num and num > 1.0 then
-            filtered = "1.0"
-        end
-        
-        if driftInput.Text ~= filtered then
-            driftInput.Text = filtered
-        end
-    end))
-
-    maid:GiveTask(driftInput.FocusLost:Connect(function()
-        local text = driftInput.Text
-        local num = tonumber(text)
-        
-        if not num then
-            driftInput.Text = "0.5"
-        else
-            if num < 0 then
-                driftInput.Text = "0.0"
-            elseif num > 1.0 then
-                driftInput.Text = "1.0"
-            else
-                -- Formata para manter 1 casa decimal quando necessário
-                if text == "0" or text == "1" then
-                    driftInput.Text = text .. ".0"
-                elseif text == "0." then
-                    driftInput.Text = "0.0"
-                elseif text == "1." then
-                    driftInput.Text = "1.0"
-                end
-            end
-        end
-    end))
 
     maid:GiveTask(container)
     local self = {}
