@@ -24,10 +24,9 @@ local FONT_MAIN = Enum.Font.GothamBold
 function SpeedFactory.new(layoutOrder: number?): SpeedSectionUI
     local maid = Maid.new()
 
-    -- Container principal com altura dinâmica (55px + Slider)
     local container = Instance.new("Frame")
     container.Name = "SpeedSection"
-    container.Size = UDim2.new(1, 0, 0, 0)
+    container.Size = UDim2.new(1, 0, 0, 45)
     container.AutomaticSize = Enum.AutomaticSize.Y
     container.BackgroundTransparency = 1
     container.LayoutOrder = layoutOrder or 2
@@ -36,53 +35,42 @@ function SpeedFactory.new(layoutOrder: number?): SpeedSectionUI
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = container
 
-    -- Linha Principal (Toggle)
     local toggleRow = Instance.new("Frame")
     toggleRow.Name = "ToggleRow"
-    toggleRow.Size = UDim2.new(1, 0, 0, 55) -- Altura exata de 55px
+    toggleRow.Size = UDim2.new(1, 0, 0, 45)
     toggleRow.BackgroundTransparency = 1
     toggleRow.LayoutOrder = 1
     toggleRow.Parent = container
 
     local togglePad = Instance.new("UIPadding")
     togglePad.PaddingLeft = UDim.new(0, 20)
-    togglePad.PaddingRight = UDim.new(0, 50)
+    togglePad.PaddingRight = UDim.new(0, 25)
     togglePad.Parent = toggleRow
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(0.5, 0, 1, 0) -- Sem scale total para não encavalar
+    titleLabel.Size = UDim2.new(0.5, 0, 1, 0)
     titleLabel.Position = UDim2.fromScale(0, 0)
     titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "Fly Speed"
+    titleLabel.Text = "Walk Speed"
     titleLabel.TextColor3 = COLOR_LABEL
     titleLabel.Font = FONT_MAIN
-    titleLabel.TextSize = 20 -- Tipografia padronizada em 20
+    titleLabel.TextSize = 18
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = toggleRow
-
-    local toggleWrapper = Instance.new("Frame")
-    toggleWrapper.Name = "ToggleWrapper"
-    toggleWrapper.Size = UDim2.new(0, 40, 1, 0)
-    toggleWrapper.AnchorPoint = Vector2.new(1, 0.5)
-    toggleWrapper.Position = UDim2.fromScale(1, 0.5) -- O UIPadding cuida do recuo real de 50px
-    toggleWrapper.BackgroundTransparency = 1
-    toggleWrapper.Parent = toggleRow
 
     local speedToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         speedToggle = ToggleButton.new()
         speedToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        speedToggle.Instance.Position = UDim2.fromScale(1, 0.5)
-        speedToggle.Instance.Parent = toggleWrapper
+        speedToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        speedToggle.Instance.Parent = toggleRow
         maid:GiveTask(speedToggle)
     end
 
-    -- Linha Secundária (Slider)
     local sliderRow = Instance.new("Frame")
     sliderRow.Name = "SliderRow"
-    sliderRow.Size = UDim2.new(1, 0, 0, 40) -- Altura base para abrigar o slider
-    sliderRow.AutomaticSize = Enum.AutomaticSize.Y -- Permite expandir se o slider precisar de mais
+    sliderRow.Size = UDim2.new(1, 0, 0, 45)
     sliderRow.BackgroundTransparency = 1
     sliderRow.Visible = false
     sliderRow.LayoutOrder = 2
@@ -90,16 +78,14 @@ function SpeedFactory.new(layoutOrder: number?): SpeedSectionUI
 
     local sliderPad = Instance.new("UIPadding")
     sliderPad.PaddingLeft = UDim.new(0, 20)
-    sliderPad.PaddingRight = UDim.new(0, 50)
+    sliderPad.PaddingRight = UDim.new(0, 25)
     sliderPad.Parent = sliderRow
 
     local speedSlider = nil
     if Slider and type(Slider.new) == "function" then
-        -- Slider.new(title, min, max, default, step)
-        speedSlider = Slider.new("Speed", 0, 300, 32, 1)
+        speedSlider = Slider.new("Speed", 16, 300, 16, 1)
         speedSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
-        speedSlider.Instance.Position = UDim2.fromScale(0, 0.5)
-        -- O componente Slider internamente vai respeitar o invólucro (sliderRow + UIPadding)
+        speedSlider.Instance.Position = UDim2.new(0, 0, 0.5, 0)
         speedSlider.Instance.Parent = sliderRow
         maid:GiveTask(speedSlider)
     end
@@ -113,9 +99,7 @@ function SpeedFactory.new(layoutOrder: number?): SpeedSectionUI
     maid:GiveTask(container)
     local self = {}
     self.Instance = container
-    function self:Destroy()
-        maid:Destroy()
-    end
+    function self:Destroy() maid:Destroy() end
     return self :: SpeedSectionUI
 end
 
