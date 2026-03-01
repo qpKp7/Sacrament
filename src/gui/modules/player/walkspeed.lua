@@ -136,6 +136,7 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
+    -- SUBFRAME RECONSTRUÍDO NO PADRÃO FLY
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 0)
@@ -179,28 +180,38 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
         maid:GiveTask(hLine)
     end
 
-    local sliderWrapper = Instance.new("Frame")
-    sliderWrapper.Name = "SliderWrapper"
-    sliderWrapper.Size = UDim2.new(1, 0, 0, 60)
-    sliderWrapper.BackgroundTransparency = 1
-    sliderWrapper.LayoutOrder = 3
-    sliderWrapper.Parent = rightContent
+    local inputsScroll = Instance.new("ScrollingFrame")
+    inputsScroll.Name = "InputsScroll"
+    inputsScroll.Size = UDim2.new(1, 0, 0, 0)
+    inputsScroll.BackgroundTransparency = 1
+    inputsScroll.BorderSizePixel = 0
+    inputsScroll.ScrollBarThickness = 0
+    inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    inputsScroll.AutomaticSize = Enum.AutomaticSize.Y
+    inputsScroll.LayoutOrder = 3
+    inputsScroll.Parent = rightContent
+
+    local inputsLayout = Instance.new("UIListLayout")
+    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    inputsLayout.Padding = UDim.new(0, 15)
+    inputsLayout.Parent = inputsScroll
+
+    local inputsPadding = Instance.new("UIPadding")
+    inputsPadding.PaddingTop = UDim.new(0, 20)
+    inputsPadding.PaddingBottom = UDim.new(0, 20)
+    inputsPadding.Parent = inputsScroll
 
     if Slider and type(Slider.new) == "function" then
         local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
-        speedSlider.Instance.Parent = sliderWrapper
+        speedSlider.Instance.LayoutOrder = 1
+        speedSlider.Instance.Parent = inputsScroll
         maid:GiveTask(speedSlider)
     end
 
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
-        end))
-    end
-
-    if arrow then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
         end))
     end
 
