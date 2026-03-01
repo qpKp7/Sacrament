@@ -135,6 +135,7 @@ function NoclipFactory.new(layoutOrder: number?): NoclipUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
+    -- SUBFRAME RECONSTRUÍDO NO PADRÃO FLY
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 0)
@@ -175,12 +176,6 @@ function NoclipFactory.new(layoutOrder: number?): NoclipUI
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
-        end))
-    end
-
-    if arrow then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
         end))
     end
 
