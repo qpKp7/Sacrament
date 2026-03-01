@@ -188,15 +188,15 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
         maid:GiveTask(hLine)
     end
 
+    -- Scroll idêntico ao Fly (sem padding lateral)
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
-    inputsScroll.Size = UDim2.new(1, 0, 0, 0)
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
     inputsScroll.BackgroundTransparency = 1
     inputsScroll.BorderSizePixel = 0
     inputsScroll.ScrollBarThickness = 0
     inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    inputsScroll.AutomaticSize = Enum.AutomaticSize.Y
     inputsScroll.LayoutOrder = 3
     inputsScroll.Parent = rightContent
 
@@ -205,7 +205,6 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     inputsLayout.Padding = UDim.new(0, 15)
     inputsLayout.Parent = inputsScroll
 
-    -- PADDING GLOBAL REMOVIDO PARA EVITAR ESMAGAMENTO DO KEYHOLD
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
@@ -213,22 +212,25 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
 
-    local speedWrapper = Instance.new("Frame")
-    speedWrapper.Name = "SpeedWrapper"
-    speedWrapper.Size = UDim2.new(1, 0, 0, 45)
-    speedWrapper.BackgroundTransparency = 1
-    speedWrapper.LayoutOrder = 2
-    speedWrapper.Parent = inputsScroll
+    -- Container Externo para driblar o UIListLayout
+    local speedOuter = Instance.new("Frame")
+    speedOuter.Name = "SpeedOuter"
+    speedOuter.Size = UDim2.new(1, 0, 0, 45)
+    speedOuter.BackgroundTransparency = 1
+    speedOuter.LayoutOrder = 2
+    speedOuter.Parent = inputsScroll
 
-    -- PADDING ISOLADO PARA O SLIDER
-    local speedPadding = Instance.new("UIPadding")
-    speedPadding.PaddingLeft = UDim.new(0, 20)
-    speedPadding.PaddingRight = UDim.new(0, 25)
-    speedPadding.Parent = speedWrapper
+    -- Container Interno com as margens absolutas
+    local speedInner = Instance.new("Frame")
+    speedInner.Name = "SpeedInner"
+    speedInner.Size = UDim2.new(1, -45, 1, 0) -- Reduz 45px da largura total (20 esq + 25 dir)
+    speedInner.Position = UDim2.fromOffset(20, 0) -- Empurra 20px da linha vermelha
+    speedInner.BackgroundTransparency = 1
+    speedInner.Parent = speedOuter
 
     if Slider and type(Slider.new) == "function" then
         local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
-        speedSlider.Instance.Parent = speedWrapper
+        speedSlider.Instance.Parent = speedInner
         maid:GiveTask(speedSlider)
     end
 
