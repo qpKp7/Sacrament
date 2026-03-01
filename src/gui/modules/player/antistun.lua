@@ -12,7 +12,9 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
 local Sidebar = SafeImport("gui/modules/components/sidebar")
+
 local KeybindSection = SafeImport("gui/modules/player/sections/shared/keybind")
+local KeyHoldSection = SafeImport("gui/modules/player/sections/shared/keyhold")
 
 export type AntiStunUI = {
     Instance: Frame,
@@ -135,11 +137,9 @@ function AntiStunFactory.new(layoutOrder: number?): AntiStunUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME RECONSTRUÍDO NO PADRÃO FLY
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
-    subFrame.Size = UDim2.new(1, 0, 0, 0)
-    subFrame.AutomaticSize = Enum.AutomaticSize.Y
+    subFrame.Size = UDim2.new(1, 0, 0, 420)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
     subFrame.Visible = false
@@ -156,8 +156,7 @@ function AntiStunFactory.new(layoutOrder: number?): AntiStunUI
 
     local rightContent = Instance.new("Frame")
     rightContent.Name = "RightContent"
-    rightContent.Size = UDim2.new(1, -2, 0, 0)
-    rightContent.AutomaticSize = Enum.AutomaticSize.Y
+    rightContent.Size = UDim2.new(1, -2, 1, 0)
     rightContent.Position = UDim2.fromOffset(2, 0)
     rightContent.BackgroundTransparency = 1
     rightContent.BorderSizePixel = 0
@@ -167,11 +166,46 @@ function AntiStunFactory.new(layoutOrder: number?): AntiStunUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    if KeybindSection and type(KeybindSection.new) == "function" then
-        local keyObj = KeybindSection.new(1)
-        keyObj.Instance.Parent = rightContent
-        maid:GiveTask(keyObj)
+    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+        if type(moduleType) == "table" and type(moduleType.new) == "function" then
+            local success, instance = pcall(function() return moduleType.new(order) end)
+            if success and instance and instance.Instance then
+                instance.Instance.Parent = parentInstance
+                maid:GiveTask(instance)
+            end
+        end
     end
+
+    safeLoadSection(KeybindSection, 1, rightContent)
+
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
+        local hLine = Sidebar.createHorizontal(2)
+        hLine.Instance.Parent = rightContent
+        maid:GiveTask(hLine)
+    end
+
+    local inputsScroll = Instance.new("ScrollingFrame")
+    inputsScroll.Name = "InputsScroll"
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+    inputsScroll.BackgroundTransparency = 1
+    inputsScroll.BorderSizePixel = 0
+    inputsScroll.ScrollBarThickness = 0
+    inputsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    inputsScroll.LayoutOrder = 3
+    inputsScroll.Parent = rightContent
+
+    local inputsLayout = Instance.new("UIListLayout")
+    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    inputsLayout.Padding = UDim.new(0, 15)
+    inputsLayout.Parent = inputsScroll
+
+    local inputsPadding = Instance.new("UIPadding")
+    inputsPadding.PaddingTop = UDim.new(0, 20)
+    inputsPadding.PaddingBottom = UDim.new(0, 20)
+    inputsPadding.Parent = inputsScroll
+
+    safeLoadSection(KeyHoldSection, 1, inputsScroll)
 
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
