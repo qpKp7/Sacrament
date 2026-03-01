@@ -30,74 +30,75 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     container.Size = UDim2.new(1, 0, 0, 0)
     container.AutomaticSize = Enum.AutomaticSize.Y
     container.BackgroundTransparency = 1
-    container.LayoutOrder = layoutOrder or 1
+    container.LayoutOrder = layoutOrder or 3
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 15)
     layout.Parent = container
 
     local trailRow = Instance.new("Frame")
     trailRow.Name = "GhostTrailRow"
-    trailRow.Size = UDim2.new(1, 0, 0, 24)
+    trailRow.Size = UDim2.new(1, 0, 0, 55)
     trailRow.BackgroundTransparency = 1
     trailRow.LayoutOrder = 1
     trailRow.Parent = container
 
+    local trailPad = Instance.new("UIPadding")
+    trailPad.PaddingLeft = UDim.new(0, 20)
+    trailPad.PaddingRight = UDim.new(0, 50)
+    trailPad.Parent = trailRow
+
     local trailLabel = Instance.new("TextLabel")
     trailLabel.Name = "Label"
     trailLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    trailLabel.Position = UDim2.fromOffset(20, 0)
+    trailLabel.Position = UDim2.fromScale(0, 0)
     trailLabel.BackgroundTransparency = 1
     trailLabel.Text = "Ghost Trail"
     trailLabel.TextColor3 = COLOR_LABEL
     trailLabel.Font = FONT_MAIN
-    trailLabel.TextSize = 16
+    trailLabel.TextSize = 20
     trailLabel.TextXAlignment = Enum.TextXAlignment.Left
     trailLabel.Parent = trailRow
-
-    local toggleWrapper = Instance.new("Frame")
-    toggleWrapper.Name = "ToggleWrapper"
-    toggleWrapper.Size = UDim2.new(0, 40, 1, 0)
-    toggleWrapper.AnchorPoint = Vector2.new(1, 0.5)
-    toggleWrapper.Position = UDim2.new(1, -50, 0.5, 0)
-    toggleWrapper.BackgroundTransparency = 1
-    toggleWrapper.Parent = trailRow
 
     local trailToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
         trailToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        trailToggle.Instance.Position = UDim2.fromScale(1, 0.5)
-        trailToggle.Instance.Parent = toggleWrapper
+        trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        trailToggle.Instance.Parent = trailRow
         maid:GiveTask(trailToggle)
     end
 
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
-    driftRow.Size = UDim2.new(1, 0, 0, 24)
+    driftRow.Size = UDim2.new(1, 0, 0, 55)
     driftRow.BackgroundTransparency = 1
     driftRow.LayoutOrder = 2
     driftRow.Visible = false
     driftRow.Parent = container
 
+    local driftPad = Instance.new("UIPadding")
+    driftPad.PaddingLeft = UDim.new(0, 20)
+    driftPad.PaddingRight = UDim.new(0, 50)
+    driftPad.Parent = driftRow
+
     local driftLabel = Instance.new("TextLabel")
     driftLabel.Name = "Label"
     driftLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    driftLabel.Position = UDim2.fromOffset(20, 0)
+    driftLabel.Position = UDim2.fromScale(0, 0)
     driftLabel.BackgroundTransparency = 1
     driftLabel.Text = "Drift Strength"
     driftLabel.TextColor3 = COLOR_LABEL
     driftLabel.Font = FONT_MAIN
-    driftLabel.TextSize = 16
+    driftLabel.TextSize = 20
     driftLabel.TextXAlignment = Enum.TextXAlignment.Left
     driftLabel.Parent = driftRow
 
     local inputCont = Instance.new("Frame")
     inputCont.Name = "InputWrapper"
-    inputCont.Size = UDim2.new(0, 50, 1, 0)
+    inputCont.Size = UDim2.new(0, 50, 0, 32)
     inputCont.AnchorPoint = Vector2.new(1, 0.5)
-    inputCont.Position = UDim2.new(1, -50, 0.5, 0)
+    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
     inputCont.BackgroundColor3 = COLOR_BOX_BG
     inputCont.Parent = driftRow
 
@@ -128,35 +129,19 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     maid:GiveTask(driftInput:GetPropertyChangedSignal("Text"):Connect(function()
         local text = driftInput.Text
         local filtered = text:gsub("[^%d%.]", "")
-        
         local _, dotCount = filtered:gsub("%.", "%.")
-        if dotCount > 1 then
-            filtered = text:sub(1, text:len() - 1)
-        end
-
-        if filtered:len() > 3 then
-            filtered = filtered:sub(1, 3)
-        end
-
+        if dotCount > 1 then filtered = text:sub(1, text:len() - 1) end
+        if filtered:len() > 3 then filtered = filtered:sub(1, 3) end
         local num = tonumber(filtered)
-        if num and num > 1.0 then
-            filtered = "1.0"
-        end
-
-        if driftInput.Text ~= filtered then
-            driftInput.Text = filtered
-        end
+        if num and num > 1.0 then filtered = "1.0" end
+        if driftInput.Text ~= filtered then driftInput.Text = filtered end
     end))
 
     maid:GiveTask(driftInput.FocusLost:Connect(function()
         local num = tonumber(driftInput.Text)
-        if not num then
-            driftInput.Text = "0.5"
-        elseif num < 0 then
-            driftInput.Text = "0.0"
-        elseif num > 1.0 then
-            driftInput.Text = "1.0"
-        end
+        if not num then driftInput.Text = "0.5"
+        elseif num < 0 then driftInput.Text = "0.0"
+        elseif num > 1.0 then driftInput.Text = "1.0" end
     end))
 
     maid:GiveTask(container)
