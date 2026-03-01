@@ -188,7 +188,6 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
         maid:GiveTask(hLine)
     end
 
-    -- Scroll idêntico ao Fly (sem padding lateral)
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
     inputsScroll.Size = UDim2.new(1, 0, 1, -57)
@@ -212,7 +211,6 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
 
-    -- Container Externo para driblar o UIListLayout
     local speedOuter = Instance.new("Frame")
     speedOuter.Name = "SpeedOuter"
     speedOuter.Size = UDim2.new(1, 0, 0, 45)
@@ -220,17 +218,16 @@ function WalkSpeedFactory.new(layoutOrder: number?): WalkSpeedUI
     speedOuter.LayoutOrder = 2
     speedOuter.Parent = inputsScroll
 
-    -- Container Interno com as margens absolutas
-    local speedInner = Instance.new("Frame")
-    speedInner.Name = "SpeedInner"
-    speedInner.Size = UDim2.new(1, -45, 1, 0) -- Reduz 45px da largura total (20 esq + 25 dir)
-    speedInner.Position = UDim2.fromOffset(20, 0) -- Empurra 20px da linha vermelha
-    speedInner.BackgroundTransparency = 1
-    speedInner.Parent = speedOuter
+    local speedPad = Instance.new("UIPadding")
+    speedPad.PaddingLeft = UDim.new(0, 20)
+    speedPad.PaddingRight = UDim.new(0, 25)
+    speedPad.Parent = speedOuter
 
     if Slider and type(Slider.new) == "function" then
         local speedSlider = Slider.new("Speed", 16, 300, 16, 1)
-        speedSlider.Instance.Parent = speedInner
+        speedSlider.Instance.Size = UDim2.fromScale(1, 1)
+        speedSlider.Instance.Position = UDim2.fromScale(0, 0)
+        speedSlider.Instance.Parent = speedOuter
         maid:GiveTask(speedSlider)
     end
 
