@@ -19,6 +19,10 @@ local DistanceSection = SafeImport("gui/modules/visual/sections/shared/distance"
 local NameSection = SafeImport("gui/modules/visual/sections/shared/name")
 local ColorsSection = SafeImport("gui/modules/visual/sections/shared/colors")
 
+local StyleSection = SafeImport("gui/modules/visual/sections/esp/style")
+local TracersSection = SafeImport("gui/modules/visual/sections/esp/tracers")
+local TargetSection = SafeImport("gui/modules/visual/sections/esp/target")
+
 export type ESPUI = {
     Instance: Frame,
     Destroy: (self: ESPUI) -> (),
@@ -212,9 +216,12 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
 
     -- CARREGAMENTO DAS SEÇÕES INJETADAS
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(DistanceSection, 2, inputsScroll)
-    safeLoadSection(NameSection, 3, inputsScroll)
-    safeLoadSection(ColorsSection, 4, inputsScroll)
+    safeLoadSection(StyleSection,   2, inputsScroll)
+    safeLoadSection(DistanceSection,3, inputsScroll)
+    safeLoadSection(NameSection,    4, inputsScroll)
+    safeLoadSection(TracersSection, 5, inputsScroll)
+    safeLoadSection(ColorsSection,  6, inputsScroll)
+    safeLoadSection(TargetSection,  7, inputsScroll)
 
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
