@@ -65,6 +65,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     pad.PaddingRight = UDim.new(0, 10)
     pad.Parent = container
 
+    -- SV Canvas (Branco à esquerda, Cor à direita, Preto no fundo)
     local svCanvas = Instance.new("TextButton")
     svCanvas.Name = "SVCanvas"
     svCanvas.Size = UDim2.new(1, 0, 0, 120)
@@ -78,14 +79,16 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     svCorner.CornerRadius = UDim.new(0, 4)
     svCorner.Parent = svCanvas
 
+    -- Camada 1: Branco para Transparente (Esquerda para Direita)
     local whiteGradient = Instance.new("UIGradient")
-    whiteGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1, 1, 1))
+    whiteGradient.Color = ColorSequence.new(Color3.new(1, 1, 1))
     whiteGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 0),
         NumberSequenceKeypoint.new(1, 1)
     })
     whiteGradient.Parent = svCanvas
 
+    -- Camada 2: Overlay Preto (Cima Transparente para Baixo Preto)
     local blackOverlay = Instance.new("Frame")
     blackOverlay.Size = UDim2.fromScale(1, 1)
     blackOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -97,7 +100,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     blackCorner.Parent = blackOverlay
 
     local blackGradient = Instance.new("UIGradient")
-    blackGradient.Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.new(0, 0, 0))
+    blackGradient.Color = ColorSequence.new(Color3.new(1, 1, 1))
     blackGradient.Transparency = NumberSequence.new({
         NumberSequenceKeypoint.new(0, 1),
         NumberSequenceKeypoint.new(1, 0)
@@ -117,10 +120,11 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     svKnobCorner.Parent = svKnob
 
     local svKnobStroke = Instance.new("UIStroke")
-    svKnobStroke.Color = Color3.new(0, 0, 0)
+    svKnobStroke.Color = Color3.new(1, 1, 1) -- Borda branca para contraste
     svKnobStroke.Thickness = 1
     svKnobStroke.Parent = svKnob
 
+    -- Hue Slider
     local hueCanvas = Instance.new("TextButton")
     hueCanvas.Name = "HueCanvas"
     hueCanvas.Size = UDim2.new(1, 0, 0, 12)
@@ -154,6 +158,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     hueKnobStroke.Thickness = 1
     hueKnobStroke.Parent = hueKnob
 
+    -- Inputs (HEX & RGB)
     local inputsFrame = Instance.new("Frame")
     inputsFrame.Name = "Inputs"
     inputsFrame.Size = UDim2.new(1, 0, 0, 28)
@@ -267,6 +272,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     bindDrag(svCanvas, false)
     bindDrag(hueCanvas, true)
 
+    -- Filtros Rigorosos de Texto (Tempo Real)
     maid:GiveTask(hexInput:GetPropertyChangedSignal("Text"):Connect(function()
         if isUpdatingInternal then return end
         isUpdatingInternal = true
@@ -280,10 +286,12 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
         if isUpdatingInternal then return end
         isUpdatingInternal = true
         local cleaned = rgbInput.Text:gsub("[^%d, ]", "")
+        cleaned = string.sub(cleaned, 1, 13) -- Máximo de caracteres para "255, 255, 255"
         rgbInput.Text = cleaned
         isUpdatingInternal = false
     end))
 
+    -- Atualização Matemática Pós-Edição
     maid:GiveTask(hexInput.FocusLost:Connect(function()
         isUpdatingInternal = true
         local txt = hexInput.Text:gsub("#", "")
@@ -300,7 +308,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
 
     maid:GiveTask(rgbInput.FocusLost:Connect(function()
         isUpdatingInternal = true
-        local r, g, b = rgbInput.Text:match("(%d+)%D+(%d+)%D+(%d+)")
+        local r, g, b = rgbInput.Text:match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
         if r and g and b then
             local nr, ng, nb = tonumber(r), tonumber(g), tonumber(b)
             if nr and ng and nb then
