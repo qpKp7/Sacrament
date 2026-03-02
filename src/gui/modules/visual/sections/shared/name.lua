@@ -91,8 +91,8 @@ function NameFactory.new(layoutOrder: number?): NameUI
         row.Parent = optionsContainer
 
         local pad = Instance.new("UIPadding")
-        pad.PaddingLeft = UDim.new(0, 40)
-        pad.PaddingRight = UDim.new(0, 25)
+        pad.PaddingLeft = UDim.new(0, 30) -- Reduzido de 40 para 30
+        pad.PaddingRight = UDim.new(0, 25) -- Alinhamento milimétrico com o Toggle da MainRow
         pad.Parent = row
 
         local lbl = Instance.new("TextLabel")
