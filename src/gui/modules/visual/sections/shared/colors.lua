@@ -9,6 +9,7 @@ local function SafeImport(path: string): any?
 end
 
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local ColorPicker = SafeImport("gui/modules/components/colorpicker")
 
 export type ColorsUI = {
     Instance: Frame,
@@ -68,7 +69,7 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
         maid:GiveTask(mainToggle)
     end
 
-    -- CONTÊINER DE SUB-OPÇÕES (COLOR PREVIEWS)
+    -- CONTÊINER DE SUB-OPÇÕES
     local optionsContainer = Instance.new("Frame")
     optionsContainer.Name = "OptionsContainer"
     optionsContainer.Size = UDim2.new(1, 0, 0, 0)
@@ -83,15 +84,27 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
     optionsLayout.Parent = optionsContainer
 
     local function createColorRow(name: string, defaultColor: Color3, order: number): Frame
+        local wrapper = Instance.new("Frame")
+        wrapper.Name = name:gsub("%s+", "") .. "Wrapper"
+        wrapper.Size = UDim2.new(1, 0, 0, 0)
+        wrapper.AutomaticSize = Enum.AutomaticSize.Y
+        wrapper.BackgroundTransparency = 1
+        wrapper.LayoutOrder = order
+        wrapper.Parent = optionsContainer
+
+        local wrapperLayout = Instance.new("UIListLayout")
+        wrapperLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        wrapperLayout.Parent = wrapper
+
         local row = Instance.new("Frame")
-        row.Name = name:gsub("%s+", "") .. "Row"
+        row.Name = "Row"
         row.Size = UDim2.new(1, 0, 0, 40)
         row.BackgroundTransparency = 1
-        row.LayoutOrder = order
-        row.Parent = optionsContainer
+        row.LayoutOrder = 1
+        row.Parent = wrapper
 
         local pad = Instance.new("UIPadding")
-        pad.PaddingLeft = UDim.new(0, 40) -- Indentação para indicar sub-opção
+        pad.PaddingLeft = UDim.new(0, 40)
         pad.PaddingRight = UDim.new(0, 25)
         pad.Parent = row
 
@@ -106,7 +119,6 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = row
 
-        -- Placeholder do ColorPicker (Caixa de Cor)
         local colorPreview = Instance.new("TextButton")
         colorPreview.Name = "ColorPreview"
         colorPreview.Size = UDim2.fromOffset(40, 20)
@@ -126,10 +138,38 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
         stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         stroke.Parent = colorPreview
 
-        return row
+        if ColorPicker and type(ColorPicker.new) == "function" then
+            local pickerContainer = Instance.new("Frame")
+            pickerContainer.Name = "PickerContainer"
+            pickerContainer.Size = UDim2.new(1, 0, 0, 0)
+            pickerContainer.AutomaticSize = Enum.AutomaticSize.Y
+            pickerContainer.BackgroundTransparency = 1
+            pickerContainer.Visible = false
+            pickerContainer.LayoutOrder = 2
+            pickerContainer.Parent = wrapper
+
+            local pPad = Instance.new("UIPadding")
+            pPad.PaddingLeft = UDim.new(0, 40)
+            pPad.PaddingRight = UDim.new(0, 25)
+            pPad.PaddingBottom = UDim.new(0, 10)
+            pPad.Parent = pickerContainer
+
+            local picker = ColorPicker.new(defaultColor)
+            picker.Instance.Parent = pickerContainer
+            maid:GiveTask(picker)
+
+            maid:GiveTask(colorPreview.Activated:Connect(function()
+                pickerContainer.Visible = not pickerContainer.Visible
+            end))
+
+            maid:GiveTask(picker.Changed:Connect(function(newColor: Color3)
+                colorPreview.BackgroundColor3 = newColor
+            end))
+        end
+
+        return wrapper
     end
 
-    -- Injetando cores padrões (Vermelho Sangue e Azul Mudo)
     createColorRow("Enemy Color", Color3.fromHex("C80000"), 1)
     createColorRow("Team Color", Color3.fromHex("4A90E2"), 2)
 
