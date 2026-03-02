@@ -35,7 +35,6 @@ function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
     local maid = Maid.new()
     local masterState = false
 
-    -- 1. Criação do Cartão Bento
     local card = BentoCard.new(
         "Blood Pact",
         "Global Team Check",
@@ -49,49 +48,81 @@ function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
         masterState = state
     end))
 
-    -- 2. Sub-Grid para as seções internas
-    local subGrid = Instance.new("Frame")
-    subGrid.Name = "BloodPactSubGrid"
-    subGrid.Size = UDim2.new(1, 0, 0, 0)
-    subGrid.AutomaticSize = Enum.AutomaticSize.Y
-    subGrid.BackgroundTransparency = 1
-    subGrid.LayoutOrder = 1
-    -- Injeta no contêiner expansível do BentoCard
-    subGrid.Parent = card.Container
+    -- Contêiner Divisor de Colunas (Esquerda: Toggles / Direita: Listas)
+    local columnsContainer = Instance.new("Frame")
+    columnsContainer.Name = "ColumnsContainer"
+    columnsContainer.Size = UDim2.new(1, 0, 0, 0)
+    columnsContainer.AutomaticSize = Enum.AutomaticSize.Y
+    columnsContainer.BackgroundTransparency = 1
+    columnsContainer.LayoutOrder = 1
+    columnsContainer.Parent = card.Container
 
-    local gridLayout = Instance.new("UIListLayout")
-    gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    gridLayout.FillDirection = Enum.FillDirection.Horizontal
-    gridLayout.Wraps = true
-    gridLayout.Padding = UDim.new(0, 15)
-    gridLayout.Parent = subGrid
+    local colsLayout = Instance.new("UIListLayout")
+    colsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    colsLayout.FillDirection = Enum.FillDirection.Horizontal
+    colsLayout.Padding = UDim.new(0, 15)
+    colsLayout.Parent = columnsContainer
 
-    -- 3. Instanciação das Seções de Controle
+    -- Coluna Esquerda
+    local leftCol = Instance.new("Frame")
+    leftCol.Name = "LeftColumn"
+    leftCol.Size = UDim2.new(0.5, -7.5, 0, 0)
+    leftCol.AutomaticSize = Enum.AutomaticSize.Y
+    leftCol.BackgroundTransparency = 1
+    leftCol.LayoutOrder = 1
+    leftCol.Parent = columnsContainer
+
+    local leftLayout = Instance.new("UIListLayout")
+    leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    leftLayout.Padding = UDim.new(0, 10)
+    leftLayout.Parent = leftCol
+
+    -- Coluna Direita
+    local rightCol = Instance.new("Frame")
+    rightCol.Name = "RightColumn"
+    rightCol.Size = UDim2.new(0.5, -7.5, 0, 0)
+    rightCol.AutomaticSize = Enum.AutomaticSize.Y
+    rightCol.BackgroundTransparency = 1
+    rightCol.LayoutOrder = 2
+    rightCol.Parent = columnsContainer
+
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Padding = UDim.new(0, 10)
+    rightLayout.Parent = rightCol
+
+    -- Instanciação e Distribuição
     local friendCheckInst = nil
     if FriendCheck and type(FriendCheck.new) == "function" then
         friendCheckInst = FriendCheck.new(1)
-        friendCheckInst.Instance.Parent = subGrid
+        friendCheckInst.Instance.Size = UDim2.new(1, 0, 0, 55)
+        friendCheckInst.Instance.Parent = leftCol
         maid:GiveTask(friendCheckInst)
     end
 
     local groupIdInst = nil
     if GroupIdCheck and type(GroupIdCheck.new) == "function" then
         groupIdInst = GroupIdCheck.new(2)
-        groupIdInst.Instance.Parent = subGrid
+        groupIdInst.ToggleInstance.Parent = leftCol
+        if groupIdInst.ListInstance then
+            groupIdInst.ListInstance.Parent = rightCol
+        end
         maid:GiveTask(groupIdInst)
     end
 
     local nameCheckInst = nil
     if NameCheck and type(NameCheck.new) == "function" then
         nameCheckInst = NameCheck.new(3)
-        nameCheckInst.Instance.Parent = subGrid
+        nameCheckInst.ToggleInstance.Parent = leftCol
+        if nameCheckInst.ListInstance then
+            nameCheckInst.ListInstance.Parent = rightCol
+        end
         maid:GiveTask(nameCheckInst)
     end
 
     local self = {}
     self.Instance = card.Instance
 
-    -- Interface de consumo para o Aimbot/ESP
     function self:GetData(): BloodPactData
         return {
             MasterEnabled = masterState,
