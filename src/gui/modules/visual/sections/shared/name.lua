@@ -35,7 +35,7 @@ function NameFactory.new(layoutOrder: number?): NameUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- LINHA PRINCIPAL (TOGGLE)
+    -- LINHA PRINCIPAL
     local mainRow = Instance.new("Frame")
     mainRow.Name = "MainRow"
     mainRow.Size = UDim2.new(1, 0, 0, 45)
@@ -68,7 +68,7 @@ function NameFactory.new(layoutOrder: number?): NameUI
         maid:GiveTask(mainToggle)
     end
 
-    -- CONTÊINER DE SUB-OPÇÕES (CHECKBOXES)
+    -- CONTÊINER DE SUB-OPÇÕES
     local optionsContainer = Instance.new("Frame")
     optionsContainer.Name = "OptionsContainer"
     optionsContainer.Size = UDim2.new(1, 0, 0, 0)
@@ -82,17 +82,17 @@ function NameFactory.new(layoutOrder: number?): NameUI
     optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
     optionsLayout.Parent = optionsContainer
 
-    local function createCheckboxRow(name: string, order: number): Frame
+    local function createCheckRow(name: string, order: number): (Frame, any)
         local row = Instance.new("Frame")
         row.Name = name:gsub("%s+", "") .. "Row"
-        row.Size = UDim2.new(1, 0, 0, 40)
+        row.Size = UDim2.new(1, 0, 0, 30)
         row.BackgroundTransparency = 1
         row.LayoutOrder = order
         row.Parent = optionsContainer
 
         local pad = Instance.new("UIPadding")
-        pad.PaddingLeft = UDim.new(0, 40) -- Indentação visual para indicar sub-opção
-        pad.PaddingRight = UDim.new(0, 25) -- Mantém alinhamento exato à direita
+        pad.PaddingLeft = UDim.new(0, 40)
+        pad.PaddingRight = UDim.new(0, 25)
         pad.Parent = row
 
         local lbl = Instance.new("TextLabel")
@@ -102,25 +102,62 @@ function NameFactory.new(layoutOrder: number?): NameUI
         lbl.Text = name
         lbl.TextColor3 = COLOR_LABEL
         lbl.Font = FONT_MAIN
-        lbl.TextSize = 16
+        lbl.TextSize = 14
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = row
 
+        local check = nil
         if Checkbox and type(Checkbox.new) == "function" then
-            local check = Checkbox.new()
+            check = Checkbox.new(false)
             check.Instance.AnchorPoint = Vector2.new(1, 0.5)
             check.Instance.Position = UDim2.new(1, 0, 0.5, 0)
             check.Instance.Parent = row
             maid:GiveTask(check)
         end
 
-        return row
+        return row, check
     end
 
-    createCheckboxRow("User Name", 1)
-    createCheckboxRow("Display Name", 2)
+    local userRow, userCheck = createCheckRow("User Name", 1)
+    local displayRow, displayCheck = createCheckRow("Display Name", 2)
 
-    -- EVENTO DE EXPANSÃO
+    -- LÓGICA RADIO BUTTON MUTUAMENTE EXCLUSIVA
+    if userCheck and displayCheck then
+        userCheck:SetState(true)
+
+        local isUpdating = false
+
+        maid:GiveTask(userCheck.Toggled:Connect(function(state: boolean)
+            if isUpdating then return end
+            isUpdating = true
+
+            if state == true then
+                displayCheck:SetState(false)
+            else
+                if displayCheck:GetState() == false then
+                    userCheck:SetState(true)
+                end
+            end
+
+            isUpdating = false
+        end))
+
+        maid:GiveTask(displayCheck.Toggled:Connect(function(state: boolean)
+            if isUpdating then return end
+            isUpdating = true
+
+            if state == true then
+                userCheck:SetState(false)
+            else
+                if userCheck:GetState() == false then
+                    displayCheck:SetState(true)
+                end
+            end
+
+            isUpdating = false
+        end))
+    end
+
     if mainToggle then
         maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
             optionsContainer.Visible = state
