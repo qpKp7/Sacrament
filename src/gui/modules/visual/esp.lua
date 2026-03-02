@@ -45,7 +45,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     -- HEADER CORE
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(0, 280, 0, 50)
+    header.Size = UDim2.new(1, 0, 0, 50) -- Agora ocupa 100% do X
     header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -209,9 +209,16 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
 
+    -- EVENTOS
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
+        end))
+    end
+
+    if arrow then
+        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+            subFrame.Visible = state
         end))
     end
 
