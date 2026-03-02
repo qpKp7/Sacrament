@@ -10,6 +10,7 @@ end
 
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Slider = SafeImport("gui/modules/components/slider")
+local ColorPicker = SafeImport("gui/modules/components/colorpicker")
 
 export type TracersUI = {
     Instance: Frame,
@@ -93,7 +94,6 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
     thickRow.Parent = optionsContainer
 
     if Slider and type(Slider.new) == "function" then
-        -- Parâmetros: Título, Mín, Máx, Padrão, Incremento
         local thickSlider = Slider.new("Thickness", 1, 4, 1, 1)
         thickSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
         thickSlider.Instance.Position = UDim2.fromScale(0, 0.5)
@@ -102,16 +102,28 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
         maid:GiveTask(thickSlider)
     end
 
-    -- PREVIEW DE COR
+    -- PREVIEW DE COR E SELETOR (WRAPPER)
+    local colorWrapper = Instance.new("Frame")
+    colorWrapper.Name = "ColorWrapper"
+    colorWrapper.Size = UDim2.new(1, 0, 0, 0)
+    colorWrapper.AutomaticSize = Enum.AutomaticSize.Y
+    colorWrapper.BackgroundTransparency = 1
+    colorWrapper.LayoutOrder = 2
+    colorWrapper.Parent = optionsContainer
+
+    local wrapperLayout = Instance.new("UIListLayout")
+    wrapperLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    wrapperLayout.Parent = colorWrapper
+
     local colorRow = Instance.new("Frame")
     colorRow.Name = "ColorRow"
     colorRow.Size = UDim2.new(1, 0, 0, 40)
     colorRow.BackgroundTransparency = 1
-    colorRow.LayoutOrder = 2
-    colorRow.Parent = optionsContainer
+    colorRow.LayoutOrder = 1
+    colorRow.Parent = colorWrapper
 
     local colorPad = Instance.new("UIPadding")
-    colorPad.PaddingLeft = UDim.new(0, 40) -- Recuo visual de sub-opção
+    colorPad.PaddingLeft = UDim.new(0, 40)
     colorPad.PaddingRight = UDim.new(0, 25)
     colorPad.Parent = colorRow
 
@@ -145,7 +157,36 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
     colorStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     colorStroke.Parent = colorPreview
 
-    -- EVENTO DE EXPANSÃO
+    if ColorPicker and type(ColorPicker.new) == "function" then
+        local pickerContainer = Instance.new("Frame")
+        pickerContainer.Name = "PickerContainer"
+        pickerContainer.Size = UDim2.new(1, 0, 0, 0)
+        pickerContainer.AutomaticSize = Enum.AutomaticSize.Y
+        pickerContainer.BackgroundTransparency = 1
+        pickerContainer.Visible = false
+        pickerContainer.LayoutOrder = 2
+        pickerContainer.Parent = colorWrapper
+
+        local pPad = Instance.new("UIPadding")
+        pPad.PaddingLeft = UDim.new(0, 40)
+        pPad.PaddingRight = UDim.new(0, 25)
+        pPad.PaddingBottom = UDim.new(0, 10)
+        pPad.Parent = pickerContainer
+
+        local picker = ColorPicker.new(COLOR_TRACER_DEFAULT)
+        picker.Instance.Parent = pickerContainer
+        maid:GiveTask(picker)
+
+        maid:GiveTask(colorPreview.Activated:Connect(function()
+            pickerContainer.Visible = not pickerContainer.Visible
+        end))
+
+        maid:GiveTask(picker.Changed:Connect(function(newColor: Color3)
+            colorPreview.BackgroundColor3 = newColor
+        end))
+    end
+
+    -- EVENTO DE EXPANSÃO PRINCIPAL
     if mainToggle then
         maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
             optionsContainer.Visible = state
