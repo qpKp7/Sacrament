@@ -17,7 +17,6 @@ local COLOR_BORDER = Color3.fromHex("333333")
 local COLOR_TEXT = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
--- Cores do arco-íris para o Hue
 local HUE_COLORS = ColorSequence.new({
     ColorSequenceKeypoint.new(0.000, Color3.fromRGB(255, 0, 0)),
     ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)),
@@ -66,7 +65,6 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     pad.PaddingRight = UDim.new(0, 10)
     pad.Parent = container
 
-    -- 1. SV Canvas (Saturação e Valor)
     local svCanvas = Instance.new("TextButton")
     svCanvas.Name = "SVCanvas"
     svCanvas.Size = UDim2.new(1, 0, 0, 120)
@@ -111,7 +109,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     svKnob.Name = "Knob"
     svKnob.Size = UDim2.fromOffset(12, 12)
     svKnob.AnchorPoint = Vector2.new(0.5, 0.5)
-    svKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+    svKnob.BackgroundColor3 = currentColor
     svKnob.Parent = svCanvas
 
     local svKnobCorner = Instance.new("UICorner")
@@ -123,7 +121,6 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     svKnobStroke.Thickness = 1
     svKnobStroke.Parent = svKnob
 
-    -- 2. Hue Slider (Matiz)
     local hueCanvas = Instance.new("TextButton")
     hueCanvas.Name = "HueCanvas"
     hueCanvas.Size = UDim2.new(1, 0, 0, 12)
@@ -145,7 +142,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     hueKnob.Name = "Knob"
     hueKnob.Size = UDim2.fromOffset(16, 16)
     hueKnob.AnchorPoint = Vector2.new(0.5, 0.5)
-    hueKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+    hueKnob.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
     hueKnob.Parent = hueCanvas
 
     local hueKnobCorner = Instance.new("UICorner")
@@ -157,7 +154,6 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     hueKnobStroke.Thickness = 1
     hueKnobStroke.Parent = hueKnob
 
-    -- 3. Inputs Container
     local inputsFrame = Instance.new("Frame")
     inputsFrame.Name = "Inputs"
     inputsFrame.Size = UDim2.new(1, 0, 0, 28)
@@ -225,12 +221,22 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
         changedEvent:Fire(currentColor)
     end
 
-    -- Lógica de Arraste (Drag)
     local function bindDrag(canvas: TextButton, isHue: boolean)
         local dragging = false
         maid:GiveTask(canvas.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
+                local pos = input.Position
+                local absPos = canvas.AbsolutePosition
+                local absSize = canvas.AbsoluteSize
+                if isHue then
+                    local newH = 1 - math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
+                    setColorInternal(newH, s, v)
+                else
+                    local newS = math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
+                    local newV = 1 - math.clamp((pos.Y - absPos.Y) / absSize.Y, 0, 1)
+                    setColorInternal(h, newS, newV)
+                end
             end
         end))
 
@@ -256,43 +262,37 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
                 end
             end
         end))
-
-        -- Captura clique único
-        maid:GiveTask(canvas.Activated:Connect(function(input)
-            local pos = UserInputService:GetMouseLocation()
-            -- Compensar o topbar offset no Y se necessário, mas em GUIs relativas AbsolutePosition é mais seguro
-            -- Como Activated não dá a posição exata do rato, o InputBegan cuidará se for um clique rápido.
-        end))
-        
-        -- Fallback de clique preciso
-        maid:GiveTask(canvas.InputBegan:Connect(function(input)
-             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                local pos = input.Position
-                local absPos = canvas.AbsolutePosition
-                local absSize = canvas.AbsoluteSize
-                if isHue then
-                    local newH = 1 - math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
-                    setColorInternal(newH, s, v)
-                else
-                    local newS = math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
-                    local newV = 1 - math.clamp((pos.Y - absPos.Y) / absSize.Y, 0, 1)
-                    setColorInternal(h, newS, newV)
-                end
-             end
-        end))
     end
 
     bindDrag(svCanvas, false)
     bindDrag(hueCanvas, true)
 
-    -- Lógica de Inputs de Texto
+    maid:GiveTask(hexInput:GetPropertyChangedSignal("Text"):Connect(function()
+        if isUpdatingInternal then return end
+        isUpdatingInternal = true
+        local cleaned = hexInput.Text:upper():gsub("[^%dA-F]", "")
+        cleaned = string.sub(cleaned, 1, 6)
+        hexInput.Text = "#" .. cleaned
+        isUpdatingInternal = false
+    end))
+
+    maid:GiveTask(rgbInput:GetPropertyChangedSignal("Text"):Connect(function()
+        if isUpdatingInternal then return end
+        isUpdatingInternal = true
+        local cleaned = rgbInput.Text:gsub("[^%d, ]", "")
+        rgbInput.Text = cleaned
+        isUpdatingInternal = false
+    end))
+
     maid:GiveTask(hexInput.FocusLost:Connect(function()
         isUpdatingInternal = true
         local txt = hexInput.Text:gsub("#", "")
-        local success, c = pcall(function() return Color3.fromHex(txt) end)
-        if success and c then
-            local newH, newS, newV = c:ToHSV()
-            setColorInternal(newH, newS, newV)
+        if #txt == 6 then
+            local success, c = pcall(function() return Color3.fromHex(txt) end)
+            if success and c then
+                local newH, newS, newV = c:ToHSV()
+                setColorInternal(newH, newS, newV)
+            end
         end
         isUpdatingInternal = false
         updateVisuals()
