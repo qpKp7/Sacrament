@@ -15,6 +15,7 @@ local CheckboxFactory = {}
 
 local COLOR_BG = Color3.fromHex("1A1A1A")
 local COLOR_BORDER = Color3.fromHex("333333")
+local COLOR_BORDER_HOVER = Color3.fromHex("555555")
 local COLOR_ACTIVE = Color3.fromHex("C80000")
 local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
@@ -63,6 +64,18 @@ function CheckboxFactory.new(defaultState: boolean?): CheckboxUI
             tween:Destroy()
         end))
     end
+
+    maid:GiveTask(button.MouseEnter:Connect(function()
+        local tween = TweenService:Create(stroke, TWEEN_INFO, {Color = COLOR_BORDER_HOVER})
+        tween:Play()
+        maid:GiveTask(tween.Completed:Connect(function() tween:Destroy() end))
+    end))
+
+    maid:GiveTask(button.MouseLeave:Connect(function()
+        local tween = TweenService:Create(stroke, TWEEN_INFO, {Color = COLOR_BORDER})
+        tween:Play()
+        maid:GiveTask(tween.Completed:Connect(function() tween:Destroy() end))
+    end))
 
     maid:GiveTask(button.Activated:Connect(function()
         isChecked = not isChecked
