@@ -45,7 +45,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
 
     local trailPad = Instance.new("UIPadding")
     trailPad.PaddingLeft = UDim.new(0, 20)
-    trailPad.PaddingRight = UDim.new(0, 50)
+    trailPad.PaddingRight = UDim.new(0, 25)
     trailPad.Parent = trailRow
 
     local trailLabel = Instance.new("TextLabel")
@@ -68,10 +68,10 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
         maid:GiveTask(trailToggle)
     end
 
-    -- ROW DRIFT STRENGTH (Slider Decimal 0.0 a 10.0)
+   -- ROW DRIFT STRENGTH (Slider Decimal 0.0 a 10.0)
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
-    driftRow.Size = UDim2.new(1, 0, 0, 55)
+    driftRow.Size = UDim2.new(1, 0, 0, 45) -- Altura simétrica ao Key Hold
     driftRow.BackgroundTransparency = 1
     driftRow.LayoutOrder = 2
     driftRow.Visible = false
@@ -79,6 +79,7 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
 
     local driftSlider = nil
     if Slider and type(Slider.new) == "function" then
+        -- Parâmetros: Título, Mín, Máx, Padrão, Incremento
         driftSlider = Slider.new("Drift Strength", 0.0, 10.0, 0.3, 0.1)
         driftSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
         driftSlider.Instance.Position = UDim2.fromScale(0, 0.5)
