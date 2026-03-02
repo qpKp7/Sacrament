@@ -49,6 +49,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
+    -- HEADER CORE: Largura oficial de 280px para o LeftPanel
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 50)
@@ -144,6 +145,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
+    -- SUBFRAME CORE: 420px de altura base
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 420)
@@ -183,6 +185,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
         end
     end
 
+    -- Seção de Keybind (Fixa no topo do conteúdo direito)
     safeLoadSection(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
@@ -191,6 +194,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
         maid:GiveTask(hLine)
     end
 
+    -- Área de rolagem para inputs adicionais
     local inputsScroll = Instance.new("ScrollingFrame")
     inputsScroll.Name = "InputsScroll"
     inputsScroll.Size = UDim2.new(1, 0, 1, -57)
@@ -212,6 +216,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
+    -- SEQUÊNCIA DE CARREGAMENTO SOLICITADA
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
     safeLoadSection(DistanceSection, 2, inputsScroll)
     safeLoadSection(StyleSection, 3, inputsScroll)
