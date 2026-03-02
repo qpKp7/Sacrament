@@ -3,8 +3,13 @@ local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 local function SafeImport(path: string): any?
-    local success, result = pcall(function() return Import(path) end)
-    if not success then return nil end
+    local success, result = pcall(function()
+        return Import(path)
+    end)
+    if not success then
+        warn("[Sacrament] Falha ao importar dependência em Key Hold: " .. path)
+        return nil
+    end
     return result
 end
 
@@ -26,7 +31,7 @@ function KeyHoldFactory.new(layoutOrder: number?): KeyHoldUI
 
     local container = Instance.new("Frame")
     container.Name = "KeyHoldSection"
-    container.Size = UDim2.new(1, 0, 0, 45) -- Padrão Row Compacto
+    container.Size = UDim2.new(1, 0, 0, 45)
     container.BackgroundTransparency = 1
     container.LayoutOrder = layoutOrder or 1
 
@@ -52,7 +57,7 @@ function KeyHoldFactory.new(layoutOrder: number?): KeyHoldUI
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        toggle.Instance.Position = UDim2.fromScale(1, 0.5)
+        toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = container
         maid:GiveTask(toggle)
 
