@@ -12,7 +12,8 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local DynamicList = SafeImport("gui/modules/components/dynamiclist")
 
 export type GroupIdUI = {
-    Instance: Frame,
+    ToggleInstance: Frame,
+    ListInstance: Frame?,
     Toggled: RBXScriptSignal,
     ListChanged: RBXScriptSignal,
     GetState: (self: GroupIdUI) -> boolean,
@@ -32,25 +33,11 @@ function GroupIdFactory.new(layoutOrder: number?): GroupIdUI
     local maid = Maid.new()
     local currentState = false
 
-    local container = Instance.new("Frame")
-    container.Name = "GroupIdContainer"
-    container.Size = UDim2.new(0.5, -7.5, 0, 0)
-    container.AutomaticSize = Enum.AutomaticSize.Y
-    container.BackgroundTransparency = 1
-    container.LayoutOrder = layoutOrder or 1
-
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 10)
-    layout.Parent = container
-
-    -- Mini-card do Toggle
     local toggleCard = Instance.new("Frame")
-    toggleCard.Name = "ToggleCard"
+    toggleCard.Name = "GroupToggleCard"
     toggleCard.Size = UDim2.new(1, 0, 0, 55)
     toggleCard.BackgroundColor3 = COLOR_BG
-    toggleCard.LayoutOrder = 1
-    toggleCard.Parent = container
+    toggleCard.LayoutOrder = layoutOrder or 1
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
@@ -91,6 +78,14 @@ function GroupIdFactory.new(layoutOrder: number?): GroupIdUI
     local toggledEvent = Instance.new("BindableEvent")
     maid:GiveTask(toggledEvent)
 
+    local listPanel = nil
+    if DynamicList and type(DynamicList.new) == "function" then
+        listPanel = DynamicList.new("Group ID List", layoutOrder)
+        listPanel.Instance.Size = UDim2.new(1, 0, 0, 0)
+        listPanel.Instance.Visible = false -- Inicia oculta
+        maid:GiveTask(listPanel)
+    end
+
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
@@ -99,42 +94,25 @@ function GroupIdFactory.new(layoutOrder: number?): GroupIdUI
         
         maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
             currentState = state
+            if listPanel then
+                listPanel.Instance.Visible = state
+            end
             toggledEvent:Fire(state)
         end))
         maid:GiveTask(toggle)
     end
 
-    -- Painel Dinâmico
-    local listPanel = nil
-    if DynamicList and type(DynamicList.new) == "function" then
-        listPanel = DynamicList.new("Group ID List", 2)
-        -- Sobrescreve o size do componente para ocupar 100% da coluna (container)
-        listPanel.Instance.Size = UDim2.new(1, 0, 0, 0)
-        listPanel.Instance.Parent = container
-        maid:GiveTask(listPanel)
-    end
-
-    maid:GiveTask(container)
+    maid:GiveTask(toggleCard)
 
     local self = {}
-    self.Instance = container
+    self.ToggleInstance = toggleCard
+    self.ListInstance = listPanel and listPanel.Instance or nil
     self.Toggled = toggledEvent.Event
     self.ListChanged = listPanel and listPanel.ListChanged or Instance.new("BindableEvent").Event
 
-    function self:GetState()
-        return currentState
-    end
-
-    function self:GetList()
-        if listPanel then
-            return listPanel:GetValues()
-        end
-        return {}
-    end
-
-    function self:Destroy()
-        maid:Destroy()
-    end
+    function self:GetState() return currentState end
+    function self:GetList() return listPanel and listPanel:GetValues() or {} end
+    function self:Destroy() maid:Destroy() end
 
     return self :: GroupIdUI
 end
