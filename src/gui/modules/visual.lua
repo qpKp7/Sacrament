@@ -37,8 +37,7 @@ function VisualTabFactory.new(): VisualTabUI
     local padding = Instance.new("UIPadding")
     padding.PaddingTop = UDim.new(0, 20)
     padding.PaddingBottom = UDim.new(0, 20)
-    padding.PaddingLeft = UDim.new(0, 20)
-    padding.PaddingRight = UDim.new(0, 20)
+    -- Padding lateral removido para respeitar o Header Core de 100% de largura
     padding.Parent = container
 
     if ESP and type(ESP.new) == "function" then
