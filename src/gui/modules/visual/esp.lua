@@ -42,10 +42,10 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER CORE
+    -- HEADER CORE: Largura exata de 280px para encaixar no LeftPanel
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 50) -- Agora ocupa 100% do X
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundTransparency = 1
     header.BorderSizePixel = 0
     header.LayoutOrder = 1
@@ -138,7 +138,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME CORE
+    -- SUBFRAME CORE: Mantido 420px como manda o contrato
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 420)
@@ -209,19 +209,14 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
 
-    -- EVENTOS
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             glowBar:SetState(state)
         end))
     end
 
-    if arrow then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
-        end))
-    end
-
+    -- Evento da Arrow purgado: a responsabilidade de abrir/fechar agora pertence exclusivamente ao visual.lua
+    
     maid:GiveTask(container)
     local self = {}
     self.Instance = container
