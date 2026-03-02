@@ -15,6 +15,9 @@ local Sidebar = SafeImport("gui/modules/components/sidebar")
 
 local KeybindSection = SafeImport("gui/modules/visual/sections/shared/keybind")
 local KeyHoldSection = SafeImport("gui/modules/visual/sections/shared/keyhold")
+local DistanceSection = SafeImport("gui/modules/visual/sections/shared/distance")
+local NameSection = SafeImport("gui/modules/visual/sections/shared/name")
+local ColorsSection = SafeImport("gui/modules/visual/sections/shared/colors")
 
 export type ESPUI = {
     Instance: Frame,
@@ -207,7 +210,11 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
+    -- CARREGAMENTO DAS SEÇÕES INJETADAS
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
+    safeLoadSection(DistanceSection, 2, inputsScroll)
+    safeLoadSection(NameSection, 3, inputsScroll)
+    safeLoadSection(ColorsSection, 4, inputsScroll)
 
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
@@ -215,8 +222,6 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
         end))
     end
 
-    -- Evento da Arrow purgado: a responsabilidade de abrir/fechar agora pertence exclusivamente ao visual.lua
-    
     maid:GiveTask(container)
     local self = {}
     self.Instance = container
