@@ -36,7 +36,6 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- LINHA PRINCIPAL (TOGGLE)
     local mainRow = Instance.new("Frame")
     mainRow.Name = "MainRow"
     mainRow.Size = UDim2.new(1, 0, 0, 45)
@@ -69,7 +68,6 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
         maid:GiveTask(mainToggle)
     end
 
-    -- CONTÊINER DE SUB-OPÇÕES
     local optionsContainer = Instance.new("Frame")
     optionsContainer.Name = "OptionsContainer"
     optionsContainer.Size = UDim2.new(1, 0, 0, 0)
@@ -173,7 +171,6 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
     createColorRow("Enemy Color", Color3.fromHex("C80000"), 1)
     createColorRow("Team Color", Color3.fromHex("4A90E2"), 2)
 
-    -- EVENTO DE EXPANSÃO
     if mainToggle then
         maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
             optionsContainer.Visible = state
