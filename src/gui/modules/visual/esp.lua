@@ -213,12 +213,12 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(DistanceSection,   2, inputsScroll)
-    safeLoadSection(StyleSection,  3, inputsScroll)
-    safeLoadSection(ColorSection,4, inputsScroll)
-    safeLoadSection(NameSection,    5, inputsScroll)
+    safeLoadSection(DistanceSection, 2, inputsScroll)
+    safeLoadSection(StyleSection, 3, inputsScroll)
+    safeLoadSection(ColorSection, 4, inputsScroll)
+    safeLoadSection(NameSection, 5, inputsScroll)
     safeLoadSection(TracersSection, 6, inputsScroll)
-    safeLoadSection(TargetSection,  7, inputsScroll)
+    safeLoadSection(TargetSection, 7, inputsScroll)
 
     if toggleBtn and glowBar then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
