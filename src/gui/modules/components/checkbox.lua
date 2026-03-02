@@ -4,97 +4,89 @@ local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 export type CheckboxUI = {
-    Instance: Frame,
+    Instance: TextButton,
     Toggled: RBXScriptSignal,
-    SetState: (self: CheckboxUI, state: boolean, animate: boolean?) -> (),
+    SetState: (self: CheckboxUI, state: boolean) -> (),
+    GetState: (self: CheckboxUI) -> boolean,
     Destroy: (self: CheckboxUI) -> ()
 }
 
 local CheckboxFactory = {}
 
-local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
-local COLOR_BOX_BORDER = Color3.fromHex("333333")
-local COLOR_FILL = Color3.fromHex("C80000")
-local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local COLOR_BG = Color3.fromHex("1A1A1A")
+local COLOR_BORDER = Color3.fromHex("333333")
+local COLOR_ACTIVE = Color3.fromHex("C80000")
+local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 function CheckboxFactory.new(defaultState: boolean?): CheckboxUI
     local maid = Maid.new()
-    local isToggled = defaultState or false
+    local isChecked = defaultState or false
 
-    local container = Instance.new("Frame")
-    container.Name = "CheckboxContainer"
-    container.Size = UDim2.fromOffset(20, 20)
-    container.BackgroundColor3 = COLOR_BOX_BG
-    container.BorderSizePixel = 0
+    local button = Instance.new("TextButton")
+    button.Name = "Checkbox"
+    button.Size = UDim2.fromOffset(20, 20)
+    button.BackgroundColor3 = COLOR_BG
+    button.Text = ""
+    button.AutoButtonColor = false
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
-    corner.Parent = container
+    corner.Parent = button
 
     local stroke = Instance.new("UIStroke")
-    stroke.Color = COLOR_BOX_BORDER
-    stroke.Thickness = 1
+    stroke.Color = COLOR_BORDER
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = container
+    stroke.Parent = button
 
-    local fill = Instance.new("Frame")
-    fill.Name = "Fill"
-    fill.AnchorPoint = Vector2.new(0.5, 0.5)
-    fill.Position = UDim2.fromScale(0.5, 0.5)
-    fill.BackgroundColor3 = COLOR_FILL
-    fill.BorderSizePixel = 0
-    fill.Parent = container
+    local innerMark = Instance.new("Frame")
+    innerMark.Name = "Mark"
+    innerMark.AnchorPoint = Vector2.new(0.5, 0.5)
+    innerMark.Position = UDim2.fromScale(0.5, 0.5)
+    innerMark.BackgroundColor3 = COLOR_ACTIVE
+    innerMark.BorderSizePixel = 0
+    innerMark.Size = isChecked and UDim2.fromOffset(12, 12) or UDim2.fromOffset(0, 0)
+    innerMark.Parent = button
 
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, 3)
-    fillCorner.Parent = fill
-
-    local hitBtn = Instance.new("TextButton")
-    hitBtn.Name = "Hitbox"
-    hitBtn.Size = UDim2.fromScale(1, 1)
-    hitBtn.BackgroundTransparency = 1
-    hitBtn.Text = ""
-    hitBtn.Parent = container
+    local innerCorner = Instance.new("UICorner")
+    innerCorner.CornerRadius = UDim.new(0, 2)
+    innerCorner.Parent = innerMark
 
     local toggledEvent = Instance.new("BindableEvent")
     maid:GiveTask(toggledEvent)
 
-    local self = {}
-    self.Instance = container
-    self.Toggled = toggledEvent.Event
-
-    function self:SetState(state: boolean, animate: boolean?)
-        isToggled = state
+    local function updateVisuals()
+        local targetSize = isChecked and UDim2.fromOffset(12, 12) or UDim2.fromOffset(0, 0)
+        local tween = TweenService:Create(innerMark, TWEEN_INFO, {Size = targetSize})
+        tween:Play()
         
-        local targetSize = state and UDim2.new(1, -8, 1, -8) or UDim2.fromScale(0, 0)
-        local targetTrans = state and 0 or 1
-
-        if animate ~= false then
-            local t = TweenService:Create(fill, TWEEN_INFO, {
-                Size = targetSize,
-                BackgroundTransparency = targetTrans
-            } :: any)
-            t:Play()
-            
-            local conn: RBXScriptConnection
-            conn = t.Completed:Connect(function()
-                t:Destroy()
-                if conn then conn:Disconnect() end
-            end)
-        else
-            fill.Size = targetSize
-            fill.BackgroundTransparency = targetTrans
-        end
+        maid:GiveTask(tween.Completed:Connect(function()
+            tween:Destroy()
+        end))
     end
 
-    maid:GiveTask(hitBtn.Activated:Connect(function()
-        self:SetState(not isToggled, true)
-        toggledEvent:Fire(isToggled)
+    maid:GiveTask(button.Activated:Connect(function()
+        isChecked = not isChecked
+        updateVisuals()
+        toggledEvent:Fire(isChecked)
     end))
 
-    self:SetState(isToggled, false)
+    maid:GiveTask(button)
+    
+    local self = {}
+    self.Instance = button
+    self.Toggled = toggledEvent.Event
 
-    maid:GiveTask(container)
+    function self:SetState(state: boolean)
+        if isChecked == state then return end
+        isChecked = state
+        updateVisuals()
+        toggledEvent:Fire(isChecked)
+    end
+
+    function self:GetState()
+        return isChecked
+    end
+
     function self:Destroy()
         maid:Destroy()
     end
