@@ -49,7 +49,6 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER CORE: Largura exata de 280px para encaixar no LeftPanel
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 50)
@@ -145,7 +144,6 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME CORE: Mantido 420px como manda o contrato
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 420)
@@ -214,13 +212,12 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    -- CARREGAMENTO DAS SEÇÕES INJETADAS
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
     safeLoadSection(StyleSection,   2, inputsScroll)
-    safeLoadSection(DistanceSection,3, inputsScroll)
-    safeLoadSection(NameSection,    4, inputsScroll)
-    safeLoadSection(TracersSection, 5, inputsScroll)
-    safeLoadSection(ColorsSection,  6, inputsScroll)
+    safeLoadSection(ColorsSection,  3, inputsScroll)
+    safeLoadSection(DistanceSection,4, inputsScroll)
+    safeLoadSection(NameSection,    5, inputsScroll)
+    safeLoadSection(TracersSection, 6, inputsScroll)
     safeLoadSection(TargetSection,  7, inputsScroll)
 
     if toggleBtn and glowBar then
