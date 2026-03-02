@@ -10,6 +10,7 @@ local function SafeImport(path: string): any?
 end
 
 local BloodPactSection = SafeImport("gui/modules/misc/bloodpact")
+local ActionButton = SafeImport("gui/modules/components/actionbutton")
 
 export type MiscUI = {
     Instance: Frame,
@@ -83,7 +84,6 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
     avatarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     avatarStroke.Parent = avatarImg
 
-    -- Carregar avatar real do LocalPlayer
     task.spawn(function()
         if localPlayer then
             local thumbType = Enum.ThumbnailType.HeadShot
@@ -142,7 +142,6 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
     gridLayout.Padding = UDim.new(0, 15)
     gridLayout.Parent = gridContainer
 
-    -- Inserir Blood Pact Cartão Dinâmico
     if BloodPactSection and type(BloodPactSection.new) == "function" then
         local success, bpInstance = pcall(function() return BloodPactSection.new(1) end)
         if success and bpInstance and bpInstance.Instance then
@@ -162,39 +161,25 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
     local configLayout = Instance.new("UIListLayout")
     configLayout.SortOrder = Enum.SortOrder.LayoutOrder
     configLayout.FillDirection = Enum.FillDirection.Horizontal
-    configLayout.HorizontalAlignment = Enum.HorizontalAlignment.SpaceBetween
+    configLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    configLayout.Padding = UDim.new(0, 14) -- 14px exatos para compensar os -7px no size de cada botão (totalizando 100%)
     configLayout.Parent = configContainer
 
-    local function createBtn(text: string, order: number)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.5, -7, 1, 0)
-        btn.BackgroundColor3 = COLOR_BG
-        btn.Text = text
-        btn.TextColor3 = COLOR_TEXT
-        btn.Font = FONT_MAIN
-        btn.TextSize = 14
-        btn.AutoButtonColor = false
-        btn.LayoutOrder = order
-        btn.Parent = configContainer
+    if ActionButton and type(ActionButton.new) == "function" then
+        local saveBtn = ActionButton.new("SAVE CONFIG", 1)
+        saveBtn.Instance.Parent = configContainer
+        maid:GiveTask(saveBtn.Activated:Connect(function()
+            -- Lógica futura de salvamento do JSON
+        end))
+        maid:GiveTask(saveBtn)
 
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
-        corner.Parent = btn
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = COLOR_BORDER
-        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        stroke.Parent = btn
-        
-        -- Eventos visuais básicos para o botão
-        maid:GiveTask(btn.MouseEnter:Connect(function() stroke.Color = COLOR_ACCENT end))
-        maid:GiveTask(btn.MouseLeave:Connect(function() stroke.Color = COLOR_BORDER end))
-
-        return btn
+        local loadBtn = ActionButton.new("LOAD CONFIG", 2)
+        loadBtn.Instance.Parent = configContainer
+        maid:GiveTask(loadBtn.Activated:Connect(function()
+            -- Lógica futura de carregamento do JSON
+        end))
+        maid:GiveTask(loadBtn)
     end
-
-    local saveBtn = createBtn("SAVE CONFIG", 1)
-    local loadBtn = createBtn("LOAD CONFIG", 2)
 
     maid:GiveTask(container)
     local self = {}
