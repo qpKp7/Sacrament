@@ -1,5 +1,4 @@
 --!strict
-local Players = game:GetService("Players")
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
@@ -10,31 +9,27 @@ local function SafeImport(path: string): any?
 end
 
 local BloodPactSection = SafeImport("gui/modules/misc/bloodpact")
-local ActionButton = SafeImport("gui/modules/components/actionbutton")
 
 export type MiscUI = {
-    Instance: Frame,
+    Instance: ScrollingFrame,
     Destroy: (self: MiscUI) -> ()
 }
 
 local MiscFactory = {}
 
-local COLOR_BG = Color3.fromHex("1A1A1A")
-local COLOR_BORDER = Color3.fromHex("333333")
-local COLOR_ACCENT = Color3.fromHex("C80000")
-local COLOR_TEXT = Color3.fromHex("FFFFFF")
-local COLOR_SUBTEXT = Color3.fromHex("888888")
-local FONT_MAIN = Enum.Font.GothamBold
-
 function MiscFactory.new(layoutOrder: number?): MiscUI
     local maid = Maid.new()
-    local localPlayer = Players.LocalPlayer
 
-    local container = Instance.new("Frame")
+    -- Root Container convertido para ScrollingFrame para evitar Overflow
+    local container = Instance.new("ScrollingFrame")
     container.Name = "MiscContainer"
-    container.Size = UDim2.new(1, 0, 0, 0)
+    container.Size = UDim2.new(1, 0, 1, 0)
     container.BackgroundTransparency = 1
-    container.AutomaticSize = Enum.AutomaticSize.Y
+    container.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    container.CanvasSize = UDim2.new(0, 0, 0, 0)
+    container.ScrollBarThickness = 2
+    container.ScrollBarImageColor3 = Color3.fromHex("333333")
+    container.BorderSizePixel = 0
     container.LayoutOrder = layoutOrder or 1
 
     local containerLayout = Instance.new("UIListLayout")
@@ -49,90 +44,13 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
     containerPad.PaddingBottom = UDim.new(0, 20)
     containerPad.Parent = container
 
-    -- 1. CARTÃO DO ADEPTO (TOP)
-    local adeptCard = Instance.new("Frame")
-    adeptCard.Name = "AdeptCard"
-    adeptCard.Size = UDim2.new(1, 0, 0, 80)
-    adeptCard.BackgroundColor3 = COLOR_BG
-    adeptCard.LayoutOrder = 1
-    adeptCard.Parent = container
-
-    local adeptCorner = Instance.new("UICorner")
-    adeptCorner.CornerRadius = UDim.new(0, 6)
-    adeptCorner.Parent = adeptCard
-
-    local adeptStroke = Instance.new("UIStroke")
-    adeptStroke.Color = COLOR_BORDER
-    adeptStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    adeptStroke.Parent = adeptCard
-
-    local avatarImg = Instance.new("ImageLabel")
-    avatarImg.Name = "Avatar"
-    avatarImg.Size = UDim2.fromOffset(60, 60)
-    avatarImg.AnchorPoint = Vector2.new(0, 0.5)
-    avatarImg.Position = UDim2.new(0, 10, 0.5, 0)
-    avatarImg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    avatarImg.BorderSizePixel = 0
-    avatarImg.Parent = adeptCard
-
-    local avatarCorner = Instance.new("UICorner")
-    avatarCorner.CornerRadius = UDim.new(0, 6)
-    avatarCorner.Parent = avatarImg
-
-    local avatarStroke = Instance.new("UIStroke")
-    avatarStroke.Color = COLOR_ACCENT
-    avatarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    avatarStroke.Parent = avatarImg
-
-    task.spawn(function()
-        if localPlayer then
-            local thumbType = Enum.ThumbnailType.HeadShot
-            local thumbSize = Enum.ThumbnailSize.Size150x150
-            local content, isReady = Players:GetUserThumbnailAsync(localPlayer.UserId, thumbType, thumbSize)
-            if isReady then
-                avatarImg.Image = content
-            end
-        end
-    end)
-
-    local adeptLabels = Instance.new("Frame")
-    adeptLabels.Name = "Labels"
-    adeptLabels.Size = UDim2.new(1, -90, 1, 0)
-    adeptLabels.Position = UDim2.fromOffset(85, 0)
-    adeptLabels.BackgroundTransparency = 1
-    adeptLabels.Parent = adeptCard
-
-    local adeptLayout = Instance.new("UIListLayout")
-    adeptLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    adeptLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    adeptLayout.Padding = UDim.new(0, 4)
-    adeptLayout.Parent = adeptLabels
-
-    local function createLabel(text: string, color: Color3, order: number)
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(1, 0, 0, 16)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = text
-        lbl.TextColor3 = color
-        lbl.Font = FONT_MAIN
-        lbl.TextSize = 16
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.LayoutOrder = order
-        lbl.Parent = adeptLabels
-    end
-
-    local playerName = localPlayer and localPlayer.Name or "Unknown"
-    createLabel("Adept: " .. playerName, COLOR_TEXT, 1)
-    createLabel("Covenant: Lifetime", COLOR_ACCENT, 2)
-    createLabel("Version: V1.0.0", COLOR_SUBTEXT, 3)
-
-    -- 2. GRID DE RITUAIS (BENTO BOX)
+    -- GRID DE RITUAIS (BENTO BOX)
     local gridContainer = Instance.new("Frame")
     gridContainer.Name = "GridContainer"
     gridContainer.Size = UDim2.new(1, 0, 0, 0)
     gridContainer.AutomaticSize = Enum.AutomaticSize.Y
     gridContainer.BackgroundTransparency = 1
-    gridContainer.LayoutOrder = 2
+    gridContainer.LayoutOrder = 1
     gridContainer.Parent = container
 
     local gridLayout = Instance.new("UIListLayout")
@@ -148,37 +66,6 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
             bpInstance.Instance.Parent = gridContainer
             maid:GiveTask(bpInstance)
         end
-    end
-
-    -- 3. BOTÕES DE CONFIG (RODAPÉ)
-    local configContainer = Instance.new("Frame")
-    configContainer.Name = "ConfigContainer"
-    configContainer.Size = UDim2.new(1, 0, 0, 45)
-    configContainer.BackgroundTransparency = 1
-    configContainer.LayoutOrder = 3
-    configContainer.Parent = container
-
-    local configLayout = Instance.new("UIListLayout")
-    configLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    configLayout.FillDirection = Enum.FillDirection.Horizontal
-    configLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    configLayout.Padding = UDim.new(0, 14)
-    configLayout.Parent = configContainer
-
-    if ActionButton and type(ActionButton.new) == "function" then
-        local saveBtn = ActionButton.new("SAVE CONFIG", 1)
-        saveBtn.Instance.Parent = configContainer
-        maid:GiveTask(saveBtn.Activated:Connect(function()
-            -- Placeholder para salvamento
-        end))
-        maid:GiveTask(saveBtn)
-
-        local loadBtn = ActionButton.new("LOAD CONFIG", 2)
-        loadBtn.Instance.Parent = configContainer
-        maid:GiveTask(loadBtn.Activated:Connect(function()
-            -- Placeholder para carregamento
-        end))
-        maid:GiveTask(loadBtn)
     end
 
     maid:GiveTask(container)
