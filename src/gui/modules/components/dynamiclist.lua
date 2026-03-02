@@ -73,10 +73,15 @@ function DynamicListFactory.new(titleText: string, layoutOrder: number?): Dynami
     pStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     pStroke.Parent = pAddBtn
 
-    local itemsContainer = Instance.new("Frame")
-    itemsContainer.Size = UDim2.new(1, 0, 0, 0)
-    itemsContainer.AutomaticSize = Enum.AutomaticSize.Y
+    -- LISTA COM SCROLL (Altura Fixa de 140px para não esticar a UI principal)
+    local itemsContainer = Instance.new("ScrollingFrame")
+    itemsContainer.Size = UDim2.new(1, 0, 0, 140)
     itemsContainer.BackgroundTransparency = 1
+    itemsContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    itemsContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    itemsContainer.ScrollBarThickness = 2
+    itemsContainer.ScrollBarImageColor3 = COLOR_BORDER
+    itemsContainer.BorderSizePixel = 0
     itemsContainer.LayoutOrder = 2
     itemsContainer.Parent = panel
 
@@ -107,7 +112,7 @@ function DynamicListFactory.new(titleText: string, layoutOrder: number?): Dynami
         local rowMaid = Maid.new()
         
         local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, 0, 0, 32)
+        row.Size = UDim2.new(1, -8, 0, 32) -- -8px para não encostar na scrollbar
         row.BackgroundTransparency = 1
         row.LayoutOrder = itemCount
         row.Parent = itemsContainer
