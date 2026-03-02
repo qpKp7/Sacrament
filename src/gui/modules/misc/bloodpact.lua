@@ -29,7 +29,7 @@ export type BloodPactMasterUI = {
 }
 
 local BloodPactFactory = {}
-local ICON_ID = "rbxassetid://98352735989850"
+local ICON_ID = "rbxassetid://119374823365207"
 
 function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
     local maid = Maid.new()
@@ -48,7 +48,6 @@ function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
         masterState = state
     end))
 
-    -- Contêiner Divisor de Colunas (Esquerda: Toggles / Direita: Listas)
     local columnsContainer = Instance.new("Frame")
     columnsContainer.Name = "ColumnsContainer"
     columnsContainer.Size = UDim2.new(1, 0, 0, 0)
@@ -63,7 +62,6 @@ function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
     colsLayout.Padding = UDim.new(0, 15)
     colsLayout.Parent = columnsContainer
 
-    -- Coluna Esquerda
     local leftCol = Instance.new("Frame")
     leftCol.Name = "LeftColumn"
     leftCol.Size = UDim2.new(0.5, -7.5, 0, 0)
@@ -77,7 +75,6 @@ function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
     leftLayout.Padding = UDim.new(0, 10)
     leftLayout.Parent = leftCol
 
-    -- Coluna Direita
     local rightCol = Instance.new("Frame")
     rightCol.Name = "RightColumn"
     rightCol.Size = UDim2.new(0.5, -7.5, 0, 0)
@@ -91,7 +88,6 @@ function BloodPactFactory.new(layoutOrder: number?): BloodPactMasterUI
     rightLayout.Padding = UDim.new(0, 10)
     rightLayout.Parent = rightCol
 
-    -- Instanciação e Distribuição
     local friendCheckInst = nil
     if FriendCheck and type(FriendCheck.new) == "function" then
         friendCheckInst = FriendCheck.new(1)
