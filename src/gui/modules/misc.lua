@@ -162,21 +162,21 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
     configLayout.SortOrder = Enum.SortOrder.LayoutOrder
     configLayout.FillDirection = Enum.FillDirection.Horizontal
     configLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    configLayout.Padding = UDim.new(0, 14) -- 14px exatos para compensar os -7px no size de cada botão (totalizando 100%)
+    configLayout.Padding = UDim.new(0, 14)
     configLayout.Parent = configContainer
 
     if ActionButton and type(ActionButton.new) == "function" then
         local saveBtn = ActionButton.new("SAVE CONFIG", 1)
         saveBtn.Instance.Parent = configContainer
         maid:GiveTask(saveBtn.Activated:Connect(function()
-            -- Lógica futura de salvamento do JSON
+            -- Placeholder para salvamento
         end))
         maid:GiveTask(saveBtn)
 
         local loadBtn = ActionButton.new("LOAD CONFIG", 2)
         loadBtn.Instance.Parent = configContainer
         maid:GiveTask(loadBtn.Activated:Connect(function()
-            -- Lógica futura de carregamento do JSON
+            -- Placeholder para carregamento
         end))
         maid:GiveTask(loadBtn)
     end
