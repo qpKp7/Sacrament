@@ -85,7 +85,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     optionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
     optionsLayout.Parent = optionsContainer
 
-    -- INPUT DE NOME (Corrigido colisão de texto)
+    -- INPUT DE NOME
     local inputRow = Instance.new("Frame")
     inputRow.Name = "InputRow"
     inputRow.Size = UDim2.new(1, 0, 0, 40)
@@ -94,18 +94,18 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     inputRow.Parent = optionsContainer
 
     local inputPad = Instance.new("UIPadding")
-    inputPad.PaddingLeft = UDim.new(0, 30) -- Reduzido para alinhar com checkboxes
+    inputPad.PaddingLeft = UDim.new(0, 20) -- Ajustado para 20px (Alinhado com o Título)
     inputPad.PaddingRight = UDim.new(0, 25)
     inputPad.Parent = inputRow
 
     local inputLabel = Instance.new("TextLabel")
     inputLabel.Name = "Label"
-    inputLabel.Size = UDim2.new(1, -140, 1, 0) -- Reserva espaço exato para a TextBox (130px + 10px margem)
+    inputLabel.Size = UDim2.new(1, -140, 1, 0)
     inputLabel.BackgroundTransparency = 1
     inputLabel.Text = "Target Name"
     inputLabel.TextColor3 = COLOR_LABEL
     inputLabel.Font = FONT_MAIN
-    inputLabel.TextSize = 14 -- Padronizado com sub-opções
+    inputLabel.TextSize = 14
     inputLabel.TextXAlignment = Enum.TextXAlignment.Left
     inputLabel.Parent = inputRow
 
@@ -133,7 +133,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     inputStroke.Parent = nameInput
 
-    -- CARTÃO DE INFORMAÇÕES DO ALVO (Redesenhado)
+    -- CARTÃO DE INFORMAÇÕES DO ALVO
     local infoRow = Instance.new("Frame")
     infoRow.Name = "InfoRow"
     infoRow.Size = UDim2.new(1, 0, 0, 90)
@@ -142,7 +142,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     infoRow.Parent = optionsContainer
 
     local infoPad = Instance.new("UIPadding")
-    infoPad.PaddingLeft = UDim.new(0, 30)
+    infoPad.PaddingLeft = UDim.new(0, 20) -- Ajustado para 20px (Alinhado com o Título)
     infoPad.PaddingRight = UDim.new(0, 25)
     infoPad.PaddingTop = UDim.new(0, 5)
     infoPad.PaddingBottom = UDim.new(0, 5)
@@ -150,7 +150,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
 
     local card = Instance.new("Frame")
     card.Name = "Card"
-    card.Size = UDim2.fromScale(1, 1) -- Fica com 80px de altura devido aos paddings superior/inferior
+    card.Size = UDim2.fromScale(1, 1)
     card.BackgroundColor3 = COLOR_BOX_BG
     card.Parent = infoRow
 
@@ -167,7 +167,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     avatarImg.Name = "Avatar"
     avatarImg.Size = UDim2.fromOffset(60, 60)
     avatarImg.AnchorPoint = Vector2.new(0, 0.5)
-    avatarImg.Position = UDim2.new(0, 10, 0.5, 0) -- Centralizado perfeitamente no eixo Y
+    avatarImg.Position = UDim2.new(0, 10, 0.5, 0)
     avatarImg.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     avatarImg.BorderSizePixel = 0
     avatarImg.Image = ""
