@@ -73,28 +73,29 @@ function DynamicListFactory.new(titleText: string, layoutOrder: number?): Dynami
     pStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     pStroke.Parent = pAddBtn
 
-    -- LISTA COM SCROLL (Cresce de 0px até 140px, depois rola)
+    -- LISTA COM SCROLL (Tamanho manual via matemática para evitar bug de sobreposição)
     local itemsContainer = Instance.new("ScrollingFrame")
     itemsContainer.Name = "ItemsContainer"
     itemsContainer.Size = UDim2.new(1, 0, 0, 0)
-    itemsContainer.AutomaticSize = Enum.AutomaticSize.Y
     itemsContainer.BackgroundTransparency = 1
     itemsContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-    itemsContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
     itemsContainer.ScrollBarThickness = 2
     itemsContainer.ScrollBarImageColor3 = COLOR_BORDER
     itemsContainer.BorderSizePixel = 0
     itemsContainer.LayoutOrder = 2
     itemsContainer.Parent = panel
 
-    local sizeConstraint = Instance.new("UISizeConstraint")
-    sizeConstraint.MaxSize = Vector2.new(math.huge, 140)
-    sizeConstraint.Parent = itemsContainer
-
     local iLayout = Instance.new("UIListLayout")
     iLayout.SortOrder = Enum.SortOrder.LayoutOrder
     iLayout.Padding = UDim.new(0, 5)
     iLayout.Parent = itemsContainer
+
+    -- Cálculos de ajuste de layout para mitigar bugs da engine
+    maid:GiveTask(iLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        local contentHeight = iLayout.AbsoluteContentSize.Y
+        itemsContainer.Size = UDim2.new(1, 0, 0, math.min(contentHeight, 140))
+        itemsContainer.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
+    end))
 
     local listChangedEvent = Instance.new("BindableEvent")
     maid:GiveTask(listChangedEvent)
