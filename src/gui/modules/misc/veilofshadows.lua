@@ -29,7 +29,7 @@ export type VeilUI = {
 }
 
 local VeilFactory = {}
-local ICON_ID = "rbxassetid://119374823365207"
+local ICON_ID = "rbxassetid://139242921950134"
 
 function VeilFactory.new(layoutOrder: number?): VeilUI
     local maid = Maid.new()
@@ -48,43 +48,71 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
         masterState = state
     end))
 
-    local container = Instance.new("Frame")
-    container.Name = "RowsContainer"
-    container.Size = UDim2.new(1, 0, 0, 0)
-    container.AutomaticSize = Enum.AutomaticSize.Y
-    container.BackgroundTransparency = 1
-    container.Parent = card.Container
+    local columnsContainer = Instance.new("Frame")
+    columnsContainer.Name = "ColumnsContainer"
+    columnsContainer.Size = UDim2.new(1, 0, 0, 0)
+    columnsContainer.AutomaticSize = Enum.AutomaticSize.Y
+    columnsContainer.BackgroundTransparency = 1
+    columnsContainer.LayoutOrder = 1
+    columnsContainer.Parent = card.Container
 
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 10)
-    layout.Parent = container
+    local colsLayout = Instance.new("UIListLayout")
+    colsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    colsLayout.FillDirection = Enum.FillDirection.Horizontal
+    colsLayout.Padding = UDim.new(0, 15)
+    colsLayout.Parent = columnsContainer
+
+    local leftCol = Instance.new("Frame")
+    leftCol.Name = "LeftColumn"
+    leftCol.Size = UDim2.new(0.5, -7.5, 0, 0)
+    leftCol.AutomaticSize = Enum.AutomaticSize.Y
+    leftCol.BackgroundTransparency = 1
+    leftCol.LayoutOrder = 1
+    leftCol.Parent = columnsContainer
+
+    local leftLayout = Instance.new("UIListLayout")
+    leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    leftLayout.Padding = UDim.new(0, 10)
+    leftLayout.Parent = leftCol
+
+    local rightCol = Instance.new("Frame")
+    rightCol.Name = "RightColumn"
+    rightCol.Size = UDim2.new(0.5, -7.5, 0, 0)
+    rightCol.AutomaticSize = Enum.AutomaticSize.Y
+    rightCol.BackgroundTransparency = 1
+    rightCol.LayoutOrder = 2
+    rightCol.Parent = columnsContainer
+
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Padding = UDim.new(0, 10)
+    rightLayout.Parent = rightCol
 
     local hideVisualsInst = nil
     if HideVisuals and type(HideVisuals.new) == "function" then
         hideVisualsInst = HideVisuals.new(1)
-        hideVisualsInst.Instance.Parent = container
+        hideVisualsInst.Instance.Parent = leftCol
         maid:GiveTask(hideVisualsInst)
     end
 
     local panicKeyInst = nil
     if PanicKey and type(PanicKey.new) == "function" then
         panicKeyInst = PanicKey.new(2)
-        panicKeyInst.Instance.Parent = container
+        panicKeyInst.Instance.Parent = leftCol
         maid:GiveTask(panicKeyInst)
     end
 
     local printScreenInst = nil
     if PrintScreen and type(PrintScreen.new) == "function" then
-        printScreenInst = PrintScreen.new(3)
-        printScreenInst.Instance.Parent = container
+        printScreenInst = PrintScreen.new(1)
+        printScreenInst.Instance.Parent = rightCol
         maid:GiveTask(printScreenInst)
     end
 
     local recorderScreenInst = nil
     if RecorderScreen and type(RecorderScreen.new) == "function" then
-        recorderScreenInst = RecorderScreen.new(4)
-        recorderScreenInst.Instance.Parent = container
+        recorderScreenInst = RecorderScreen.new(2)
+        recorderScreenInst.Instance.Parent = rightCol
         maid:GiveTask(recorderScreenInst)
     end
 
