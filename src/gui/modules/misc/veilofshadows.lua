@@ -10,14 +10,12 @@ end
 
 local BentoCard = SafeImport("gui/modules/components/bentocard")
 local HideVisuals = SafeImport("gui/modules/misc/sections/veilofshadows/hidevisuals")
-local PanicKey = SafeImport("gui/modules/misc/sections/veilofshadows/panickey")
 local PrintScreen = SafeImport("gui/modules/misc/sections/veilofshadows/printscreen")
 local RecorderScreen = SafeImport("gui/modules/misc/sections/veilofshadows/recorderscreen")
 
 export type VeilData = {
     MasterEnabled: boolean,
     HideVisualsEnabled: boolean,
-    PanicKey: Enum.KeyCode?,
     CleanPrintScreen: boolean,
     OBSBypass: boolean
 }
@@ -29,7 +27,7 @@ export type VeilUI = {
 }
 
 local VeilFactory = {}
-local ICON_ID = "rbxassetid://139242921950134"
+local ICON_ID = "rbxassetid://108584963373035"
 
 function VeilFactory.new(layoutOrder: number?): VeilUI
     local maid = Maid.new()
@@ -67,23 +65,16 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
         maid:GiveTask(hideVisualsInst)
     end
 
-    local panicKeyInst = nil
-    if PanicKey and type(PanicKey.new) == "function" then
-        panicKeyInst = PanicKey.new(2)
-        panicKeyInst.Instance.Parent = container
-        maid:GiveTask(panicKeyInst)
-    end
-
     local printScreenInst = nil
     if PrintScreen and type(PrintScreen.new) == "function" then
-        printScreenInst = PrintScreen.new(3)
+        printScreenInst = PrintScreen.new(2)
         printScreenInst.Instance.Parent = container
         maid:GiveTask(printScreenInst)
     end
 
     local recorderScreenInst = nil
     if RecorderScreen and type(RecorderScreen.new) == "function" then
-        recorderScreenInst = RecorderScreen.new(4)
+        recorderScreenInst = RecorderScreen.new(3)
         recorderScreenInst.Instance.Parent = container
         maid:GiveTask(recorderScreenInst)
     end
@@ -95,7 +86,6 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
         return {
             MasterEnabled = masterState,
             HideVisualsEnabled = hideVisualsInst and hideVisualsInst:GetState() or false,
-            PanicKey = panicKeyInst and panicKeyInst:GetKey() or nil,
             CleanPrintScreen = printScreenInst and printScreenInst:GetState() or false,
             OBSBypass = recorderScreenInst and recorderScreenInst:GetState() or false
         }
