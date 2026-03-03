@@ -10,6 +10,7 @@ local function SafeImport(path: string): any?
 end
 
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local Arrow = SafeImport("gui/modules/components/arrow")
 
 export type BentoCardUI = {
     Instance: Frame,
@@ -62,7 +63,7 @@ function BentoCardFactory.new(titleText: string, subtitleText: string, descText:
 
     local headerPad = Instance.new("UIPadding")
     headerPad.PaddingLeft = UDim.new(0, 15)
-    headerPad.PaddingRight = UDim.new(0, 25) -- Alinhamento de controle direito
+    headerPad.PaddingRight = UDim.new(0, 10) -- Medida oficial de margem direita
     headerPad.Parent = header
 
     local icon = Instance.new("ImageLabel")
@@ -105,13 +106,31 @@ function BentoCardFactory.new(titleText: string, subtitleText: string, descText:
     createLabel(subtitleText, 14, COLOR_TEXT, 2)
     createLabel(descText, 12, COLOR_SUBTEXT, 3)
 
+    -- CONTROLS (Toggle + Arrow)
+    local controls = Instance.new("Frame")
+    controls.Name = "Controls"
+    controls.Size = UDim2.new(0, 90, 0, 50)
+    controls.AnchorPoint = Vector2.new(1, 0.5)
+    controls.Position = UDim2.new(1, 0, 0.5, 0)
+    controls.BackgroundTransparency = 1
+    controls.Parent = header
+
     local mainToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         mainToggle = ToggleButton.new()
-        mainToggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        mainToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-        mainToggle.Instance.Parent = header
+        mainToggle.Instance.AnchorPoint = Vector2.new(0, 0.5)
+        mainToggle.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        mainToggle.Instance.Parent = controls
         maid:GiveTask(mainToggle)
+    end
+
+    local mainArrow = nil
+    if Arrow and type(Arrow.new) == "function" then
+        mainArrow = Arrow.new()
+        mainArrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        mainArrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        mainArrow.Instance.Parent = controls
+        maid:GiveTask(mainArrow)
     end
 
     -- CONTAINER DE CONTEÚDO EXPANSÍVEL
@@ -126,8 +145,8 @@ function BentoCardFactory.new(titleText: string, subtitleText: string, descText:
     contentContainer.Parent = card
 
     local contentPad = Instance.new("UIPadding")
-    contentPad.PaddingLeft = UDim.new(0, 30) -- Indentação fixa de sub-itens
-    contentPad.PaddingRight = UDim.new(0, 25) -- Margem de controle
+    contentPad.PaddingLeft = UDim.new(0, 30)
+    contentPad.PaddingRight = UDim.new(0, 25)
     contentPad.PaddingBottom = UDim.new(0, 20)
     contentPad.Parent = contentContainer
 
@@ -146,10 +165,9 @@ function BentoCardFactory.new(titleText: string, subtitleText: string, descText:
     local toggledEvent = Instance.new("BindableEvent")
     maid:GiveTask(toggledEvent)
 
+    -- Toggle gerencia a cor e estado interno
     if mainToggle then
         maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
-            contentContainer.Visible = state
-            
             local targetColor = state and COLOR_ACCENT or COLOR_BORDER
             local iconColor = state and COLOR_ACCENT or COLOR_SUBTEXT
             
@@ -163,6 +181,13 @@ function BentoCardFactory.new(titleText: string, subtitleText: string, descText:
             maid:GiveTask(t2.Completed:Connect(function() t2:Destroy() end))
 
             toggledEvent:Fire(state)
+        end))
+    end
+
+    -- Arrow gerencia a expansão
+    if mainArrow then
+        maid:GiveTask(mainArrow.Toggled:Connect(function(state: boolean)
+            contentContainer.Visible = state
         end))
     end
 
