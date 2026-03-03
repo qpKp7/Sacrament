@@ -1,1 +1,111 @@
+--!strict
+local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
 
+local function SafeImport(path: string): any?
+    local success, result = pcall(function() return Import(path) end)
+    if not success then return nil end
+    return result
+end
+
+local BentoCard = SafeImport("gui/modules/components/bentocard")
+local HideVisuals = SafeImport("gui/modules/misc/sections/veilofshadows/hidevisuals")
+local PanicKey = SafeImport("gui/modules/misc/sections/veilofshadows/panickey")
+local PrintScreen = SafeImport("gui/modules/misc/sections/veilofshadows/printscreen")
+local RecorderScreen = SafeImport("gui/modules/misc/sections/veilofshadows/recorderscreen")
+
+export type VeilData = {
+    MasterEnabled: boolean,
+    HideVisualsEnabled: boolean,
+    PanicKey: Enum.KeyCode?,
+    CleanPrintScreen: boolean,
+    OBSBypass: boolean
+}
+
+export type VeilUI = {
+    Instance: Frame,
+    GetData: (self: VeilUI) -> VeilData,
+    Destroy: (self: VeilUI) -> ()
+}
+
+local VeilFactory = {}
+local ICON_ID = "rbxassetid://119374823365207"
+
+function VeilFactory.new(layoutOrder: number?): VeilUI
+    local maid = Maid.new()
+    local masterState = false
+
+    local card = BentoCard.new(
+        "Veil of Shadows",
+        "Streamer Mode",
+        "Hides GUI and visuals for screen sharing.",
+        ICON_ID,
+        layoutOrder or 1
+    )
+    maid:GiveTask(card)
+
+    maid:GiveTask(card.Toggled:Connect(function(state: boolean)
+        masterState = state
+    end))
+
+    local container = Instance.new("Frame")
+    container.Name = "RowsContainer"
+    container.Size = UDim2.new(1, 0, 0, 0)
+    container.AutomaticSize = Enum.AutomaticSize.Y
+    container.BackgroundTransparency = 1
+    container.Parent = card.Container
+
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = container
+
+    local hideVisualsInst = nil
+    if HideVisuals and type(HideVisuals.new) == "function" then
+        hideVisualsInst = HideVisuals.new(1)
+        hideVisualsInst.Instance.Parent = container
+        maid:GiveTask(hideVisualsInst)
+    end
+
+    local panicKeyInst = nil
+    if PanicKey and type(PanicKey.new) == "function" then
+        panicKeyInst = PanicKey.new(2)
+        panicKeyInst.Instance.Parent = container
+        maid:GiveTask(panicKeyInst)
+    end
+
+    local printScreenInst = nil
+    if PrintScreen and type(PrintScreen.new) == "function" then
+        printScreenInst = PrintScreen.new(3)
+        printScreenInst.Instance.Parent = container
+        maid:GiveTask(printScreenInst)
+    end
+
+    local recorderScreenInst = nil
+    if RecorderScreen and type(RecorderScreen.new) == "function" then
+        recorderScreenInst = RecorderScreen.new(4)
+        recorderScreenInst.Instance.Parent = container
+        maid:GiveTask(recorderScreenInst)
+    end
+
+    local self = {}
+    self.Instance = card.Instance
+
+    function self:GetData(): VeilData
+        return {
+            MasterEnabled = masterState,
+            HideVisualsEnabled = hideVisualsInst and hideVisualsInst:GetState() or false,
+            PanicKey = panicKeyInst and panicKeyInst:GetKey() or nil,
+            CleanPrintScreen = printScreenInst and printScreenInst:GetState() or false,
+            OBSBypass = recorderScreenInst and recorderScreenInst:GetState() or false
+        }
+    end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
+    return self :: VeilUI
+end
+
+return VeilFactory
