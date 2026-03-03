@@ -24,6 +24,7 @@ local COLOR_BORDER = Color3.fromHex("333333")
 local COLOR_TEXT = Color3.fromHex("FFFFFF")
 local COLOR_SUBTEXT = Color3.fromHex("888888")
 local FONT_MAIN = Enum.Font.GothamBold
+local ROW_ICON = "rbxassetid://108584963373035"
 
 function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     local maid = Maid.new()
@@ -50,16 +51,27 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     pad.PaddingRight = UDim.new(0, 50)
     pad.Parent = row
 
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "RowIcon"
+    icon.Size = UDim2.new(0, 28, 0, 28)
+    icon.Position = UDim2.new(0, 0, 0.5, 0)
+    icon.AnchorPoint = Vector2.new(0, 0.5)
+    icon.BackgroundTransparency = 1
+    icon.Image = ROW_ICON
+    icon.ImageColor3 = COLOR_TEXT
+    icon.Parent = row
+
     local textContainer = Instance.new("Frame")
     textContainer.Name = "TextContainer"
-    textContainer.Size = UDim2.new(0.6, 0, 1, 0)
+    textContainer.Size = UDim2.new(1, -40, 1, 0)
+    textContainer.Position = UDim2.new(0, 40, 0, 0)
     textContainer.BackgroundTransparency = 1
     textContainer.Parent = row
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
     title.Size = UDim2.new(1, 0, 0, 16)
-    title.Position = UDim2.new(0, 0, 0.5, -10)
+    title.Position = UDim2.new(0, 0, 0.5, -9)
     title.AnchorPoint = Vector2.new(0, 0.5)
     title.BackgroundTransparency = 1
     title.Text = "Hide Visuals"
@@ -72,7 +84,7 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     local subtitle = Instance.new("TextLabel")
     subtitle.Name = "Subtitle"
     subtitle.Size = UDim2.new(1, 0, 0, 12)
-    subtitle.Position = UDim2.new(0, 0, 0.5, 10)
+    subtitle.Position = UDim2.new(0, 0, 0.5, 9)
     subtitle.AnchorPoint = Vector2.new(0, 0.5)
     subtitle.BackgroundTransparency = 1
     subtitle.Text = "Disable ESP and screen overlays"
