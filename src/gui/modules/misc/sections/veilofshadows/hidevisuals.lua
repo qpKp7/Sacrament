@@ -24,7 +24,6 @@ local COLOR_BORDER = Color3.fromHex("333333")
 local COLOR_TEXT = Color3.fromHex("FFFFFF")
 local COLOR_SUBTEXT = Color3.fromHex("888888")
 local FONT_MAIN = Enum.Font.GothamBold
-local ROW_ICON = "rbxassetid://108584963373035"
 
 function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     local maid = Maid.new()
@@ -51,20 +50,9 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     pad.PaddingRight = UDim.new(0, 50)
     pad.Parent = row
 
-    local icon = Instance.new("ImageLabel")
-    icon.Name = "RowIcon"
-    icon.Size = UDim2.new(0, 28, 0, 28)
-    icon.Position = UDim2.new(0, 0, 0.5, 0)
-    icon.AnchorPoint = Vector2.new(0, 0.5)
-    icon.BackgroundTransparency = 1
-    icon.Image = ROW_ICON
-    icon.ImageColor3 = COLOR_TEXT
-    icon.Parent = row
-
     local textContainer = Instance.new("Frame")
     textContainer.Name = "TextContainer"
-    textContainer.Size = UDim2.new(1, -40, 1, 0)
-    textContainer.Position = UDim2.new(0, 40, 0, 0)
+    textContainer.Size = UDim2.new(0.6, 0, 1, 0)
     textContainer.BackgroundTransparency = 1
     textContainer.Parent = row
 
