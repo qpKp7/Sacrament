@@ -9,6 +9,7 @@ local function SafeImport(path: string): any?
 end
 
 local BloodPactSection = SafeImport("gui/modules/misc/bloodpact")
+local VeilOfShadowsSection = SafeImport("gui/modules/misc/veilofshadows")
 
 export type MiscUI = {
     Instance: ScrollingFrame,
@@ -20,7 +21,6 @@ local MiscFactory = {}
 function MiscFactory.new(layoutOrder: number?): MiscUI
     local maid = Maid.new()
 
-    -- Root Container convertido para ScrollingFrame para evitar Overflow
     local container = Instance.new("ScrollingFrame")
     container.Name = "MiscContainer"
     container.Size = UDim2.new(1, 0, 1, 0)
@@ -65,6 +65,14 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
         if success and bpInstance and bpInstance.Instance then
             bpInstance.Instance.Parent = gridContainer
             maid:GiveTask(bpInstance)
+        end
+    end
+
+    if VeilOfShadowsSection and type(VeilOfShadowsSection.new) == "function" then
+        local success, vosInstance = pcall(function() return VeilOfShadowsSection.new(2) end)
+        if success and vosInstance and vosInstance.Instance then
+            vosInstance.Instance.Parent = gridContainer
+            maid:GiveTask(vosInstance)
         end
     end
 
