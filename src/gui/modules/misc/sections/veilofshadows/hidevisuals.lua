@@ -38,17 +38,27 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = row
+
     local stroke = Instance.new("UIStroke")
     stroke.Color = COLOR_BORDER
+    stroke.Thickness = 1
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = row
+
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 20)
     pad.PaddingRight = UDim.new(0, 50)
     pad.Parent = row
 
+    local textContainer = Instance.new("Frame")
+    textContainer.Name = "TextContainer"
+    textContainer.Size = UDim2.new(0.6, 0, 1, 0)
+    textContainer.BackgroundTransparency = 1
+    textContainer.Parent = row
+
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(0.5, 0, 0, 16)
+    title.Name = "Title"
+    title.Size = UDim2.new(1, 0, 0, 16)
     title.Position = UDim2.new(0, 0, 0.5, -10)
     title.AnchorPoint = Vector2.new(0, 0.5)
     title.BackgroundTransparency = 1
@@ -57,10 +67,11 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     title.Font = FONT_MAIN
     title.TextSize = 16
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = row
+    title.Parent = textContainer
 
     local subtitle = Instance.new("TextLabel")
-    subtitle.Size = UDim2.new(0.5, 0, 0, 12)
+    subtitle.Name = "Subtitle"
+    subtitle.Size = UDim2.new(1, 0, 0, 12)
     subtitle.Position = UDim2.new(0, 0, 0.5, 10)
     subtitle.AnchorPoint = Vector2.new(0, 0.5)
     subtitle.BackgroundTransparency = 1
@@ -69,7 +80,7 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     subtitle.Font = FONT_MAIN
     subtitle.TextSize = 12
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
-    subtitle.Parent = row
+    subtitle.Parent = textContainer
 
     local toggledEvent = Instance.new("BindableEvent")
     maid:GiveTask(toggledEvent)
@@ -79,6 +90,7 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = row
+        
         maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
             currentState = state
             toggledEvent:Fire(state)
@@ -91,8 +103,10 @@ function HideVisualsFactory.new(layoutOrder: number?): HideVisualsUI
     local self = {}
     self.Instance = row
     self.Toggled = toggledEvent.Event
+    
     function self:GetState() return currentState end
     function self:Destroy() maid:Destroy() end
+    
     return self :: HideVisualsUI
 end
 
