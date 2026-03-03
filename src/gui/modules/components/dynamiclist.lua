@@ -73,7 +73,7 @@ function DynamicListFactory.new(titleText: string, layoutOrder: number?): Dynami
     pStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     pStroke.Parent = pAddBtn
 
-    -- LISTA COM SCROLL (Tamanho manual via matemática para evitar bug de sobreposição)
+    -- LISTA COM SCROLL (Travada em 70px para manter apenas 2 visíveis)
     local itemsContainer = Instance.new("ScrollingFrame")
     itemsContainer.Name = "ItemsContainer"
     itemsContainer.Size = UDim2.new(1, 0, 0, 0)
@@ -90,10 +90,10 @@ function DynamicListFactory.new(titleText: string, layoutOrder: number?): Dynami
     iLayout.Padding = UDim.new(0, 5)
     iLayout.Parent = itemsContainer
 
-    -- Cálculos de ajuste de layout para mitigar bugs da engine
     maid:GiveTask(iLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         local contentHeight = iLayout.AbsoluteContentSize.Y
-        itemsContainer.Size = UDim2.new(1, 0, 0, math.min(contentHeight, 140))
+        -- Limita matematicamente a altura máxima a 70px (exatamente 2 linhas)
+        itemsContainer.Size = UDim2.new(1, 0, 0, math.min(contentHeight, 70))
         itemsContainer.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
     end))
 
