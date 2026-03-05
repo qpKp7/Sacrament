@@ -51,6 +51,10 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
     container.BackgroundTransparency = 1
     container.Parent = card.Container
 
+    local pad = Instance.new("UIPadding")
+    pad.PaddingTop = UDim.new(0, 10)
+    pad.Parent = container
+
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 10)
