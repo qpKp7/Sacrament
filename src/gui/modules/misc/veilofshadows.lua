@@ -9,13 +9,11 @@ local function SafeImport(path: string): any?
 end
 
 local BentoCard = SafeImport("gui/modules/components/bentocard")
-local HideVisuals = SafeImport("gui/modules/misc/sections/veilofshadows/hidevisuals")
 local PrintScreen = SafeImport("gui/modules/misc/sections/veilofshadows/printscreen")
 local RecorderScreen = SafeImport("gui/modules/misc/sections/veilofshadows/recorderscreen")
 
 export type VeilData = {
     MasterEnabled: boolean,
-    HideVisualsEnabled: boolean,
     CleanPrintScreen: boolean,
     OBSBypass: boolean
 }
@@ -58,23 +56,16 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
     layout.Padding = UDim.new(0, 10)
     layout.Parent = container
 
-    local hideVisualsInst = nil
-    if HideVisuals and type(HideVisuals.new) == "function" then
-        hideVisualsInst = HideVisuals.new(1)
-        hideVisualsInst.Instance.Parent = container
-        maid:GiveTask(hideVisualsInst)
-    end
-
     local printScreenInst = nil
     if PrintScreen and type(PrintScreen.new) == "function" then
-        printScreenInst = PrintScreen.new(2)
+        printScreenInst = PrintScreen.new(1)
         printScreenInst.Instance.Parent = container
         maid:GiveTask(printScreenInst)
     end
 
     local recorderScreenInst = nil
     if RecorderScreen and type(RecorderScreen.new) == "function" then
-        recorderScreenInst = RecorderScreen.new(3)
+        recorderScreenInst = RecorderScreen.new(2)
         recorderScreenInst.Instance.Parent = container
         maid:GiveTask(recorderScreenInst)
     end
@@ -85,7 +76,6 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
     function self:GetData(): VeilData
         return {
             MasterEnabled = masterState,
-            HideVisualsEnabled = hideVisualsInst and hideVisualsInst:GetState() or false,
             CleanPrintScreen = printScreenInst and printScreenInst:GetState() or false,
             OBSBypass = recorderScreenInst and recorderScreenInst:GetState() or false
         }
