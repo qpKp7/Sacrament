@@ -25,6 +25,7 @@ export type VeilUI = {
 }
 
 local VeilFactory = {}
+-- NOTA: O ID 75507316618777 é um Decal ID. Se não carregar, use o Image ID gerado pelo Studio.
 local ICON_ID = "rbxassetid://75507316618777"
 
 function VeilFactory.new(layoutOrder: number?): VeilUI
