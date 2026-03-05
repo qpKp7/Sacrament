@@ -27,16 +27,19 @@ export type ServerUtilityUI = {
 local ServerUtilityFactory = {}
 local ICON_ID = "rbxassetid://111933292722916"
 
-function ServerUtilityFactory.new(layoutOrder: number?): ServerUtilityUI
+function ServerUtilityFactory.new(layoutOrder: any): ServerUtilityUI
     local maid = Maid.new()
     local masterState = false
+    
+    -- Barreira de proteção contra injeção de tabelas pelo loader dinâmico
+    local actualOrder = type(layoutOrder) == "number" and layoutOrder or 2
 
     local card = BentoCard.new(
         "Server Utility",
         "Session Control",
         "Manage your current server connection.",
         ICON_ID,
-        layoutOrder or 2
+        actualOrder
     )
     maid:GiveTask(card)
 
@@ -68,7 +71,7 @@ function ServerUtilityFactory.new(layoutOrder: number?): ServerUtilityUI
         
         maid:GiveTask(rejoinInst.Clicked:Connect(function()
             if not masterState then return end
-            -- Lógica de TeleportService (Rejoin) será acoplada pelo controlador principal
+            -- Lógica de TeleportService (Rejoin)
         end))
     end
 
@@ -80,7 +83,7 @@ function ServerUtilityFactory.new(layoutOrder: number?): ServerUtilityUI
         
         maid:GiveTask(serverHopInst.Clicked:Connect(function()
             if not masterState then return end
-            -- Lógica de TeleportService + HttpService (Hop) será acoplada pelo controlador principal
+            -- Lógica de TeleportService + HttpService (Hop)
         end))
     end
 
