@@ -25,7 +25,7 @@ export type VeilUI = {
 }
 
 local VeilFactory = {}
-local ICON_ID = "rbxassetid://108584963373035"
+local ICON_ID = "rbxassetid://75507316618777"
 
 function VeilFactory.new(layoutOrder: number?): VeilUI
     local maid = Maid.new()
