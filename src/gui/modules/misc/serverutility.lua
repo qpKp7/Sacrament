@@ -25,7 +25,7 @@ export type ServerUtilityUI = {
 }
 
 local ServerUtilityFactory = {}
-local ICON_ID = "rbxassetid://10115053154" -- Ícone provisório (globo/servidor)
+local ICON_ID = "rbxassetid://111933292722916"
 
 function ServerUtilityFactory.new(layoutOrder: number?): ServerUtilityUI
     local maid = Maid.new()
