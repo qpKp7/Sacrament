@@ -10,6 +10,7 @@ end
 
 local BloodPactSection = SafeImport("gui/modules/misc/bloodpact")
 local VeilOfShadowsSection = SafeImport("gui/modules/misc/veilofshadows")
+local ServerUtilitySection = SafeImport("gui/modules/misc/serverutility")
 
 export type MiscUI = {
     Instance: ScrollingFrame,
@@ -18,8 +19,11 @@ export type MiscUI = {
 
 local MiscFactory = {}
 
-function MiscFactory.new(layoutOrder: number?): MiscUI
+function MiscFactory.new(layoutOrder: any): MiscUI
     local maid = Maid.new()
+    
+    -- Barreira de proteção contra injeção de tabelas pelo loader dinâmico
+    local actualOrder = type(layoutOrder) == "number" and layoutOrder or 1
 
     local container = Instance.new("ScrollingFrame")
     container.Name = "MiscContainer"
@@ -30,7 +34,7 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
     container.ScrollBarThickness = 2
     container.ScrollBarImageColor3 = Color3.fromHex("333333")
     container.BorderSizePixel = 0
-    container.LayoutOrder = layoutOrder or 1
+    container.LayoutOrder = actualOrder
 
     local containerLayout = Instance.new("UIListLayout")
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -76,10 +80,23 @@ function MiscFactory.new(layoutOrder: number?): MiscUI
         end
     end
 
+    if ServerUtilitySection and type(ServerUtilitySection.new) == "function" then
+        local success, suInstance = pcall(function() return ServerUtilitySection.new(3) end)
+        if success and suInstance and suInstance.Instance then
+            suInstance.Instance.Parent = gridContainer
+            maid:GiveTask(suInstance)
+        end
+    end
+
     maid:GiveTask(container)
+    
     local self = {}
     self.Instance = container
-    function self:Destroy() maid:Destroy() end
+    
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+    
     return self :: MiscUI
 end
 
