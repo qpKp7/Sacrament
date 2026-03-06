@@ -44,16 +44,20 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     local pad = Instance.new("UIPadding")
     pad.PaddingTop = UDim.new(0, 20)
     pad.PaddingBottom = UDim.new(0, 20)
+    pad.PaddingLeft = UDim.new(0, 20)
+    pad.PaddingRight = UDim.new(0, 20)
     pad.Parent = box
 
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.VerticalAlignment = Enum.VerticalAlignment.Center
-    layout.Padding = UDim.new(0, 12)
-    layout.Parent = box
+    -- Layout Horizontal da Box Principal (Avatar <-espaço-> Textos)
+    local boxLayout = Instance.new("UIListLayout")
+    boxLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    boxLayout.FillDirection = Enum.FillDirection.Horizontal
+    boxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    boxLayout.Padding = UDim.new(0, 15)
+    boxLayout.Parent = box
 
-    local avatarSize = 90
+    -- 1. Avatar (Esquerda)
+    local avatarSize = 85
     local avatar = Instance.new("ImageLabel")
     avatar.Name = "Avatar"
     avatar.Size = UDim2.new(0, avatarSize, 0, avatarSize)
@@ -72,24 +76,40 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     avatarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     avatarStroke.Parent = avatar
 
+    -- 2. Coluna de Textos (Direita)
+    local textStack = Instance.new("Frame")
+    textStack.Name = "TextStack"
+    textStack.Size = UDim2.new(1, -(avatarSize + 15), 0, 0) -- Preenche o espaço restante
+    textStack.AutomaticSize = Enum.AutomaticSize.Y
+    textStack.BackgroundTransparency = 1
+    textStack.LayoutOrder = 2
+    textStack.Parent = box
+
+    local stackLayout = Instance.new("UIListLayout")
+    stackLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    stackLayout.FillDirection = Enum.FillDirection.Vertical
+    stackLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    stackLayout.Padding = UDim.new(0, 8) -- Espaçamento vertical entre os textos
+    stackLayout.Parent = textStack
+
     local function createText(name: string, text: string, size: number, color: Color3, order: number, font: Enum.Font)
         local lbl = Instance.new("TextLabel")
         lbl.Name = name
-        lbl.Size = UDim2.new(1, -20, 0, size + 4)
+        lbl.Size = UDim2.new(1, 0, 0, size)
         lbl.BackgroundTransparency = 1
         lbl.Text = text
         lbl.TextColor3 = color
         lbl.Font = font
         lbl.TextSize = size
+        lbl.TextXAlignment = Enum.TextXAlignment.Left -- Alinhado rigorosamente à esquerda
         lbl.LayoutOrder = order
-        lbl.Parent = box
+        lbl.Parent = textStack
     end
 
-    createText("Name", "Name: " .. localPlayer.DisplayName, 16, COLOR_TEXT, 2, FONT_BOLD)
-    createText("User", "Username: @" .. localPlayer.Name, 13, COLOR_SUBTEXT, 3, FONT_MED)
-    createText("Age", "Idade da Conta: " .. localPlayer.AccountAge .. " Days", 13, COLOR_SUBTEXT, 4, FONT_MED)
-    createText("Status", "Status: Eternal Adept", 15, COLOR_RED, 5, FONT_BOLD)
-    createText("Cycle", "Ciclo: Lifetime", 13, COLOR_SUBTEXT, 6, FONT_MED)
+    createText("Username", "Username: @" .. localPlayer.Name, 14, COLOR_TEXT, 1, FONT_BOLD)
+    createText("DisplayName", "Display Name: " .. localPlayer.DisplayName, 13, COLOR_SUBTEXT, 2, FONT_MED)
+    createText("Age", "Account Age: " .. localPlayer.AccountAge .. " Days", 13, COLOR_SUBTEXT, 3, FONT_MED)
+    createText("Status", "Status: Eternal Adept", 14, COLOR_RED, 4, FONT_BOLD)
 
     maid:GiveTask(box)
 
