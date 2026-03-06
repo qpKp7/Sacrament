@@ -2,6 +2,14 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+
+if not Players.LocalPlayer then
+    (Players:GetPropertyChangedSignal("LocalPlayer") :: RBXScriptSignal):Wait()
+end
+local localPlayer = Players.LocalPlayer
+
 export type InfoUI = {
     Instance: Frame,
     Destroy: (self: InfoUI) -> ()
@@ -9,83 +17,73 @@ export type InfoUI = {
 
 local InfoFactory = {}
 
-local COLOR_BG = Color3.fromRGB(14, 14, 14)
-local COLOR_ALTAR = Color3.fromRGB(20, 20, 20)
-local COLOR_RED = Color3.fromHex("C80000")
-local COLOR_TEXT = Color3.fromRGB(255, 255, 255)
-local COLOR_SUBTEXT = Color3.fromRGB(150, 150, 150)
-local FONT_MAIN = Enum.Font.GothamBold
+local COLORS = {
+    BG_TAB = Color3.fromRGB(14, 14, 14),
+    BG_ALTAR = Color3.fromRGB(18, 18, 18),
+    TEXT_MAIN = Color3.fromRGB(255, 255, 255),
+    TEXT_SUB = Color3.fromRGB(170, 170, 170),
+    ACCENT_RED = Color3.fromHex("C80000"),
+    BTN_HOVER = Color3.fromRGB(40, 40, 40),
+    BTN_DEFAULT = Color3.fromRGB(30, 30, 30)
+}
 
--- Cria um gradiente simulado para o Altar (centro claro, bordas escuras)
-local function CreateRadialGradient(parent: GuiObject)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-        ColorSequenceKeypoint.new(0.5, Color3.new(0.8, 0.8, 0.8)),
-        ColorSequenceKeypoint.new(1, Color3.new(0.4, 0.4, 0.4))
-    })
-    gradient.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(0.8, 0.3),
-        NumberSequenceKeypoint.new(1, 0.7)
-    })
-    gradient.Rotation = 90
-    gradient.Parent = parent
-end
+local FONT_BOLD = Enum.Font.GothamBold
 
-function InfoFactory.createInfoFrame(parent: Frame): Frame
+function InfoFactory.createInfoFrame(parent: Frame?): Frame
+    local maid = Maid.new()
+
     local container = Instance.new("Frame")
     container.Name = "InfoContainer"
     container.Size = UDim2.new(1, 0, 1, 0)
-    container.BackgroundColor3 = COLOR_BG
+    container.BackgroundTransparency = 1
     container.BorderSizePixel = 0
-    if parent then
-        container.Parent = parent
-    end
+    if parent then container.Parent = parent end
 
-    -- Altar Central
+    local altarSize = UDim2.new(0, 420, 0, 580)
     local altar = Instance.new("Frame")
     altar.Name = "Altar"
-    altar.Size = UDim2.new(0, 400, 0, 500)
+    altar.Size = altarSize
     altar.AnchorPoint = Vector2.new(0.5, 0.5)
     altar.Position = UDim2.new(0.5, 0, 0.5, 0)
-    altar.BackgroundColor3 = COLOR_ALTAR
+    altar.BackgroundColor3 = COLORS.BG_ALTAR
     altar.Parent = container
 
     local altarCorner = Instance.new("UICorner")
-    altarCorner.CornerRadius = UDim.new(0, 12)
+    altarCorner.CornerRadius = UDim.new(0.5, 0)
     altarCorner.Parent = altar
 
     local altarStroke = Instance.new("UIStroke")
-    altarStroke.Color = COLOR_RED
+    altarStroke.Color = COLORS.ACCENT_RED
     altarStroke.Thickness = 1
     altarStroke.Transparency = 0.6
     altarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     altarStroke.Parent = altar
 
-    CreateRadialGradient(altar)
-
     local altarPadding = Instance.new("UIPadding")
     altarPadding.PaddingTop = UDim.new(0, 30)
     altarPadding.PaddingBottom = UDim.new(0, 30)
-    altarPadding.PaddingLeft = UDim.new(0, 20)
-    altarPadding.PaddingRight = UDim.new(0, 20)
+    altarPadding.PaddingLeft = UDim.new(0, 25)
+    altarPadding.PaddingRight = UDim.new(0, 25)
     altarPadding.Parent = altar
 
     local altarLayout = Instance.new("UIListLayout")
     altarLayout.SortOrder = Enum.SortOrder.LayoutOrder
     altarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    altarLayout.Padding = UDim.new(0, 15)
+    altarLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    altarLayout.Padding = UDim.new(0, 18)
     altarLayout.Parent = altar
 
-    -- Avatar
-    local avatarSize = 120
+    local tweenInfoPulse = TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+    local tweenPulse = TweenService:Create(altarStroke, tweenInfoPulse, {Transparency = 0.9})
+    tweenPulse:Play()
+    maid:GiveTask(tweenPulse)
+
+    local avatarSize = 140
     local avatar = Instance.new("ImageLabel")
     avatar.Name = "Avatar"
     avatar.Size = UDim2.new(0, avatarSize, 0, avatarSize)
-    -- Placeholder ID (pode ser substituído dinamicamente depois)
-    avatar.Image = "rbxthumb://type=Avatar&id=1&w=150&h=150" 
-    avatar.BackgroundColor3 = COLOR_BG
+    avatar.Image = "rbxthumb://type=Avatar&id="..localPlayer.UserId.."&w=420&h=420&filters=avatar_type:3d"
+    avatar.BackgroundColor3 = COLORS.BG_ALTAR
     avatar.LayoutOrder = 1
     avatar.Parent = altar
 
@@ -94,111 +92,146 @@ function InfoFactory.createInfoFrame(parent: Frame): Frame
     avatarCorner.Parent = avatar
 
     local avatarStroke = Instance.new("UIStroke")
-    avatarStroke.Color = COLOR_RED
+    avatarStroke.Color = COLORS.ACCENT_RED
     avatarStroke.Thickness = 2
     avatarStroke.Transparency = 0.4
     avatarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     avatarStroke.Parent = avatar
 
-    -- Função auxiliar de texto
-    local function CreateText(name: string, text: string, size: number, color: Color3, order: number): TextLabel
+    local textStack = Instance.new("Frame")
+    textStack.Name = "TextStack"
+    textStack.Size = UDim2.new(1, 0, 0, 0)
+    textStack.AutomaticSize = Enum.AutomaticSize.Y
+    textStack.BackgroundTransparency = 1
+    textStack.LayoutOrder = 2
+    textStack.Parent = altar
+
+    local textLayout = Instance.new("UIListLayout")
+    textLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    textLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    textLayout.Padding = UDim.new(0, 12)
+    textLayout.Parent = textStack
+
+    local function CreateTextLabel(name: string, text: string, size: number, color: Color3, order: number)
         local lbl = Instance.new("TextLabel")
         lbl.Name = name
-        lbl.Size = UDim2.new(1, 0, 0, size + 4)
+        lbl.Size = UDim2.new(1, 0, 0, size + 2)
         lbl.BackgroundTransparency = 1
         lbl.Text = text
         lbl.TextColor3 = color
-        lbl.Font = FONT_MAIN
+        lbl.Font = FONT_BOLD
         lbl.TextSize = size
+        lbl.TextWrapped = true
         lbl.LayoutOrder = order
-        lbl.Parent = altar
+        lbl.Parent = textStack
         return lbl
     end
 
-    -- Informações Principais
-    CreateText("Name", "Name: juniorplay828", 18, COLOR_TEXT, 2)
-    CreateText("Username", "Username: @Lokcsz", 14, COLOR_SUBTEXT, 3)
-    CreateText("AccountAge", "Idade da Conta: 2098 Days", 14, COLOR_SUBTEXT, 4)
-    CreateText("Status", "Status: Eternal Adept", 16, COLOR_RED, 5)
-    CreateText("Cycle", "Ciclo: Lifetime", 14, COLOR_SUBTEXT, 6)
+    CreateTextLabel("Name", "Name: " .. localPlayer.DisplayName, 20, COLORS.TEXT_MAIN, 1)
+    CreateTextLabel("Username", "Username: @" .. localPlayer.Name, 16, COLORS.TEXT_SUB, 2)
+    CreateTextLabel("AccountAge", "Idade da Conta: " .. localPlayer.AccountAge .. " Days", 16, COLORS.TEXT_SUB, 3)
 
-    -- Divisor (Runas/Linha Vermelha)
+    CreateTextLabel("Status", "Status: Eternal Adept", 18, COLORS.ACCENT_RED, 4)
+    CreateTextLabel("Cycle", "Ciclo: Lifetime", 16, COLORS.TEXT_SUB, 5)
+
     local divider = Instance.new("Frame")
     divider.Name = "Divider"
     divider.Size = UDim2.new(0.8, 0, 0, 1)
-    divider.BackgroundColor3 = COLOR_RED
-    divider.BackgroundTransparency = 0.5
-    divider.LayoutOrder = 7
+    divider.BackgroundColor3 = COLORS.ACCENT_RED
+    divider.BackgroundTransparency = 0.6
+    divider.LayoutOrder = 3
     divider.Parent = altar
 
-    -- Rodapé Sacrament
-    local footerContainer = Instance.new("Frame")
-    footerContainer.Name = "Footer"
-    footerContainer.Size = UDim2.new(1, 0, 0, 60)
-    footerContainer.BackgroundTransparency = 1
-    footerContainer.LayoutOrder = 8
-    footerContainer.Parent = altar
+    local sacramentFooter = Instance.new("Frame")
+    sacramentFooter.Name = "SacramentFooter"
+    sacramentFooter.Size = UDim2.new(1, 0, 0, 0)
+    sacramentFooter.AutomaticSize = Enum.AutomaticSize.Y
+    sacramentFooter.BackgroundTransparency = 1
+    sacramentFooter.LayoutOrder = 4
+    sacramentFooter.Parent = altar
 
-    local footerLayout = Instance.new("UIListLayout")
-    footerLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    footerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    footerLayout.Padding = UDim.new(0, 5)
-    footerLayout.Parent = footerContainer
+    local sacramentLayout = Instance.new("UIListLayout")
+    sacramentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    sacramentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    sacramentLayout.Padding = UDim.new(0, 6)
+    sacramentLayout.Parent = sacramentFooter
 
-    local lblSacrament = Instance.new("TextLabel")
-    lblSacrament.Size = UDim2.new(1, 0, 0, 14)
-    lblSacrament.BackgroundTransparency = 1
-    lblSacrament.Text = "Sacrament v1.0.0"
-    lblSacrament.TextColor3 = COLOR_TEXT
-    lblSacrament.Font = FONT_MAIN
-    lblSacrament.TextSize = 12
-    lblSacrament.LayoutOrder = 1
-    lblSacrament.Parent = footerContainer
+    local function CreateSacramentLabel(text: string, order: number)
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 14)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = text
+        lbl.TextColor3 = COLORS.TEXT_SUB
+        lbl.Font = FONT_BOLD
+        lbl.TextSize = 12
+        lbl.LayoutOrder = order
+        lbl.Parent = sacramentFooter
+    end
 
-    local lblForged = Instance.new("TextLabel")
-    lblForged.Size = UDim2.new(1, 0, 0, 14)
-    lblForged.BackgroundTransparency = 1
-    lblForged.Text = "Forged by @cardstolen"
-    lblForged.TextColor3 = COLOR_SUBTEXT
-    lblForged.Font = FONT_MAIN
-    lblForged.TextSize = 12
-    lblForged.LayoutOrder = 2
-    lblForged.Parent = footerContainer
+    CreateSacramentLabel("Sacrament v1.0.0", 1)
+    CreateSacramentLabel("Forged by @cardstolen", 2)
+    CreateSacramentLabel("Invocation: March 05, 2026", 3)
 
-    local lblDate = Instance.new("TextLabel")
-    lblDate.Size = UDim2.new(1, 0, 0, 14)
-    lblDate.BackgroundTransparency = 1
-    lblDate.Text = "Invocation: March 05, 2026"
-    lblDate.TextColor3 = COLOR_SUBTEXT
-    lblDate.Font = FONT_MAIN
-    lblDate.TextSize = 12
-    lblDate.LayoutOrder = 3
-    lblDate.Parent = footerContainer
-
-    -- Botão Discord
+    local discordSize = UDim2.new(1, 0, 0, 32)
     local discordBtn = Instance.new("TextButton")
     discordBtn.Name = "DiscordBtn"
-    discordBtn.Size = UDim2.new(1, 0, 0, 20)
-    discordBtn.BackgroundTransparency = 1
+    discordBtn.Size = discordSize
+    discordBtn.BackgroundColor3 = COLORS.BTN_DEFAULT
     discordBtn.Text = "Discord Sanctuary: discord.gg/bvNyfSDZxG"
-    discordBtn.TextColor3 = COLOR_RED
-    discordBtn.Font = FONT_MAIN
+    discordBtn.TextColor3 = COLORS.ACCENT_RED
+    discordBtn.Font = FONT_BOLD
     discordBtn.TextSize = 12
-    discordBtn.LayoutOrder = 9
+    discordBtn.AutoButtonColor = false
+    discordBtn.LayoutOrder = 5
     discordBtn.Parent = altar
 
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = discordBtn
+
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Color = COLORS.ACCENT_RED
+    btnStroke.Thickness = 1
+    btnStroke.Transparency = 0.8
+    btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    btnStroke.Parent = discordBtn
+
+    local tweenInfoHover = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    
+    local tweenHoverOn = TweenService:Create(discordBtn, tweenInfoHover, {BackgroundColor3 = COLORS.BTN_HOVER})
+    local tweenHoverOff = TweenService:Create(discordBtn, tweenInfoHover, {BackgroundColor3 = COLORS.BTN_DEFAULT})
+
+    maid:GiveTask(discordBtn.MouseEnter:Connect(function()
+        tweenHoverOn:Play()
+    end))
+
+    maid:GiveTask(discordBtn.MouseLeave:Connect(function()
+        tweenHoverOff:Play()
+    end))
+
+    maid:GiveTask(discordBtn.MouseButton1Click:Connect(function()
+        discordBtn.TextTransparency = 0.5
+        task.wait(0.1)
+        discordBtn.TextTransparency = 0
+    end))
+
+    maid:GiveTask(container)
+    
     return container
 end
 
--- Wrapper caso o loader utilize .new()
 function InfoFactory.new(layoutOrder: any): InfoUI
     local maid = Maid.new()
-    local frame = InfoFactory.createInfoFrame(nil :: any)
+    local frame = InfoFactory.createInfoFrame()
     maid:GiveTask(frame)
 
     local self = {}
     self.Instance = frame
-    function self:Destroy() maid:Destroy() end
+    
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+    
     return self :: InfoUI
 end
 
