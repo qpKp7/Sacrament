@@ -65,17 +65,17 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
         lbl.Parent = box
     end
 
-    createText("Title", "Sacrament v1.0.0", 14, COLOR_TEXT, 1, FONT_BOLD)
-    createText("Author", "Forged by @cardstolen", 13, COLOR_SUBTEXT, 2, FONT_MED)
-    createText("Date", "Invocation: March 05, 2026", 13, COLOR_SUBTEXT, 3, FONT_MED)
+    createText("Title", "Sacrament", 18, COLOR_TEXT, 1, FONT_BOLD)
+    createText("Version", "Version: v1.0.0", 13, COLOR_SUBTEXT, 2, FONT_MED)
+    createText("Author", "Forged By: @cardstolen", 13, COLOR_SUBTEXT, 3, FONT_MED)
 
-    local divider = Instance.new("Frame")
-    divider.Name = "Divider"
-    divider.Size = UDim2.new(0.8, 0, 0, 1)
-    divider.BackgroundColor3 = COLOR_RED
-    divider.BackgroundTransparency = 0.5
-    divider.LayoutOrder = 4
-    divider.Parent = box
+    -- Espaçador invisível para separar os textos do botão
+    local spacer = Instance.new("Frame")
+    spacer.Name = "Spacer"
+    spacer.Size = UDim2.new(1, 0, 0, 10)
+    spacer.BackgroundTransparency = 1
+    spacer.LayoutOrder = 4
+    spacer.Parent = box
 
     local discordBtn = Instance.new("TextButton")
     discordBtn.Name = "DiscordBtn"
