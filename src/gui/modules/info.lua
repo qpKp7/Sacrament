@@ -28,7 +28,6 @@ function InfoFactory.new(layoutOrder: any): InfoUI
     container.BackgroundTransparency = 1
     container.LayoutOrder = actualOrder
 
-    -- Wrapper Vertical para empilhar os cards com elegância
     local wrapper = Instance.new("Frame")
     wrapper.Name = "VerticalWrapper"
     wrapper.Size = UDim2.new(0, 480, 1, 0)
@@ -42,13 +41,14 @@ function InfoFactory.new(layoutOrder: any): InfoUI
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.VerticalAlignment = Enum.VerticalAlignment.Center
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 25) -- Espaçamento equilibrado entre os dois cards
+    layout.Padding = UDim.new(0, 25)
     layout.Parent = wrapper
 
     if AdeptSection and type(AdeptSection.new) == "function" then
         local success, adeptInst = pcall(function() return AdeptSection.new(1) end)
         if success and adeptInst and adeptInst.Instance then
-            adeptInst.Instance.Size = UDim2.new(1, 0, 0, 150)
+            -- Altura expandida para 165px para permitir respiro elegante do avatar e textos
+            adeptInst.Instance.Size = UDim2.new(1, 0, 0, 165)
             adeptInst.Instance.Parent = wrapper
             maid:GiveTask(adeptInst)
         end
