@@ -10,13 +10,13 @@ export type ScriptInfoUI = {
 
 local ScriptInfoFactory = {}
 
-local COLOR_BG = Color3.fromHex("1A1A1A")
-local COLOR_BORDER = Color3.fromHex("333333")
+local COLOR_BG = Color3.fromRGB(22, 22, 22)
+local COLOR_BORDER = Color3.fromRGB(45, 45, 45)
 local COLOR_TEXT = Color3.fromRGB(255, 255, 255)
 local COLOR_SUBTEXT = Color3.fromRGB(170, 170, 170)
 local COLOR_RED = Color3.fromHex("C80000")
-local COLOR_BTN = Color3.fromHex("222222")
-local COLOR_HOVER = Color3.fromHex("2A2A2A")
+local COLOR_BTN = Color3.fromRGB(30, 30, 30)
+local COLOR_HOVER = Color3.fromRGB(40, 40, 40)
 local FONT_BOLD = Enum.Font.GothamBold
 local FONT_MED = Enum.Font.GothamMedium
 
@@ -29,7 +29,7 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
     box.LayoutOrder = layoutOrder
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = box
 
     local stroke = Instance.new("UIStroke")
@@ -41,15 +41,16 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
     local pad = Instance.new("UIPadding")
     pad.PaddingTop = UDim.new(0, 20)
     pad.PaddingBottom = UDim.new(0, 20)
-    pad.PaddingLeft = UDim.new(0, 15)
-    pad.PaddingRight = UDim.new(0, 15)
+    pad.PaddingLeft = UDim.new(0, 25)
+    pad.PaddingRight = UDim.new(0, 25)
     pad.Parent = box
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.FillDirection = Enum.FillDirection.Vertical
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.VerticalAlignment = Enum.VerticalAlignment.Center
-    layout.Padding = UDim.new(0, 14)
+    layout.Padding = UDim.new(0, 8)
     layout.Parent = box
 
     local function createText(name: string, text: string, size: number, color: Color3, order: number, font: Enum.Font)
@@ -61,32 +62,39 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
         lbl.TextColor3 = color
         lbl.Font = font
         lbl.TextSize = size
+        lbl.TextXAlignment = Enum.TextXAlignment.Center
         lbl.LayoutOrder = order
         lbl.Parent = box
     end
 
-    createText("Title", "Sacrament", 18, COLOR_TEXT, 1, FONT_BOLD)
-    createText("Version", "Version: v1.0.0", 13, COLOR_SUBTEXT, 2, FONT_MED)
-    createText("Author", "Forged By: @cardstolen", 13, COLOR_SUBTEXT, 3, FONT_MED)
+    createText("Title", "Sacrament", 20, COLOR_TEXT, 1, FONT_BOLD)
+    
+    local spacer1 = Instance.new("Frame")
+    spacer1.Size = UDim2.new(1, 0, 0, 4)
+    spacer1.BackgroundTransparency = 1
+    spacer1.LayoutOrder = 2
+    spacer1.Parent = box
 
-    -- Espaçador invisível para separar os textos do botão
-    local spacer = Instance.new("Frame")
-    spacer.Name = "Spacer"
-    spacer.Size = UDim2.new(1, 0, 0, 10)
-    spacer.BackgroundTransparency = 1
-    spacer.LayoutOrder = 4
-    spacer.Parent = box
+    createText("Version", "Version: v1.0.0", 14, COLOR_SUBTEXT, 3, FONT_MED)
+    createText("Author", "Forged By: @cardstolen", 14, COLOR_SUBTEXT, 4, FONT_MED)
+
+    -- Spacer flexível para empurrar o botão para a base
+    local spacer2 = Instance.new("Frame")
+    spacer2.Size = UDim2.new(1, 0, 1, -110)
+    spacer2.BackgroundTransparency = 1
+    spacer2.LayoutOrder = 5
+    spacer2.Parent = box
 
     local discordBtn = Instance.new("TextButton")
     discordBtn.Name = "DiscordBtn"
     discordBtn.Size = UDim2.new(1, 0, 0, 36)
     discordBtn.BackgroundColor3 = COLOR_BTN
-    discordBtn.Text = "Discord Sanctuary\ndiscord.gg/bvNyfSDZxG"
+    discordBtn.Text = "Discord Sanctuary"
     discordBtn.TextColor3 = COLOR_RED
     discordBtn.Font = FONT_BOLD
-    discordBtn.TextSize = 11
+    discordBtn.TextSize = 13
     discordBtn.AutoButtonColor = false
-    discordBtn.LayoutOrder = 5
+    discordBtn.LayoutOrder = 6
     discordBtn.Parent = box
 
     local btnCorner = Instance.new("UICorner")
