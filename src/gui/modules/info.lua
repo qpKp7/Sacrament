@@ -8,8 +8,8 @@ local function SafeImport(path: string): any?
     return result
 end
 
-local PlayerCard = SafeImport("gui/modules/components/playercard")
-local ScriptCard = SafeImport("gui/modules/components/scriptcard")
+local AdeptSection = SafeImport("gui/modules/info/adept")
+local ScriptInfoSection = SafeImport("gui/modules/info/scriptinfo")
 
 export type InfoUI = {
     Instance: Frame,
@@ -28,35 +28,37 @@ function InfoFactory.new(layoutOrder: any): InfoUI
     container.BackgroundTransparency = 1
     container.LayoutOrder = actualOrder
 
-    local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 20)
-    pad.PaddingBottom = UDim.new(0, 20)
-    pad.PaddingLeft = UDim.new(0, 20)
-    pad.PaddingRight = UDim.new(0, 20)
-    pad.Parent = container
+    -- Wrapper central para segurar as duas boxes lado a lado com tamanho fixo e premium
+    local wrapper = Instance.new("Frame")
+    wrapper.Name = "HorizontalWrapper"
+    wrapper.Size = UDim2.new(0, 680, 0, 160)
+    wrapper.AnchorPoint = Vector2.new(0.5, 0.5)
+    wrapper.Position = UDim2.new(0.5, 0, 0.5, 0)
+    wrapper.BackgroundTransparency = 1
+    wrapper.Parent = container
 
     local layout = Instance.new("UIListLayout")
     layout.FillDirection = Enum.FillDirection.Horizontal
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.VerticalAlignment = Enum.VerticalAlignment.Center
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 15)
-    layout.Parent = container
+    layout.Padding = UDim.new(0, 20)
+    layout.Parent = wrapper
 
-    if PlayerCard and type(PlayerCard.new) == "function" then
-        local success, playerInst = pcall(function() return PlayerCard.new(1) end)
-        if success and playerInst and playerInst.Instance then
-            playerInst.Instance.Size = UDim2.new(0.55, -7, 1, 0)
-            playerInst.Instance.Parent = container
-            maid:GiveTask(playerInst)
+    if AdeptSection and type(AdeptSection.new) == "function" then
+        local success, adeptInst = pcall(function() return AdeptSection.new(1) end)
+        if success and adeptInst and adeptInst.Instance then
+            adeptInst.Instance.Size = UDim2.new(0.55, -10, 1, 0)
+            adeptInst.Instance.Parent = wrapper
+            maid:GiveTask(adeptInst)
         end
     end
 
-    if ScriptCard and type(ScriptCard.new) == "function" then
-        local success, scriptInst = pcall(function() return ScriptCard.new(2) end)
+    if ScriptInfoSection and type(ScriptInfoSection.new) == "function" then
+        local success, scriptInst = pcall(function() return ScriptInfoSection.new(2) end)
         if success and scriptInst and scriptInst.Instance then
-            scriptInst.Instance.Size = UDim2.new(0.45, -8, 1, 0)
-            scriptInst.Instance.Parent = container
+            scriptInst.Instance.Size = UDim2.new(0.45, -10, 1, 0)
+            scriptInst.Instance.Parent = wrapper
             maid:GiveTask(scriptInst)
         end
     end
