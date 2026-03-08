@@ -15,8 +15,7 @@ export type AdeptUI = {
 
 local AdeptFactory = {}
 
-local COLOR_BG = Color3.fromRGB(22, 22, 22)
-local COLOR_BORDER = Color3.fromRGB(45, 45, 45)
+local COLOR_BG = Color3.fromRGB(20, 20, 20)
 local COLOR_TEXT = Color3.fromRGB(255, 255, 255)
 local COLOR_SUBTEXT = Color3.fromRGB(170, 170, 170)
 local COLOR_RED = Color3.fromHex("C80000")
@@ -35,34 +34,37 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = box
 
+    -- Borda vermelha suave (Glow premium Sacrament)
     local stroke = Instance.new("UIStroke")
-    stroke.Color = COLOR_BORDER
-    stroke.Thickness = 1
+    stroke.Color = COLOR_RED
+    stroke.Transparency = 0.5
+    stroke.Thickness = 1.5
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = box
 
     local pad = Instance.new("UIPadding")
     pad.PaddingTop = UDim.new(0, 20)
     pad.PaddingBottom = UDim.new(0, 20)
-    pad.PaddingLeft = UDim.new(0, 20)
-    pad.PaddingRight = UDim.new(0, 20)
+    pad.PaddingLeft = UDim.new(0, 25)
+    pad.PaddingRight = UDim.new(0, 25)
     pad.Parent = box
 
-    -- ROOT INTERNO HORIZONTAL (Avatar à esquerda, Textos à direita)
+    -- Root Interno Horizontal
     local boxLayout = Instance.new("UIListLayout")
     boxLayout.SortOrder = Enum.SortOrder.LayoutOrder
     boxLayout.FillDirection = Enum.FillDirection.Horizontal
     boxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    boxLayout.Padding = UDim.new(0, 18)
+    boxLayout.Padding = UDim.new(0, 25)
     boxLayout.Parent = box
 
-    -- 1. AVATAR (Esquerda, Quadrado 1:1, Corpo inteiro)
-    local avatarSize = 110
+    -- 1. AVATAR (Quadrado 1:1, Fit para não cortar o personagem)
+    local avatarSize = 100
     local avatar = Instance.new("ImageLabel")
     avatar.Name = "Avatar"
     avatar.Size = UDim2.new(0, avatarSize, 0, avatarSize)
     avatar.Image = "rbxthumb://type=Avatar&id="..localPlayer.UserId.."&w=150&h=150"
-    avatar.BackgroundColor3 = COLOR_BG
+    avatar.ScaleType = Enum.ScaleType.Fit -- Garante o enquadramento perfeito sem cortes
+    avatar.BackgroundTransparency = 1
     avatar.LayoutOrder = 1
     avatar.Parent = box
 
@@ -71,15 +73,16 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     avatarCorner.Parent = avatar
 
     local avatarStroke = Instance.new("UIStroke")
-    avatarStroke.Color = COLOR_BORDER
+    avatarStroke.Color = COLOR_RED
+    avatarStroke.Transparency = 0.3
     avatarStroke.Thickness = 1
     avatarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     avatarStroke.Parent = avatar
 
-    -- 2. COLUNA DE TEXTOS (Direita, preenche o resto da box)
+    -- 2. COLUNA DE TEXTOS
     local textColumn = Instance.new("Frame")
     textColumn.Name = "TextColumn"
-    textColumn.Size = UDim2.new(1, -(avatarSize + 18), 1, 0)
+    textColumn.Size = UDim2.new(1, -(avatarSize + 25), 1, 0)
     textColumn.BackgroundTransparency = 1
     textColumn.LayoutOrder = 2
     textColumn.Parent = box
@@ -89,7 +92,7 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     columnLayout.FillDirection = Enum.FillDirection.Vertical
     columnLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     columnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    columnLayout.Padding = UDim.new(0, 6)
+    columnLayout.Padding = UDim.new(0, 7)
     columnLayout.Parent = textColumn
 
     local function createText(name: string, text: string, size: number, color: Color3, order: number, font: Enum.Font)
@@ -102,15 +105,14 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
         lbl.Font = font
         lbl.TextSize = size
         lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.TextTruncate = Enum.TextTruncate.AtEnd
         lbl.LayoutOrder = order
         lbl.Parent = textColumn
     end
 
-    createText("Username", "Username: @" .. localPlayer.Name, 16, COLOR_TEXT, 1, FONT_BOLD)
+    createText("Username", "Username: @" .. localPlayer.Name, 17, COLOR_TEXT, 1, FONT_BOLD)
     createText("DisplayName", "Display Name: " .. localPlayer.DisplayName, 14, COLOR_SUBTEXT, 2, FONT_MED)
     createText("Age", "Account Age: " .. localPlayer.AccountAge .. " Days", 14, COLOR_SUBTEXT, 3, FONT_MED)
-    createText("Status", "Status: Eternal Adept", 14, COLOR_RED, 4, FONT_BOLD)
+    createText("Status", "Status: Eternal Adept", 15, COLOR_RED, 4, FONT_BOLD)
 
     maid:GiveTask(box)
 
