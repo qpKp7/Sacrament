@@ -15,10 +15,12 @@ export type AdeptUI = {
 
 local AdeptFactory = {}
 
-local COLOR_BG = Color3.fromRGB(20, 20, 20)
-local COLOR_TEXT = Color3.fromRGB(255, 255, 255)
-local COLOR_SUBTEXT = Color3.fromRGB(170, 170, 170)
+local COLOR_BG = Color3.fromRGB(24, 24, 24) -- Fundo levemente destacado
+local COLOR_FRAME_BG = Color3.fromRGB(18, 18, 18) -- Fundo escuro para a moldura do avatar
+local COLOR_TEXT_MAIN = Color3.fromRGB(255, 255, 255)
+local COLOR_TEXT_SUB = Color3.fromRGB(160, 160, 160)
 local COLOR_RED = Color3.fromHex("C80000")
+
 local FONT_BOLD = Enum.Font.GothamBold
 local FONT_MED = Enum.Font.GothamMedium
 
@@ -34,22 +36,21 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = box
 
-    -- Borda vermelha suave (Glow premium Sacrament)
+    -- Glow vermelho suave do card
     local stroke = Instance.new("UIStroke")
     stroke.Color = COLOR_RED
-    stroke.Transparency = 0.5
-    stroke.Thickness = 1.5
+    stroke.Transparency = 0.65 -- Alta transparência para efeito de glow
+    stroke.Thickness = 2 -- Mais espesso para não parecer uma linha dura
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = box
 
     local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 20)
-    pad.PaddingBottom = UDim.new(0, 20)
-    pad.PaddingLeft = UDim.new(0, 25)
-    pad.PaddingRight = UDim.new(0, 25)
+    pad.PaddingTop = UDim.new(0, 25)
+    pad.PaddingBottom = UDim.new(0, 25)
+    pad.PaddingLeft = UDim.new(0, 30)
+    pad.PaddingRight = UDim.new(0, 30)
     pad.Parent = box
 
-    -- Root Interno Horizontal
     local boxLayout = Instance.new("UIListLayout")
     boxLayout.SortOrder = Enum.SortOrder.LayoutOrder
     boxLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -57,32 +58,41 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     boxLayout.Padding = UDim.new(0, 25)
     boxLayout.Parent = box
 
-    -- 1. AVATAR (Quadrado 1:1, Fit para não cortar o personagem)
-    local avatarSize = 100
+    -- 1. MOLDURA DO AVATAR (Respiro e Enquadramento)
+    local frameSize = 115
+    local avatarFrame = Instance.new("Frame")
+    avatarFrame.Name = "AvatarFrame"
+    avatarFrame.Size = UDim2.new(0, frameSize, 0, frameSize)
+    avatarFrame.BackgroundColor3 = COLOR_FRAME_BG
+    avatarFrame.LayoutOrder = 1
+    avatarFrame.Parent = box
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 6)
+    frameCorner.Parent = avatarFrame
+
+    local frameStroke = Instance.new("UIStroke")
+    frameStroke.Color = COLOR_RED
+    frameStroke.Transparency = 0.4
+    frameStroke.Thickness = 1
+    frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    frameStroke.Parent = avatarFrame
+
+    -- IMAGEM DO AVATAR (Dentro da moldura, com margem de 8px de cada lado)
     local avatar = Instance.new("ImageLabel")
-    avatar.Name = "Avatar"
-    avatar.Size = UDim2.new(0, avatarSize, 0, avatarSize)
+    avatar.Name = "AvatarImage"
+    avatar.Size = UDim2.new(1, -16, 1, -16) -- Garante o respiro interno
+    avatar.AnchorPoint = Vector2.new(0.5, 0.5)
+    avatar.Position = UDim2.new(0.5, 0, 0.5, 0)
     avatar.Image = "rbxthumb://type=Avatar&id="..localPlayer.UserId.."&w=150&h=150"
-    avatar.ScaleType = Enum.ScaleType.Fit -- Garante o enquadramento perfeito sem cortes
+    avatar.ScaleType = Enum.ScaleType.Fit -- Corpo completo sem cortes
     avatar.BackgroundTransparency = 1
-    avatar.LayoutOrder = 1
-    avatar.Parent = box
+    avatar.Parent = avatarFrame
 
-    local avatarCorner = Instance.new("UICorner")
-    avatarCorner.CornerRadius = UDim.new(0, 6)
-    avatarCorner.Parent = avatar
-
-    local avatarStroke = Instance.new("UIStroke")
-    avatarStroke.Color = COLOR_RED
-    avatarStroke.Transparency = 0.3
-    avatarStroke.Thickness = 1
-    avatarStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    avatarStroke.Parent = avatar
-
-    -- 2. COLUNA DE TEXTOS
+    -- 2. COLUNA DE TEXTOS (Hierarquia Visual)
     local textColumn = Instance.new("Frame")
     textColumn.Name = "TextColumn"
-    textColumn.Size = UDim2.new(1, -(avatarSize + 25), 1, 0)
+    textColumn.Size = UDim2.new(1, -(frameSize + 25), 1, 0)
     textColumn.BackgroundTransparency = 1
     textColumn.LayoutOrder = 2
     textColumn.Parent = box
@@ -92,7 +102,7 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
     columnLayout.FillDirection = Enum.FillDirection.Vertical
     columnLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     columnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    columnLayout.Padding = UDim.new(0, 7)
+    columnLayout.Padding = UDim.new(0, 8) -- Espaçamento limpo entre linhas
     columnLayout.Parent = textColumn
 
     local function createText(name: string, text: string, size: number, color: Color3, order: number, font: Enum.Font)
@@ -109,10 +119,18 @@ function AdeptFactory.new(layoutOrder: number): AdeptUI
         lbl.Parent = textColumn
     end
 
-    createText("Username", "Username: @" .. localPlayer.Name, 17, COLOR_TEXT, 1, FONT_BOLD)
-    createText("DisplayName", "Display Name: " .. localPlayer.DisplayName, 14, COLOR_SUBTEXT, 2, FONT_MED)
-    createText("Age", "Account Age: " .. localPlayer.AccountAge .. " Days", 14, COLOR_SUBTEXT, 3, FONT_MED)
-    createText("Status", "Status: Eternal Adept", 15, COLOR_RED, 4, FONT_BOLD)
+    -- Hierarquia visual forte: Username dominante, Status com destaque final
+    createText("Username", "Username: @" .. localPlayer.Name, 18, COLOR_TEXT_MAIN, 1, FONT_BOLD)
+    createText("DisplayName", "Display Name: " .. localPlayer.DisplayName, 13, COLOR_TEXT_SUB, 2, FONT_MED)
+    createText("Age", "Account Age: " .. localPlayer.AccountAge .. " Days", 13, COLOR_TEXT_SUB, 3, FONT_MED)
+    
+    local spacer = Instance.new("Frame")
+    spacer.Size = UDim2.new(1, 0, 0, 2)
+    spacer.BackgroundTransparency = 1
+    spacer.LayoutOrder = 4
+    spacer.Parent = textColumn
+
+    createText("Status", "Status: Eternal Adept", 15, COLOR_RED, 5, FONT_BOLD)
 
     maid:GiveTask(box)
 
