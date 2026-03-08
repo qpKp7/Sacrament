@@ -10,13 +10,12 @@ export type ScriptInfoUI = {
 
 local ScriptInfoFactory = {}
 
-local COLOR_BG = Color3.fromRGB(22, 22, 22)
-local COLOR_BORDER = Color3.fromRGB(45, 45, 45)
+local COLOR_BG = Color3.fromRGB(20, 20, 20)
 local COLOR_TEXT = Color3.fromRGB(255, 255, 255)
 local COLOR_SUBTEXT = Color3.fromRGB(170, 170, 170)
 local COLOR_RED = Color3.fromHex("C80000")
-local COLOR_BTN = Color3.fromRGB(30, 30, 30)
-local COLOR_HOVER = Color3.fromRGB(40, 40, 40)
+local COLOR_BTN = Color3.fromRGB(26, 26, 26)
+local COLOR_HOVER = Color3.fromRGB(36, 36, 36)
 local FONT_BOLD = Enum.Font.GothamBold
 local FONT_MED = Enum.Font.GothamMedium
 
@@ -32,17 +31,19 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
     corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = box
 
+    -- Borda vermelha suave (Glow premium Sacrament)
     local stroke = Instance.new("UIStroke")
-    stroke.Color = COLOR_BORDER
-    stroke.Thickness = 1
+    stroke.Color = COLOR_RED
+    stroke.Transparency = 0.5
+    stroke.Thickness = 1.5
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = box
 
     local pad = Instance.new("UIPadding")
-    pad.PaddingTop = UDim.new(0, 20)
-    pad.PaddingBottom = UDim.new(0, 20)
-    pad.PaddingLeft = UDim.new(0, 25)
-    pad.PaddingRight = UDim.new(0, 25)
+    pad.PaddingTop = UDim.new(0, 25)
+    pad.PaddingBottom = UDim.new(0, 25)
+    pad.PaddingLeft = UDim.new(0, 30)
+    pad.PaddingRight = UDim.new(0, 30)
     pad.Parent = box
 
     local layout = Instance.new("UIListLayout")
@@ -67,10 +68,10 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
         lbl.Parent = box
     end
 
-    createText("Title", "Sacrament", 20, COLOR_TEXT, 1, FONT_BOLD)
+    createText("Title", "Sacrament", 22, COLOR_TEXT, 1, FONT_BOLD)
     
     local spacer1 = Instance.new("Frame")
-    spacer1.Size = UDim2.new(1, 0, 0, 4)
+    spacer1.Size = UDim2.new(1, 0, 0, 2)
     spacer1.BackgroundTransparency = 1
     spacer1.LayoutOrder = 2
     spacer1.Parent = box
@@ -78,16 +79,16 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
     createText("Version", "Version: v1.0.0", 14, COLOR_SUBTEXT, 3, FONT_MED)
     createText("Author", "Forged By: @cardstolen", 14, COLOR_SUBTEXT, 4, FONT_MED)
 
-    -- Spacer flexível para empurrar o botão para a base
+    -- Spacer flexível para empurrar o botão para baixo
     local spacer2 = Instance.new("Frame")
-    spacer2.Size = UDim2.new(1, 0, 1, -110)
+    spacer2.Size = UDim2.new(1, 0, 1, -100)
     spacer2.BackgroundTransparency = 1
     spacer2.LayoutOrder = 5
     spacer2.Parent = box
 
     local discordBtn = Instance.new("TextButton")
     discordBtn.Name = "DiscordBtn"
-    discordBtn.Size = UDim2.new(1, 0, 0, 36)
+    discordBtn.Size = UDim2.new(1, 0, 0, 38)
     discordBtn.BackgroundColor3 = COLOR_BTN
     discordBtn.Text = "Discord Sanctuary"
     discordBtn.TextColor3 = COLOR_RED
@@ -102,7 +103,8 @@ function ScriptInfoFactory.new(layoutOrder: number): ScriptInfoUI
     btnCorner.Parent = discordBtn
 
     local btnStroke = Instance.new("UIStroke")
-    btnStroke.Color = COLOR_BORDER
+    btnStroke.Color = COLOR_RED
+    btnStroke.Transparency = 0.6
     btnStroke.Thickness = 1
     btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     btnStroke.Parent = discordBtn
