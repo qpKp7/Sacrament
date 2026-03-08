@@ -96,7 +96,7 @@ function AimlockFactory.new(): AimlockUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, -20, 0.5, 0)
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0) -- Correção: Offset -20 removido
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -237,11 +237,7 @@ function AimlockFactory.new(): AimlockUI
         end))
     end
 
-    if arrow then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
-        end))
-    end
+    -- CORREÇÃO DO DUPLO CLIQUE: A conexão de arrow.Toggled que forçava subFrame.Visible foi removida.
 
     maid:GiveTask(container)
     
