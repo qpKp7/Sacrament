@@ -13,6 +13,9 @@ local function SafeImport(path: string): any?
     return result
 end
 
+-- Importação do Cérebro de Estado
+local UIState = SafeImport("state/uistate")
+
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
@@ -96,7 +99,7 @@ function AimlockFactory.new(): AimlockUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0) -- Correção: Offset -20 removido
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -221,7 +224,6 @@ function AimlockFactory.new(): AimlockUI
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
-    -- PaddingRight removido para alinhar perfeitamente com o Fly
     inputsPadding.Parent = inputsScroll
 
     safeLoadSection(KeyHoldSection, 1, inputsScroll)
@@ -231,13 +233,73 @@ function AimlockFactory.new(): AimlockUI
     safeLoadSection(WallCheckSection, 5, inputsScroll)
     safeLoadSection(KnockCheckSection, 6, inputsScroll)
 
-    if toggleBtn and glowBar then
-        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-            glowBar:SetState(state)
-        end))
-    end
 
-    -- CORREÇÃO DO DUPLO CLIQUE: A conexão de arrow.Toggled que forçava subFrame.Visible foi removida.
+    -- ==========================================
+    -- INTEGRAÇÃO COM O CÉREBRO (UISTATE)
+    -- ==========================================
+    if UIState then
+        -- 1. Leitura do estado salvo no cérebro (ou valor padrão caso não exista)
+        local isEnabled = UIState.Get("AimlockEnabled", false)
+        local isExpanded = UIState.Get("AimlockExpanded", false)
+
+        -- 2. Aplicar o estado inicial visualmente
+        if toggleBtn and typeof(toggleBtn.SetState) == "function" then
+            toggleBtn:SetState(isEnabled)
+        end
+        if glowBar and typeof(glowBar.SetState) == "function" then
+            glowBar:SetState(isEnabled)
+        end
+        if arrow and typeof(arrow.SetState) == "function" then
+            arrow:SetState(isExpanded)
+        end
+        subFrame.Visible = isExpanded
+
+        -- 3. Ações do usuário: Atualizar a UI e Salvar no Cérebro
+        if toggleBtn then
+            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+                if glowBar then
+                    glowBar:SetState(state)
+                end
+                UIState.Set("AimlockEnabled", state) -- Persistência!
+            end))
+        end
+
+        if arrow then
+            maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+                subFrame.Visible = state
+                UIState.Set("AimlockExpanded", state) -- Persistência!
+            end))
+        end
+
+        -- 4. Reatividade: Se outro script mudar o estado, a UI atualiza automaticamente
+        maid:GiveTask(UIState.SettingChanged:Connect(function(key: string, value: any)
+            if key == "AimlockEnabled" then
+                if toggleBtn and typeof(toggleBtn.SetState) == "function" then
+                    toggleBtn:SetState(value)
+                end
+                if glowBar and typeof(glowBar.SetState) == "function" then
+                    glowBar:SetState(value)
+                end
+            elseif key == "AimlockExpanded" then
+                if arrow and typeof(arrow.SetState) == "function" then
+                    arrow:SetState(value)
+                end
+                subFrame.Visible = value
+            end
+        end))
+    else
+        -- Fallback de segurança caso o UIState falhe ao carregar
+        if toggleBtn and glowBar then
+            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+                glowBar:SetState(state)
+            end))
+        end
+        if arrow then
+            maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+                subFrame.Visible = state
+            end))
+        end
+    end
 
     maid:GiveTask(container)
     
