@@ -111,6 +111,35 @@ local function ensureArrowOrder(controls: Instance, arrowGlyph: Instance?)
     end
 end
 
+local function createHitboxOverGlyph(maid: any, glyph: Instance): GuiButton?
+    if glyph:IsA("TextButton") then return glyph end
+    if not glyph:IsA("GuiObject") or not glyph.Parent then return nil end
+
+    local guiObj = glyph :: GuiObject
+    local hit = Instance.new("TextButton")
+    hit.Name = "ArrowHitbox"
+    hit.BackgroundTransparency = 1
+    hit.BorderSizePixel = 0
+    hit.AutoButtonColor = false
+    hit.Text = ""
+    hit.ZIndex = guiObj.ZIndex + 1
+    hit.Parent = guiObj.Parent
+
+    local function sync()
+        hit.ZIndex = guiObj.ZIndex + 1
+        hit.AnchorPoint = guiObj.AnchorPoint
+        hit.Size = guiObj.Size
+        hit.Position = guiObj.Position
+    end
+
+    maid:GiveTask(guiObj:GetPropertyChangedSignal("ZIndex"):Connect(sync))
+    maid:GiveTask(guiObj:GetPropertyChangedSignal("Size"):Connect(sync))
+    maid:GiveTask(guiObj:GetPropertyChangedSignal("Position"):Connect(sync))
+    sync()
+
+    return hit
+end
+
 function CombatModuleFactory.new(): CombatModule
     local maid = Maid.new()
 
@@ -158,6 +187,9 @@ function CombatModuleFactory.new(): CombatModule
         if glyph then
             ensureArrowOrder(controls, glyph)
             
+            -- Sincronia idêntica à do player.lua (Hitbox com 100% do tamanho)
+            item.arrowHit = createHitboxOverGlyph(maid, glyph)
+            
             if glyph:IsA("TextLabel") or glyph:IsA("TextButton") then
                 local textObj = glyph :: TextLabel | TextButton
                 textObj.TextTransparency = 1
@@ -187,18 +219,6 @@ function CombatModuleFactory.new(): CombatModule
             item.fakeGlyph = fake
             item.fakeStroke = stroke
             maid:GiveTask(fake)
-
-            local arrowHit = Instance.new("TextButton")
-            arrowHit.Name = "CombatArrowHitbox"
-            arrowHit.Size = UDim2.fromScale(2, 2)
-            arrowHit.Position = UDim2.fromScale(0.5, 0.5)
-            arrowHit.AnchorPoint = Vector2.new(0.5, 0.5)
-            arrowHit.BackgroundTransparency = 1
-            arrowHit.Text = ""
-            arrowHit.ZIndex = 100 
-            arrowHit.Parent = fake
-
-            item.arrowHit = arrowHit
         end
 
         local oldClick = item.header:FindFirstChild("HeaderClick")
@@ -222,7 +242,6 @@ function CombatModuleFactory.new(): CombatModule
             end
         end
 
-        -- Expansão delegada unicamente à hitbox da seta
         if item.arrowHit then
             maid:GiveTask(item.arrowHit.Activated:Connect(onToggle))
         end
