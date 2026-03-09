@@ -86,11 +86,17 @@ function AimlockFactory.new(): AimlockUI
     controls.Active = false
     controls.Parent = header
 
+    -- Inicia os estados antes de carregar os componentes para evitar animações de ativação redundantes
+    local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
+    local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
+
     local toggleBtn
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        -- Define o estado ANTES de colocar no Parent para silenciar a animação inicial
+        if toggleBtn.SetState then toggleBtn:SetState(isEnabled) end
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -100,6 +106,8 @@ function AimlockFactory.new(): AimlockUI
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        -- Define o estado ANTES de colocar no Parent
+        if arrow.SetState then arrow:SetState(isExpanded) end
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -118,6 +126,7 @@ function AimlockFactory.new(): AimlockUI
         glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        if glowBar.SetState then glowBar:SetState(isEnabled) end
         glowBar.Instance.Parent = glowWrapper
 
         local gObj = glowBar.Instance
@@ -134,26 +143,17 @@ function AimlockFactory.new(): AimlockUI
 
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
-
         local titleRightAbsolute = title.AbsolutePosition.X + title.AbsoluteSize.X
         local controlsLeftAbsolute = controls.AbsolutePosition.X
-
         local startX = (titleRightAbsolute - header.AbsolutePosition.X) + 5
         local endX = (controlsLeftAbsolute - header.AbsolutePosition.X) - 5
-
         local width = math.max(0, endX - startX)
-
         glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
         glowWrapper.Size = UDim2.fromOffset(width, 32)
     end
 
     maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(title:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(controls:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
-    maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
-    
     task.defer(updateGlowBar)
 
     local subFrame = Instance.new("Frame")
@@ -161,14 +161,13 @@ function AimlockFactory.new(): AimlockUI
     subFrame.Size = UDim2.new(1, 0, 0, 320)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
-    subFrame.Visible = false
+    subFrame.Visible = isExpanded -- Respeita o estado do cérebro
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
     if Sidebar and type(Sidebar.createVertical) == "function" then
         local vLine = Sidebar.createVertical()
         vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
-        vLine.Instance.Position = UDim2.fromScale(0, 0)
         vLine.Instance.Parent = subFrame
         maid:GiveTask(vLine)
     end
@@ -178,17 +177,17 @@ function AimlockFactory.new(): AimlockUI
     rightContent.Size = UDim2.new(1, -2, 1, 0)
     rightContent.Position = UDim2.fromOffset(2, 0)
     rightContent.BackgroundTransparency = 1
-    rightContent.BorderSizePixel = 0
     rightContent.Parent = subFrame
 
     local rightLayout = Instance.new("UIListLayout")
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+    -- ATUALIZADO: Agora passa o UIState para cada sub-seção para que elas possam salvar seus próprios estados
+    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance, state: any)
         if typeof(moduleType) == "table" and moduleType.new then
             local success, instance = pcall(function()
-                return moduleType.new(order)
+                return moduleType.new(order, state) -- Injeção de dependência de estado
             end)
             if success and instance then
                 instance.Instance.Parent = parentInstance
@@ -197,7 +196,7 @@ function AimlockFactory.new(): AimlockUI
         end
     end
 
-    safeLoadSection(KeybindSection, 1, rightContent)
+    safeLoadSection(KeybindSection, 1, rightContent, UIState)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -226,89 +225,34 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(PredictSection, 2, inputsScroll)
-    safeLoadSection(SmoothSection, 3, inputsScroll)
-    safeLoadSection(AimPartSection, 4, inputsScroll)
-    safeLoadSection(WallCheckSection, 5, inputsScroll)
-    safeLoadSection(KnockCheckSection, 6, inputsScroll)
+    -- Passando UIState para todas as sub-seções customizáveis
+    safeLoadSection(KeyHoldSection, 1, inputsScroll, UIState)
+    safeLoadSection(PredictSection, 2, inputsScroll, UIState)
+    safeLoadSection(SmoothSection, 3, inputsScroll, UIState)
+    safeLoadSection(AimPartSection, 4, inputsScroll, UIState)
+    safeLoadSection(WallCheckSection, 5, inputsScroll, UIState)
+    safeLoadSection(KnockCheckSection, 6, inputsScroll, UIState)
 
-
-    -- ==========================================
-    -- INTEGRAÇÃO COM O CÉREBRO (UISTATE)
-    -- ==========================================
-    if UIState then
-        -- 1. Leitura do estado salvo no cérebro (ou valor padrão caso não exista)
-        local isEnabled = UIState.Get("AimlockEnabled", false)
-        local isExpanded = UIState.Get("AimlockExpanded", false)
-
-        -- 2. Aplicar o estado inicial visualmente
-        if toggleBtn and typeof(toggleBtn.SetState) == "function" then
-            toggleBtn:SetState(isEnabled)
-        end
-        if glowBar and typeof(glowBar.SetState) == "function" then
-            glowBar:SetState(isEnabled)
-        end
-        if arrow and typeof(arrow.SetState) == "function" then
-            arrow:SetState(isExpanded)
-        end
-        subFrame.Visible = isExpanded
-
-        -- 3. Ações do usuário: Atualizar a UI e Salvar no Cérebro
-        if toggleBtn then
-            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-                if glowBar then
-                    glowBar:SetState(state)
-                end
-                UIState.Set("AimlockEnabled", state) -- Persistência!
-            end))
-        end
-
-        if arrow then
-            maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-                subFrame.Visible = state
-                UIState.Set("AimlockExpanded", state) -- Persistência!
-            end))
-        end
-
-        -- 4. Reatividade: Se outro script mudar o estado, a UI atualiza automaticamente
-        maid:GiveTask(UIState.SettingChanged:Connect(function(key: string, value: any)
-            if key == "AimlockEnabled" then
-                if toggleBtn and typeof(toggleBtn.SetState) == "function" then
-                    toggleBtn:SetState(value)
-                end
-                if glowBar and typeof(glowBar.SetState) == "function" then
-                    glowBar:SetState(value)
-                end
-            elseif key == "AimlockExpanded" then
-                if arrow and typeof(arrow.SetState) == "function" then
-                    arrow:SetState(value)
-                end
-                subFrame.Visible = value
-            end
+    -- Conexões de Eventos com Persistência
+    if toggleBtn and UIState then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            if glowBar then glowBar:SetState(state) end
+            UIState.Set("AimlockEnabled", state)
         end))
-    else
-        -- Fallback de segurança caso o UIState falhe ao carregar
-        if toggleBtn and glowBar then
-            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-                glowBar:SetState(state)
-            end))
-        end
-        if arrow then
-            maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-                subFrame.Visible = state
-            end))
-        end
+    end
+
+    if arrow and UIState then
+        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+            subFrame.Visible = state
+            UIState.Set("AimlockExpanded", state)
+        end))
     end
 
     maid:GiveTask(container)
     
     local self = {}
     self.Instance = container
-
-    function self:Destroy()
-        maid:Destroy()
-    end
+    function self:Destroy() maid:Destroy() end
 
     return self :: AimlockUI
 end
