@@ -7,6 +7,7 @@ export type KeyboxUI = {
     Instance: TextButton,
     KeyChanged: RBXScriptSignal,
     GetKey: (self: KeyboxUI) -> Enum.KeyCode?,
+    SetKey: (self: KeyboxUI, keyEnum: Enum.KeyCode?) -> (),
     Destroy: (self: KeyboxUI) -> ()
 }
 
@@ -78,6 +79,16 @@ function KeyboxFactory.new(defaultKey: Enum.KeyCode?): KeyboxUI
     
     function self:GetKey() 
         return currentKey 
+    end
+
+    -- Método injetado para suportar carregamento de memória silencioso
+    function self:SetKey(keyEnum: Enum.KeyCode?)
+        currentKey = keyEnum
+        if keyEnum then
+            btn.Text = keyEnum.Name
+        else
+            btn.Text = "None"
+        end
     end
     
     function self:Destroy() 
