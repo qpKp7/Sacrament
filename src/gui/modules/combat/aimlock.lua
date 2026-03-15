@@ -39,6 +39,98 @@ local AimlockFactory = {}
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
+-- =========================================================================
+-- MÁQUINA DE BINDING UNIVERSAL (V3 - PRECISÃO MÁXIMA)
+-- Detecta componentes externos e faz busca profunda por componentes internos
+-- =========================================================================
+local function UniversalStateBinder(sectionTable: any, stateKey: string, state: any, maid: any)
+    if not state or not sectionTable then return end
+    
+    local root = sectionTable.Instance
+    if not root then return end
+
+    -- 1. IDENTIFICAR COMPONENTES EXTERNOS (Tabelas/Objetos)
+    
+    -- [TOGGLE BUTTON / CHECKBOX]
+    if sectionTable.Toggled and sectionTable.SetState then
+        local savedVal = state.Get(stateKey, false)
+        sectionTable:SetState(savedVal, true) -- 'true' para carregar sem animação
+        
+        maid:GiveTask(sectionTable.Toggled:Connect(function(val: boolean)
+            state.Set(stateKey, val)
+        end))
+        return
+    end
+
+    -- [SLIDER EXTERNO]
+    if sectionTable.OnValueChanged and sectionTable.SetValue then
+        local savedVal = state.Get(stateKey)
+        if savedVal ~= nil then
+            sectionTable:SetValue(savedVal)
+        end
+        
+        maid:GiveTask(sectionTable.OnValueChanged:Connect(function(val: number)
+            state.Set(stateKey, val)
+        end))
+        return
+    end
+
+    -- [KEYBOX EXTERNO]
+    if sectionTable.KeyChanged and sectionTable.SetKey then
+        local savedKeyName = state.Get(stateKey)
+        
+        if savedKeyName and type(savedKeyName) == "string" then
+            local success, enumItem = pcall(function() return Enum.KeyCode[savedKeyName] end)
+            if success then
+                sectionTable:SetKey(enumItem)
+            end
+        end
+
+        maid:GiveTask(sectionTable.KeyChanged:Connect(function(keyEnum: Enum.KeyCode?)
+            state.Set(stateKey, keyEnum and keyEnum.Name or nil)
+        end))
+        return
+    end
+
+    -- 2. IDENTIFICAR COMPONENTES INTERNOS (Injetados no arquivo, ex: Smooth, AimPart)
+    
+    -- [VALUEBOX / TEXTBOX INTERNO] (Ex: SmoothBox)
+    local box = root:FindFirstChildWhichIsA("TextBox", true)
+    if box then
+        local savedText = state.Get(stateKey, box.Text)
+        box.Text = savedText
+        
+        maid:GiveTask(box.FocusLost:Connect(function()
+            state.Set(stateKey, box.Text)
+        end))
+        -- Sem return aqui, pois pode haver TextBox E Dropdown na mesma seção
+    end
+
+    -- [DROPDOWN INTERNO] (Ex: Aim Part)
+    -- Baseado no seu aimpart.lua, o valor fica num TextLabel dentro de um TextButton
+    local displayLabel = nil
+    for _, child in ipairs(root:GetDescendants()) do
+        if child:IsA("TextLabel") and child.Parent and child.Parent:IsA("TextButton") then
+            -- Ignora labels de UI estrutural como o Título ou a setinha ">"
+            if child.Name ~= "Label" and child.Text ~= ">" then
+                displayLabel = child
+                break
+            end
+        end
+    end
+
+    if displayLabel then
+        -- Carrega o valor salvo no JSON para a tela
+        local savedDropdown = state.Get(stateKey, displayLabel.Text)
+        displayLabel.Text = savedDropdown
+        
+        -- Escuta a mudança de texto feita pelo seu código interno do Dropdown
+        maid:GiveTask(displayLabel:GetPropertyChangedSignal("Text"):Connect(function()
+            state.Set(stateKey, displayLabel.Text)
+        end))
+    end
+end
+
 function AimlockFactory.new(): AimlockUI
     local maid = Maid.new()
 
@@ -86,7 +178,7 @@ function AimlockFactory.new(): AimlockUI
     controls.Active = false
     controls.Parent = header
 
-    -- Inicia os estados antes de carregar os componentes para evitar animações de ativação redundantes
+    -- Pega os estados salvos para o Toggle e Expansão
     local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
     local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
 
@@ -95,8 +187,9 @@ function AimlockFactory.new(): AimlockUI
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
-        -- Define o estado ANTES de colocar no Parent para silenciar a animação inicial
-        if toggleBtn.SetState then toggleBtn:SetState(isEnabled) end
+        
+        if toggleBtn.SetState then toggleBtn:SetState(isEnabled, true) end
+        
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -106,7 +199,6 @@ function AimlockFactory.new(): AimlockUI
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-        -- Define o estado ANTES de colocar no Parent
         if arrow.SetState then arrow:SetState(isExpanded) end
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
@@ -161,7 +253,7 @@ function AimlockFactory.new(): AimlockUI
     subFrame.Size = UDim2.new(1, 0, 0, 320)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
-    subFrame.Visible = isExpanded -- Respeita o estado do cérebro
+    subFrame.Visible = isExpanded
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
@@ -183,20 +275,24 @@ function AimlockFactory.new(): AimlockUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    -- ATUALIZADO: Agora passa o UIState para cada sub-seção para que elas possam salvar seus próprios estados
-    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance, state: any)
+    -- ATUALIZADO: Carregamento de Seção com Auto-Binding
+    local function safeLoadSection(moduleType: any, sectionID: string, order: number, parentInstance: Instance, state: any)
         if typeof(moduleType) == "table" and moduleType.new then
             local success, instance = pcall(function()
-                return moduleType.new(order, state) -- Injeção de dependência de estado
+                return moduleType.new(order, state) 
             end)
             if success and instance then
                 instance.Instance.Parent = parentInstance
+                
+                -- Aplica a memória independentemente se é externo ou construído à mão
+                UniversalStateBinder(instance, "Aimlock_" .. sectionID, state, maid)
+                
                 maid:GiveTask(instance)
             end
         end
     end
 
-    safeLoadSection(KeybindSection, 1, rightContent, UIState)
+    safeLoadSection(KeybindSection, "Keybind", 1, rightContent, UIState)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -225,27 +321,30 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    -- Passando UIState para todas as sub-seções customizáveis
-    safeLoadSection(KeyHoldSection, 1, inputsScroll, UIState)
-    safeLoadSection(PredictSection, 2, inputsScroll, UIState)
-    safeLoadSection(SmoothSection, 3, inputsScroll, UIState)
-    safeLoadSection(AimPartSection, 4, inputsScroll, UIState)
-    safeLoadSection(WallCheckSection, 5, inputsScroll, UIState)
-    safeLoadSection(KnockCheckSection, 6, inputsScroll, UIState)
+    safeLoadSection(KeyHoldSection, "KeyHold", 1, inputsScroll, UIState)
+    safeLoadSection(PredictSection, "Predict", 2, inputsScroll, UIState)
+    safeLoadSection(SmoothSection, "Smooth", 3, inputsScroll, UIState)
+    safeLoadSection(AimPartSection, "AimPart", 4, inputsScroll, UIState)
+    safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
+    safeLoadSection(KnockCheckSection, "Knock", 6, inputsScroll, UIState)
 
-    -- Conexões de Eventos com Persistência
+    -- Eventos Diferidos (Evita disparos durante a montagem da UI)
     if toggleBtn and UIState then
-        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-            if glowBar then glowBar:SetState(state) end
-            UIState.Set("AimlockEnabled", state)
-        end))
+        task.defer(function()
+            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+                if glowBar then glowBar:SetState(state) end
+                UIState.Set("AimlockEnabled", state)
+            end))
+        end)
     end
 
     if arrow and UIState then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
-            UIState.Set("AimlockExpanded", state)
-        end))
+        task.defer(function()
+            maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+                subFrame.Visible = state
+                UIState.Set("AimlockExpanded", state)
+            end))
+        end)
     end
 
     maid:GiveTask(container)
