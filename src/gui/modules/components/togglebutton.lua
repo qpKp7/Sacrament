@@ -51,16 +51,30 @@ function ToggleButtonFactory.new(initialState: boolean?): ToggleButton
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = knob
 
-    local function updateVisuals(state: boolean)
-        local targetPos = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-        local targetColor = state and COLOR_BG_ON or COLOR_BG_OFF
+   -- Altere a função updateVisuals para aceitar um parâmetro 'instant'
+local function updateVisuals(state: boolean, instant: boolean?)
+    local targetPos = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
+    local targetColor = state and COLOR_BG_ON or COLOR_BG_OFF
 
+    if instant then
+        -- Se for instantâneo, aplica direto sem Tween
+        knob.Position = targetPos
+        button.BackgroundColor3 = targetColor
+    else
+        -- Se não, mantém o seu TweenService original
         local tweenPos = TweenService:Create(knob, tInfo, { Position = targetPos })
         local tweenColor = TweenService:Create(button, tInfo, { BackgroundColor3 = targetColor })
-
         tweenPos:Play()
         tweenColor:Play()
+        -- ... (seu código de destruição do tween)
+    end
+end
 
+-- Altere o seu método SetState para suportar o modo instantâneo
+function self:SetState(state: boolean, instant: boolean?)
+    isEnabled = state
+    updateVisuals(state, instant)
+end
         maid:GiveTask(tweenPos.Completed:Connect(function()
             tweenPos:Destroy()
         end))
