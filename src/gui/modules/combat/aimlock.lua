@@ -40,8 +40,7 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
 -- =========================================================================
--- MÁQUINA DE BINDING UNIVERSAL (V3 - PRECISÃO MÁXIMA)
--- Detecta componentes externos e faz busca profunda por componentes internos
+-- MÁQUINA DE BINDING UNIVERSAL (V4 - CORREÇÃO DE CORRIDA E EVENTOS)
 -- =========================================================================
 local function UniversalStateBinder(sectionTable: any, stateKey: string, state: any, maid: any)
     if not state or not sectionTable then return end
@@ -49,12 +48,12 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
     local root = sectionTable.Instance
     if not root then return end
 
-    -- 1. IDENTIFICAR COMPONENTES EXTERNOS (Tabelas/Objetos)
+    -- 1. IDENTIFICAR COMPONENTES EXTERNOS
     
     -- [TOGGLE BUTTON / CHECKBOX]
     if sectionTable.Toggled and sectionTable.SetState then
         local savedVal = state.Get(stateKey, false)
-        sectionTable:SetState(savedVal, true) -- 'true' para carregar sem animação
+        sectionTable:SetState(savedVal, true)
         
         maid:GiveTask(sectionTable.Toggled:Connect(function(val: boolean)
             state.Set(stateKey, val)
@@ -92,7 +91,7 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
         return
     end
 
-    -- 2. IDENTIFICAR COMPONENTES INTERNOS (Injetados no arquivo, ex: Smooth, AimPart)
+    -- 2. IDENTIFICAR COMPONENTES INTERNOS
     
     -- [VALUEBOX / TEXTBOX INTERNO] (Ex: SmoothBox)
     local box = root:FindFirstChildWhichIsA("TextBox", true)
@@ -101,17 +100,17 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
         box.Text = savedText
         
         maid:GiveTask(box.FocusLost:Connect(function()
-            state.Set(stateKey, box.Text)
+            -- RESOLVE O BUG DO 19289: Espera 1 frame para o teu script de validação limpar o número antes de guardar!
+            task.defer(function()
+                state.Set(stateKey, box.Text)
+            end)
         end))
-        -- Sem return aqui, pois pode haver TextBox E Dropdown na mesma seção
     end
 
     -- [DROPDOWN INTERNO] (Ex: Aim Part)
-    -- Baseado no seu aimpart.lua, o valor fica num TextLabel dentro de um TextButton
     local displayLabel = nil
     for _, child in ipairs(root:GetDescendants()) do
         if child:IsA("TextLabel") and child.Parent and child.Parent:IsA("TextButton") then
-            -- Ignora labels de UI estrutural como o Título ou a setinha ">"
             if child.Name ~= "Label" and child.Text ~= ">" then
                 displayLabel = child
                 break
@@ -120,11 +119,9 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
     end
 
     if displayLabel then
-        -- Carrega o valor salvo no JSON para a tela
         local savedDropdown = state.Get(stateKey, displayLabel.Text)
         displayLabel.Text = savedDropdown
         
-        -- Escuta a mudança de texto feita pelo seu código interno do Dropdown
         maid:GiveTask(displayLabel:GetPropertyChangedSignal("Text"):Connect(function()
             state.Set(stateKey, displayLabel.Text)
         end))
@@ -178,7 +175,7 @@ function AimlockFactory.new(): AimlockUI
     controls.Active = false
     controls.Parent = header
 
-    -- Pega os estados salvos para o Toggle e Expansão
+    -- Pega os estados guardados em memória volátil
     local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
     local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
 
@@ -275,7 +272,6 @@ function AimlockFactory.new(): AimlockUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    -- ATUALIZADO: Carregamento de Seção com Auto-Binding
     local function safeLoadSection(moduleType: any, sectionID: string, order: number, parentInstance: Instance, state: any)
         if typeof(moduleType) == "table" and moduleType.new then
             local success, instance = pcall(function()
@@ -284,7 +280,6 @@ function AimlockFactory.new(): AimlockUI
             if success and instance then
                 instance.Instance.Parent = parentInstance
                 
-                -- Aplica a memória independentemente se é externo ou construído à mão
                 UniversalStateBinder(instance, "Aimlock_" .. sectionID, state, maid)
                 
                 maid:GiveTask(instance)
@@ -328,23 +323,19 @@ function AimlockFactory.new(): AimlockUI
     safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
     safeLoadSection(KnockCheckSection, "Knock", 6, inputsScroll, UIState)
 
-    -- Eventos Diferidos (Evita disparos durante a montagem da UI)
+    -- RESOLVIDO: O task.defer foi removido para evitar isolamento dos eventos principais
     if toggleBtn and UIState then
-        task.defer(function()
-            maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-                if glowBar then glowBar:SetState(state) end
-                UIState.Set("AimlockEnabled", state)
-            end))
-        end)
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            if glowBar then glowBar:SetState(state) end
+            UIState.Set("AimlockEnabled", state)
+        end))
     end
 
     if arrow and UIState then
-        task.defer(function()
-            maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-                subFrame.Visible = state
-                UIState.Set("AimlockExpanded", state)
-            end))
-        end)
+        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
+            subFrame.Visible = state
+            UIState.Set("AimlockExpanded", state)
+        end))
     end
 
     maid:GiveTask(container)
