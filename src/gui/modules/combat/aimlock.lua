@@ -196,7 +196,10 @@ function AimlockFactory.new(): AimlockUI
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-        if arrow.SetState then arrow:SetState(isExpanded) end
+        
+        -- Garante o estado visual inicial sem animações desnecessárias
+        if arrow.SetState then arrow:SetState(isExpanded, true) end
+        
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
