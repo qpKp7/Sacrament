@@ -2,7 +2,6 @@
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
--- Proteção de Módulo: Isolamento de dependências via pcall (Conforme memória)
 local function SafeImport(path: string): any?
     local success, result = pcall(function()
         return Import(path)
@@ -18,7 +17,9 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type KeyHoldSection = {
     Instance: Frame,
+    Toggled: RBXScriptSignal, -- [NOVO] Expõe o evento para o Aimlock
     GetState: (self: KeyHoldSection) -> boolean,
+    SetState: (self: KeyHoldSection, state: boolean, instant: boolean?) -> (), -- [NOVO] Permite injeção de memória
     Destroy: (self: KeyHoldSection) -> ()
 }
 
@@ -30,6 +31,10 @@ local FONT_MAIN = Enum.Font.GothamBold
 function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     local maid = Maid.new()
     local state = false
+    
+    -- Evento de fallback caso o ToggleButton falhe ao carregar
+    local fallbackEvent = Instance.new("BindableEvent")
+    maid:GiveTask(fallbackEvent)
 
     local row = Instance.new("Frame")
     row.Name = "KeyHoldRow"
@@ -68,6 +73,9 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
+    local self = {}
+    self.Instance = row
+
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
@@ -78,20 +86,20 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
         maid:GiveTask(toggle.Toggled:Connect(function(newState: boolean)
             state = newState
         end))
+        
+        -- [O SEGREDO]: Exportamos as funções do filho para que o aimlock.lua os veja
+        self.Toggled = toggle.Toggled
+        function self:SetState(newState: boolean, instant: boolean?)
+            state = newState
+            if toggle.SetState then toggle:SetState(newState, instant) end
+        end
+    else
+        self.Toggled = fallbackEvent.Event
+        function self:SetState(newState: boolean) state = newState end
     end
 
-    maid:GiveTask(row)
-
-    local self = {}
-    self.Instance = row
-
-    function self:GetState()
-        return state
-    end
-
-    function self:Destroy()
-        maid:Destroy()
-    end
+    function self:GetState() return state end
+    function self:Destroy() maid:Destroy() end
 
     return self :: KeyHoldSection
 end
