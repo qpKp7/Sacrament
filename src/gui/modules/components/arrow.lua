@@ -8,7 +8,7 @@ export type ArrowUI = {
     Instance: Frame,
     Toggled: RBXScriptSignal,
     State: boolean,
-    SetState: (self: ArrowUI, state: boolean) -> (),
+    SetState: (self: ArrowUI, state: boolean, instant: boolean?) -> (),
     Destroy: (self: ArrowUI) -> ()
 }
 
@@ -22,13 +22,11 @@ local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirectio
 function ArrowFactory.new(): ArrowUI
     local maid = Maid.new()
     
-    -- Gaiola estrutural: impede que a Seta quebre o layout de outros módulos e impede que estique.
     local container = Instance.new("Frame")
     container.Name = "ArrowContainer"
     container.Size = UDim2.fromOffset(30, 30)
     container.BackgroundTransparency = 1
     
-    -- Hitbox real: 24x24 pixels absolutos no centro da gaiola.
     local btn = Instance.new("TextButton")
     btn.Name = "ArrowButton"
     btn.Size = UDim2.fromOffset(24, 24)
@@ -51,21 +49,33 @@ function ArrowFactory.new(): ArrowUI
     self.State = false
     self.Toggled = toggledEvent.Event
     
-    local function animate()
-        TweenService:Create(btn, TWEEN_INFO, {
-            Rotation = self.State and 90 or 0,
-            TextColor3 = self.State and COLOR_ACTIVE or COLOR_IDLE
-        }):Play()
+    -- Função visual com suporte ao modo instantâneo
+    local function updateVisuals(state: boolean, instant: boolean?)
+        local targetRot = state and 90 or 0
+        local targetCol = state and COLOR_ACTIVE or COLOR_IDLE
+
+        if instant then
+            btn.Rotation = targetRot
+            btn.TextColor3 = targetCol
+        else
+            local tween = TweenService:Create(btn, TWEEN_INFO, {
+                Rotation = targetRot,
+                TextColor3 = targetCol
+            })
+            tween:Play()
+            maid:GiveTask(tween.Completed:Connect(function() tween:Destroy() end))
+        end
     end
     
-    function self:SetState(state: boolean)
-        if self.State == state then return end
+    function self:SetState(state: boolean, instant: boolean?)
+        -- Removemos o "return end" estrito para garantir que a UI
+        -- force a posição e cor corretas na inicialização, mesmo que state == self.State
         self.State = state
-        animate()
+        updateVisuals(state, instant)
     end
     
     maid:GiveTask(btn.MouseButton1Click:Connect(function()
-        self:SetState(not self.State)
+        self:SetState(not self.State, false)
         toggledEvent:Fire(self.State)
     end))
     
