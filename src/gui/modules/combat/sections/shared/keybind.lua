@@ -5,6 +5,8 @@ local Maid = Import("utils/maid")
 
 export type KeybindSection = {
     Instance: Frame,
+    KeyChanged: RBXScriptSignal, -- [NOVO] 
+    SetKey: (self: KeybindSection, keyEnum: any) -> (), -- [NOVO] 
     Destroy: (self: KeybindSection) -> ()
 }
 
@@ -30,6 +32,9 @@ end
 function KeybindFactory.new(layoutOrder: number): KeybindSection
     local maid = Maid.new()
     local capturingKey = false
+    
+    local keyChangedEvent = Instance.new("BindableEvent")
+    maid:GiveTask(keyChangedEvent)
 
     local row = Instance.new("Frame")
     row.Name = "KeyRow"
@@ -100,6 +105,8 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
                 keyBtn.Text = formatKeyName(input.KeyCode.Name)
                 capturingKey = false
                 connection:Disconnect()
+                keyChangedEvent:Fire(input.KeyCode) -- Avisa o Estado!
+                
             elseif input.UserInputType == Enum.UserInputType.MouseButton1 or
                    input.UserInputType == Enum.UserInputType.MouseButton2 or
                    input.UserInputType == Enum.UserInputType.MouseButton3 or
@@ -107,6 +114,7 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
                 keyBtn.Text = formatKeyName(input.UserInputType.Name)
                 capturingKey = false
                 connection:Disconnect()
+                keyChangedEvent:Fire(input.UserInputType) -- Avisa o Estado!
             end
         end)
         
@@ -117,12 +125,22 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
 
     local self = {}
     self.Instance = row
+    self.KeyChanged = keyChangedEvent.Event
+    
+    -- [O SEGREDO]: Esta função permite ao aimlock.lua injetar a tecla salva
+    function self:SetKey(keyEnum: any)
+        if keyEnum then
+            keyBtn.Text = formatKeyName(keyEnum.Name)
+        else
+            keyBtn.Text = "NONE"
+        end
+    end
 
     function self:Destroy()
         maid:Destroy()
     end
 
-    return self
+    return self :: KeybindSection
 end
 
 return KeybindFactory
