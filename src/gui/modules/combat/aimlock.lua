@@ -40,7 +40,7 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
 -- =========================================================================
--- MÁQUINA DE BINDING UNIVERSAL (V4 - CORREÇÃO DE CORRIDA E EVENTOS)
+-- MÁQUINA DE BINDING UNIVERSAL
 -- =========================================================================
 local function UniversalStateBinder(sectionTable: any, stateKey: string, state: any, maid: any)
     if not state or not sectionTable then return end
@@ -48,9 +48,7 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
     local root = sectionTable.Instance
     if not root then return end
 
-    -- 1. IDENTIFICAR COMPONENTES EXTERNOS
-    
-    -- [TOGGLE BUTTON / CHECKBOX]
+    -- [TOGGLE BUTTON / KEYHOLD]
     if sectionTable.Toggled and sectionTable.SetState then
         local savedVal = state.Get(stateKey, false)
         sectionTable:SetState(savedVal, true)
@@ -74,7 +72,7 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
         return
     end
 
-    -- [KEYBOX EXTERNO]
+    -- [KEYBOX EXTERNO / KEYBIND]
     if sectionTable.KeyChanged and sectionTable.SetKey then
         local savedKeyName = state.Get(stateKey)
         
@@ -91,8 +89,6 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
         return
     end
 
-    -- 2. IDENTIFICAR COMPONENTES INTERNOS
-    
     -- [VALUEBOX / TEXTBOX INTERNO] (Ex: SmoothBox)
     local box = root:FindFirstChildWhichIsA("TextBox", true)
     if box then
@@ -100,7 +96,6 @@ local function UniversalStateBinder(sectionTable: any, stateKey: string, state: 
         box.Text = savedText
         
         maid:GiveTask(box.FocusLost:Connect(function()
-            -- RESOLVE O BUG DO 19289: Espera 1 frame para o teu script de validação limpar o número antes de guardar!
             task.defer(function()
                 state.Set(stateKey, box.Text)
             end)
@@ -184,9 +179,7 @@ function AimlockFactory.new(): AimlockUI
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
-        
-        if toggleBtn.SetState then toggleBtn:SetState(isEnabled, true) end
-        
+        -- NÃO aplica o SetState aqui, vamos fazê-lo pós-montagem
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -196,10 +189,7 @@ function AimlockFactory.new(): AimlockUI
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-        
-        -- Garante o estado visual inicial sem animações desnecessárias
-        if arrow.SetState then arrow:SetState(isExpanded, true) end
-        
+        -- NÃO aplica o SetState aqui, vamos fazê-lo pós-montagem
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -218,7 +208,6 @@ function AimlockFactory.new(): AimlockUI
         glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
-        if glowBar.SetState then glowBar:SetState(isEnabled) end
         glowBar.Instance.Parent = glowWrapper
 
         local gObj = glowBar.Instance
@@ -253,7 +242,8 @@ function AimlockFactory.new(): AimlockUI
     subFrame.Size = UDim2.new(1, 0, 0, 320)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
-    subFrame.Visible = isExpanded
+    -- BUG RESOLVIDO: O SubFrame nasce sempre invisível para forçar o recalculo do AutomaticSize!
+    subFrame.Visible = false 
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
@@ -326,7 +316,21 @@ function AimlockFactory.new(): AimlockUI
     safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
     safeLoadSection(KnockCheckSection, "Knock", 6, inputsScroll, UIState)
 
-    -- RESOLVIDO: O task.defer foi removido para evitar isolamento dos eventos principais
+    -- EVENTOS E INICIALIZAÇÃO PÓS-MONTAGEM (O Segredo para a Seta e o Toggle)
+    task.defer(function()
+        if toggleBtn and toggleBtn.SetState then 
+            toggleBtn:SetState(isEnabled, true) 
+        end
+        if glowBar and glowBar.SetState then 
+            glowBar:SetState(isEnabled) 
+        end
+        
+        if arrow and arrow.SetState then 
+            arrow:SetState(isExpanded, true) 
+            subFrame.Visible = isExpanded -- Só muda a visibilidade quando tudo já está renderizado!
+        end
+    end)
+
     if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             if glowBar then glowBar:SetState(state) end
