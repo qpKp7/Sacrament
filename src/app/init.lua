@@ -1,8 +1,8 @@
 --!strict
---[[ SACRAMENT | Smart Loader ]]--
+--[[ SACRAMENT | Smart Loader (Direto da Raiz) ]]--
 
--- Substitua pelo seu link raw exato
-local BaseURL = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/"
+-- Removido o "/src/" pois suas pastas estao na raiz do repo
+local BaseURL = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/"
 
 local function smartImport(path: string): any
     -- Tenta o arquivo direto (.lua)
@@ -14,21 +14,27 @@ local function smartImport(path: string): any
         if successInit and not contentInit:find("404") then
             content = contentInit
         else
-            error("[SACRAMENT] Erro: Path nao encontrado -> " .. path)
+            error("[SACRAMENT] Erro 404: Arquivo nao encontrado no GitHub -> " .. path)
         end
     end
 
-    local func = loadstring(content)
+    local func, err = loadstring(content)
     if not func then 
-        error("[SACRAMENT] Erro de sintaxe no modulo: " .. path) 
+        error("[SACRAMENT] Erro de sintaxe no modulo (" .. path .. "): " .. tostring(err)) 
     end
     
-    return func()
+    local successRun, module = pcall(func)
+    if not successRun then
+        error("[SACRAMENT] Erro ao executar modulo (" .. path .. "): " .. tostring(module))
+    end
+    
+    return module
 end
 
 (_G :: any).SacramentImport = smartImport
 
--- Carrega os pilares
+-- IMPORTANTE: Verifique se esses arquivos existem nessas pastas no seu GitHub
+-- Se voce moveu o uimanager para dentro de gui/, o path deve ser "gui/uimanager"
 local InputHandler = smartImport("input/inputhandler")
 local UIManager    = smartImport("gui/uimanager")
 local Settings     = smartImport("logic/settings")
