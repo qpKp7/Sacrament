@@ -1,98 +1,112 @@
 --!strict
+--[[
+    SACRAMENT | Component: Keybox
+    Responsável pela captura de inputs (Teclado e Mouse) e formatação visual.
+--]]
+
 local UserInputService = game:GetService("UserInputService")
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 export type KeyboxUI = {
-    Instance: TextButton,
+    Instance: Frame,
     KeyChanged: RBXScriptSignal,
-    GetKey: (self: KeyboxUI) -> Enum.KeyCode?,
-    SetKey: (self: KeyboxUI, keyEnum: Enum.KeyCode?) -> (),
+    SetKey: (self: KeyboxUI, keyEnum: any) -> (),
     Destroy: (self: KeyboxUI) -> ()
 }
 
 local KeyboxFactory = {}
 
-local COLOR_BG = Color3.fromHex("1A1A1A")
-local COLOR_BORDER = Color3.fromHex("333333")
-local COLOR_TEXT = Color3.fromHex("FFFFFF")
-local COLOR_ACCENT = Color3.fromHex("C80000")
+-- Constantes Visuais (Preservadas da versão original)
+local COLOR_RED_DARK = Color3.fromHex("680303")
+local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
+local COLOR_BOX_BORDER = Color3.fromHex("333333")
 local FONT_MAIN = Enum.Font.GothamBold
 
-function KeyboxFactory.new(defaultKey: Enum.KeyCode?): KeyboxUI
+-- Utilitário de formatação interno
+local function formatKeyName(name: string): string
+    local map = {
+        One="1", Two="2", Three="3", Four="4", Five="5",
+        Six="6", Seven="7", Eight="8", Nine="9", Zero="0",
+        MouseButton1="MB1", MouseButton2="MB2", MouseButton3="MB3",
+        MouseButton4="MB4", MouseButton5="MB5"
+    }
+    return map[name] or name
+end
+
+function KeyboxFactory.new(): KeyboxUI
     local maid = Maid.new()
-    local currentKey = defaultKey
-    local isListening = false
-
-    local btn = Instance.new("TextButton")
-    btn.Name = "Keybox"
-    btn.Size = UDim2.fromOffset(120, 32)
-    btn.BackgroundColor3 = COLOR_BG
-    btn.Text = currentKey and currentKey.Name or "None"
-    btn.TextColor3 = COLOR_TEXT
-    btn.Font = FONT_MAIN
-    btn.TextSize = 16
-    btn.AutoButtonColor = false
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 4)
-    corner.Parent = btn
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = COLOR_BORDER
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = btn
-
+    local capturingKey = false
+    
     local keyChangedEvent = Instance.new("BindableEvent")
     maid:GiveTask(keyChangedEvent)
 
-    maid:GiveTask(btn.Activated:Connect(function()
-        if isListening then return end
-        isListening = true
-        btn.Text = "..."
-        stroke.Color = COLOR_ACCENT
-    end))
+    -- Container da Box
+    local inputCont = Instance.new("Frame")
+    inputCont.Name = "KeyboxContainer"
+    inputCont.Size = UDim2.fromOffset(120, 32)
+    inputCont.BackgroundColor3 = COLOR_BOX_BG
+    inputCont.BorderSizePixel = 0
 
-    maid:GiveTask(UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-        if not isListening then return end
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 6)
+    inputCorner.Parent = inputCont
+
+    local inputStroke = Instance.new("UIStroke")
+    inputStroke.Color = COLOR_BOX_BORDER
+    inputStroke.Thickness = 1
+    inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    inputStroke.Parent = inputCont
+    
+    local keyBtn = Instance.new("TextButton")
+    keyBtn.Name = "InteractionButton"
+    keyBtn.Size = UDim2.fromScale(1, 1)
+    keyBtn.BackgroundTransparency = 1
+    keyBtn.Text = "NONE"
+    keyBtn.TextColor3 = COLOR_RED_DARK
+    keyBtn.Font = FONT_MAIN
+    keyBtn.TextSize = 16
+    keyBtn.Parent = inputCont
+
+    -- Lógica de Captura
+    maid:GiveTask(keyBtn.MouseButton1Click:Connect(function()
+        if capturingKey then return end
+        capturingKey = true
+        keyBtn.Text = "..."
         
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            if input.KeyCode == Enum.KeyCode.Escape then
-                currentKey = nil
-                btn.Text = "None"
-            else
-                currentKey = input.KeyCode
-                btn.Text = currentKey.Name
+        local connection: RBXScriptConnection
+        connection = UserInputService.InputBegan:Connect(function(input)
+            local inputType = input.UserInputType
+            local inputKey = (inputType == Enum.UserInputType.Keyboard) and input.KeyCode or inputType
+
+            -- Filtro para Keyboard ou Mouse Buttons
+            if inputType == Enum.UserInputType.Keyboard or inputType.Name:match("MouseButton") then
+                keyBtn.Text = formatKeyName(inputKey.Name)
+                capturingKey = false
+                connection:Disconnect()
+                keyChangedEvent:Fire(inputKey)
             end
-            
-            stroke.Color = COLOR_BORDER
-            isListening = false
-            keyChangedEvent:Fire(currentKey)
-        end
+        end)
+        
+        maid:GiveTask(connection)
     end))
 
-    maid:GiveTask(btn)
+    maid:GiveTask(inputCont)
 
     local self = {}
-    self.Instance = btn
+    self.Instance = inputCont
     self.KeyChanged = keyChangedEvent.Event
     
-    function self:GetKey() 
-        return currentKey 
-    end
-
-    -- Método injetado para suportar carregamento de memória silencioso
-    function self:SetKey(keyEnum: Enum.KeyCode?)
-        currentKey = keyEnum
+    function self:SetKey(keyEnum: any)
         if keyEnum then
-            btn.Text = keyEnum.Name
+            keyBtn.Text = formatKeyName(keyEnum.Name)
         else
-            btn.Text = "None"
+            keyBtn.Text = "NONE"
         end
     end
-    
-    function self:Destroy() 
-        maid:Destroy() 
+
+    function self:Destroy()
+        maid:Destroy()
     end
 
     return self :: KeyboxUI
