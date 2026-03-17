@@ -1,50 +1,36 @@
 --!strict
---[[ SACRAMENT | Main Root Loader ]]--
-
+--[[ SACRAMENT | Root Loader ]]--
 local BaseURL = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/"
 
--- Função de importação robusta
 local function smartImport(path: string): any
-    -- Tenta o arquivo .lua direto (ex: utils/maid.lua)
-    local success, content = pcall(game.HttpGet, game, BaseURL .. path .. ".lua")
+    -- Tenta carregar o arquivo (ex: gui/uimanager.lua ou combat/init.lua)
+    local url = BaseURL .. path .. ".lua"
+    local success, content = pcall(game.HttpGet, game, url)
     
-    -- Se falhar (404), tenta como pasta (ex: combat/init.lua)
+    -- Se não achar .lua, tenta como pasta /init.lua
     if not success or content:find("404") then
-        local successInit, contentInit = pcall(game.HttpGet, game, BaseURL .. path .. "/init.lua")
-        if successInit and not contentInit:find("404") then
-            content = contentInit
-        else
-            error("[SACRAMENT] Erro 404: Arquivo nao encontrado -> " .. path)
-        end
+        content = game:HttpGet(BaseURL .. path .. "/init.lua")
     end
 
-    local func, err = loadstring(content)
-    if not func then error("[SACRAMENT] Erro de sintaxe em " .. path .. ": " .. tostring(err)) end
-    
-    local successRun, module = pcall(func)
-    if not successRun then error("[SACRAMENT] Erro ao rodar " .. path .. ": " .. tostring(module)) end
-    
-    return module
+    local func = loadstring(content)
+    if not func then error("[SACRAMENT] Erro no path: " .. path) end
+    return func()
 end
 
 (_G :: any).SacramentImport = smartImport
 
--- Carrega os módulos base (Ajuste os caminhos se necessário)
--- Ex: Se o uimanager estiver dentro da pasta gui, use "gui/uimanager"
+-- IMPORTANTE: Verifique se esses nomes de pastas estao certos no seu GitHub
 local InputHandler = smartImport("input/inputhandler")
-local UIManager    = smartImport("gui/uimanager")
+local UIManager    = smartImport("gui/uimanager") -- Se estiver na raiz, use apenas "uimanager"
 local Settings     = smartImport("logic/settings")
 
 local App = {}
-
-function App.Start(adapter: any)
+function App.Start(adapter)
     InputHandler.Init(adapter)
     UIManager.Init(adapter, Settings)
 end
-
 function App.Stop()
     InputHandler.Destroy()
     UIManager.Destroy()
 end
-
 return App
