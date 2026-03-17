@@ -1,32 +1,32 @@
 --!strict
 --[[ SACRAMENT | Main Loader ]]--
-
--- O link precisa terminar com /src/ para achar as subpastas
 local BaseURL = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/"
 
 local function smartImport(path: string): any
-    -- 1. Tenta o arquivo direto (.lua)
+    -- Tenta carregar o arquivo .lua direto
     local success, content = pcall(game.HttpGet, game, BaseURL .. path .. ".lua")
     
-    -- 2. Se der 404, tenta a pasta (/init.lua)
+    -- Se der erro ou for 404, tenta a pasta /init.lua
     if not success or content:find("404") then
         local successInit, contentInit = pcall(game.HttpGet, game, BaseURL .. path .. "/init.lua")
         if successInit and not contentInit:find("404") then
             content = contentInit
         else
-            error("[SACRAMENT] Path nao encontrado: " .. path)
+            error("[SACRAMENT] Erro: Nao achou " .. path .. " no GitHub.")
         end
     end
 
     local func = loadstring(content)
     if not func then error("[SACRAMENT] Erro de sintaxe: " .. path) end
     
-    return func()
+    local ok, res = pcall(func)
+    if not ok then error("[SACRAMENT] Erro ao rodar: " .. path .. " | " .. tostring(res)) end
+    return res
 end
 
 (_G :: any).SacramentImport = smartImport
 
--- IMPORTANTE: Garanta que esses arquivos existam dentro de /src/ no seu GitHub
+-- Carrega os pilares (Verifique se esses nomes de pastas estao minusculos no seu GitHub)
 local InputHandler = smartImport("input/inputhandler")
 local UIManager    = smartImport("gui/uimanager")
 local Settings     = smartImport("logic/settings")
