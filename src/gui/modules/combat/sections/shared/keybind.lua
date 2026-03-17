@@ -1,46 +1,35 @@
 --!strict
-local UserInputService = game:GetService("UserInputService")
+--[[
+    SACRAMENT | Section: Keybind Row
+    Exibe a linha "KEY" e utiliza o componente Keybox centralizado.
+--]]
+
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
+-- Importando o novo componente
+local KeyboxComponent = Import("gui/modules/components/keybox")
+
 export type KeybindSection = {
     Instance: Frame,
-    KeyChanged: RBXScriptSignal, -- [NOVO] 
-    SetKey: (self: KeybindSection, keyEnum: any) -> (), -- [NOVO] 
+    KeyChanged: RBXScriptSignal,
+    SetKey: (self: KeybindSection, keyEnum: any) -> (),
     Destroy: (self: KeybindSection) -> ()
 }
 
 local KeybindFactory = {}
 
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
-local COLOR_WHITE = Color3.fromHex("FFFFFF")
-local COLOR_RED_DARK = Color3.fromHex("680303")
-local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
-local COLOR_BOX_BORDER = Color3.fromHex("333333")
 local FONT_MAIN = Enum.Font.GothamBold
-
-local function formatKeyName(name: string): string
-    local map = {
-        One="1", Two="2", Three="3", Four="4", Five="5",
-        Six="6", Seven="7", Eight="8", Nine="9", Zero="0",
-        MouseButton1="MB1", MouseButton2="MB2", MouseButton3="MB3",
-        MouseButton4="MB4", MouseButton5="MB5"
-    }
-    return map[name] or name
-end
 
 function KeybindFactory.new(layoutOrder: number): KeybindSection
     local maid = Maid.new()
-    local capturingKey = false
     
-    local keyChangedEvent = Instance.new("BindableEvent")
-    maid:GiveTask(keyChangedEvent)
-
+    -- Container da Linha
     local row = Instance.new("Frame")
     row.Name = "KeyRow"
     row.Size = UDim2.new(1, 0, 0, 55)
     row.BackgroundTransparency = 1
-    row.BorderSizePixel = 0
     row.LayoutOrder = layoutOrder
 
     local rowLayout = Instance.new("UIListLayout")
@@ -54,10 +43,10 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     pad.PaddingRight = UDim.new(0, 50)
     pad.Parent = row
 
+    -- Label "KEY"
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(0.5, 0, 1, 0)
     lbl.BackgroundTransparency = 1
-    lbl.BorderSizePixel = 0
     lbl.Text = "KEY"
     lbl.TextColor3 = COLOR_LABEL
     lbl.Font = FONT_MAIN
@@ -65,75 +54,21 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
-    local inputCont = Instance.new("Frame")
-    inputCont.Size = UDim2.new(0, 120, 0, 32)
-    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
-    inputCont.AnchorPoint = Vector2.new(1, 0.5)
-    inputCont.BackgroundColor3 = COLOR_BOX_BG
-    inputCont.BorderSizePixel = 0
-    inputCont.Parent = row
-
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 6)
-    inputCorner.Parent = inputCont
-
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = COLOR_BOX_BORDER
-    inputStroke.Thickness = 1
-    inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    inputStroke.Parent = inputCont
-    
-    local keyBtn = Instance.new("TextButton")
-    keyBtn.Size = UDim2.fromScale(1, 1)
-    keyBtn.BackgroundColor3 = COLOR_BOX_BG
-    keyBtn.BackgroundTransparency = 1
-    keyBtn.BorderSizePixel = 0
-    keyBtn.Text = "NONE"
-    keyBtn.TextColor3 = COLOR_RED_DARK
-    keyBtn.Font = FONT_MAIN
-    keyBtn.TextSize = 16
-    keyBtn.Parent = inputCont
-
-    maid:GiveTask(keyBtn.MouseButton1Click:Connect(function()
-        if capturingKey then return end
-        capturingKey = true
-        keyBtn.Text = "..."
-        
-        local connection
-        connection = UserInputService.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                keyBtn.Text = formatKeyName(input.KeyCode.Name)
-                capturingKey = false
-                connection:Disconnect()
-                keyChangedEvent:Fire(input.KeyCode) -- Avisa o Estado!
-                
-            elseif input.UserInputType == Enum.UserInputType.MouseButton1 or
-                   input.UserInputType == Enum.UserInputType.MouseButton2 or
-                   input.UserInputType == Enum.UserInputType.MouseButton3 or
-                   input.UserInputType.Name:match("Mouse") then
-                keyBtn.Text = formatKeyName(input.UserInputType.Name)
-                capturingKey = false
-                connection:Disconnect()
-                keyChangedEvent:Fire(input.UserInputType) -- Avisa o Estado!
-            end
-        end)
-        
-        maid:GiveTask(connection)
-    end))
+    -- Instanciação do Componente Centralizado
+    local keybox = KeyboxComponent.new()
+    keybox.Instance.AnchorPoint = Vector2.new(1, 0.5)
+    keybox.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+    keybox.Instance.Parent = row
+    maid:GiveTask(keybox)
 
     maid:GiveTask(row)
 
     local self = {}
     self.Instance = row
-    self.KeyChanged = keyChangedEvent.Event
+    self.KeyChanged = keybox.KeyChanged -- Repassa o sinal do componente
     
-    -- [O SEGREDO]: Esta função permite ao aimlock.lua injetar a tecla salva
     function self:SetKey(keyEnum: any)
-        if keyEnum then
-            keyBtn.Text = formatKeyName(keyEnum.Name)
-        else
-            keyBtn.Text = "NONE"
-        end
+        keybox:SetKey(keyEnum)
     end
 
     function self:Destroy()
