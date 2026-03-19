@@ -250,7 +250,7 @@ function SilentAimFactory.new(): SilentAimUI
     end
 
     -- =========================================================================
-    -- 👑 ORQUESTRADOR DE ESTADOS (Idêntico ao do Aimlock)
+    -- 👑 ORQUESTRADOR DE ESTADOS (AGORA COM SUPORTE A SLIDER!)
     -- =========================================================================
     local Orchestrator = {}
     
@@ -262,64 +262,52 @@ function SilentAimFactory.new(): SilentAimUI
         if componentType == "TextBox" or componentType == "ValueBox" then
             local component = section.ValueBox or section.TextBox
             if component then
-                if savedValue ~= nil and component.SetValue then
-                    pcall(function() component:SetValue(savedValue, true) end)
-                end
-                if component.OnValueChanged then
-                    maid:GiveTask(component.OnValueChanged:Connect(function(finalValue)
-                        UIState.Set(stateKey, finalValue)
-                    end))
-                end
+                if savedValue ~= nil and component.SetValue then pcall(function() component:SetValue(savedValue, true) end) end
+                if component.OnValueChanged then maid:GiveTask(component.OnValueChanged:Connect(function(finalValue) UIState.Set(stateKey, finalValue) end)) end
             end
             
         elseif componentType == "Toggle" then
             local component = section.Toggle or section.ToggleButton
             if component then
-                if savedValue ~= nil and component.SetState then
-                    pcall(function() component:SetState(savedValue, true) end)
-                end
-                if component.Toggled then
-                    maid:GiveTask(component.Toggled:Connect(function(val: boolean)
-                        UIState.Set(stateKey, val)
-                    end))
-                end
+                if savedValue ~= nil and component.SetState then pcall(function() component:SetState(savedValue, true) end) end
+                if component.Toggled then maid:GiveTask(component.Toggled:Connect(function(val: boolean) UIState.Set(stateKey, val) end)) end
             end
             
         elseif componentType == "Dropdown" then
             local component = section.Dropdown
             if component then
-                if savedValue ~= nil and component.SetSelected then
-                    pcall(function() component:SetSelected(savedValue, true) end)
-                end
-                if component.OnSelectionChanged then
-                    maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string)
-                        UIState.Set(stateKey, val)
-                    end))
-                end
+                if savedValue ~= nil and component.SetSelected then pcall(function() component:SetSelected(savedValue, true) end) end
+                if component.OnSelectionChanged then maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string) UIState.Set(stateKey, val) end)) end
+            end
+
+        -- 👉 AQUI ESTÁ A MAGIA QUE FALTAVA: ENSINAR O ORQUESTRADOR A LER O SLIDER!
+        elseif componentType == "Slider" then
+            local component = section.Slider
+            if component then
+                if savedValue ~= nil and component.SetValue then pcall(function() component:SetValue(savedValue, true) end) end
+                if component.OnValueChanged then maid:GiveTask(component.OnValueChanged:Connect(function(val: number) UIState.Set(stateKey, val) end)) end
             end
 
         elseif componentType == "Keybind" then
             local component = section.Keybox or section.KeyBind or section
             if component then
-                if savedValue and type(savedValue) == "string" and component.SetKey then
-                    pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end)
-                end
-                if component.KeyChanged then
-                    maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?)
-                        UIState.Set(stateKey, k and k.Name or nil)
-                    end))
-                end
+                if savedValue and type(savedValue) == "string" and component.SetKey then pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end) end
+                if component.KeyChanged then maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?) UIState.Set(stateKey, k and k.Name or nil) end)) end
             end
         end
     end
 
-    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (CHAVES DO SILENT AIM)
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (CHAVES DO SILENT AIM CORRIGIDAS)
     Orchestrator.Bind(secKeybind,   "SilentAim_Keybind",   "Keybind")
     Orchestrator.Bind(secKeyHold,   "SilentAim_KeyHold",   "Toggle")
     Orchestrator.Bind(secPredict,   "SilentAim_Predict",   "ValueBox")
-    Orchestrator.Bind(secHitChance, "SilentAim_HitChance", "ValueBox")
+    
+    -- 👉 Agora o Orquestrador sabe que esses dois são Sliders:
+    Orchestrator.Bind(secHitChance, "SilentAim_HitChance", "Slider")
+    Orchestrator.Bind(secFovLimit,  "SilentAim_ShowFov",   "Toggle")
+    Orchestrator.Bind(secFovLimit,  "SilentAim_FovLimit",  "Slider")
+    
     Orchestrator.Bind(secMarkStyle, "SilentAim_MarkStyle", "Dropdown")
-    Orchestrator.Bind(secFovLimit,  "SilentAim_FovLimit",  "ValueBox")
     Orchestrator.Bind(secAimPart,   "SilentAim_AimPart",   "Dropdown")
     Orchestrator.Bind(secWallCheck, "SilentAim_WallCheck", "Toggle")
     Orchestrator.Bind(secKnockCheck,"SilentAim_KnockCheck","Toggle")
