@@ -9,7 +9,7 @@ local UIState = Import("state/uistate")
 local Maid = Import("utils/maid")
 
 -- O SmartImport cuidará se o mainframe estiver em gui/ ou gui/components/
-local MainFrameModule = Import("gui/mainframe") 
+local MainFrameModule = Import("gui/components/mainframe")
 
 local UIManager = {}
 local uiMaid = Maid.new()
