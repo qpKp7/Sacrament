@@ -5,7 +5,8 @@ local Maid = Import("utils/maid")
 
 export type Slider = {
     Instance: Frame,
-    SetValue: (self: Slider, value: number) -> (),
+    SetValue: (self: Slider, value: number, silent: boolean?) -> (),
+    GetValue: (self: Slider) -> number,
     OnValueChanged: RBXScriptSignal,
     Destroy: (self: Slider) -> ()
 }
@@ -19,8 +20,10 @@ local FONT_MAIN = Enum.Font.GothamBold
 function SliderFactory.new(title: string, min: number, max: number, default: number): Slider
     local maid = Maid.new()
     local valueChanged = Instance.new("BindableEvent")
+    maid:GiveTask(valueChanged)
     
     local isDragging = false
+    -- O math.round garante que o valor sempre seja inteiro (pula de 1 em 1)
     local currentValue = math.clamp(math.round(default), min, max)
 
     local container = Instance.new("Frame")
@@ -85,27 +88,58 @@ function SliderFactory.new(title: string, min: number, max: number, default: num
     
     Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-    local function updateValue(input: InputObject)
+    local self = {} :: any
+    self.Instance = container
+    self.OnValueChanged = valueChanged.Event
+
+    -- =========================================================
+    -- O CONTRATO OBRIGATÓRIO (Para o Orquestrador ler e escrever)
+    -- =========================================================
+    function self:SetValue(value: number, silent: boolean?)
+        -- Força o número a ser inteiro e dentro do limite
+        local num = math.clamp(math.round(tonumber(value) or default), min, max)
+        
+        if num ~= currentValue or silent then
+            currentValue = num
+            lblValue.Text = tostring(currentValue)
+            
+            -- Evita divisão por zero se max == min
+            local percent = (max > min) and ((currentValue - min) / (max - min)) or 0
+            fill.Size = UDim2.fromScale(percent, 1)
+
+            -- Se for o Orquestrador que estiver setando, não avisa ele de volta
+            if not silent then
+                valueChanged:Fire(currentValue)
+            end
+        end
+    end
+
+    function self:GetValue(): number
+        return currentValue
+    end
+
+    -- =========================================================
+    -- LÓGICA DO MOUSE
+    -- =========================================================
+    local function processMouseInput(input: InputObject)
         local railAbsoluteSize = rail.AbsoluteSize.X
         local railAbsolutePos = rail.AbsolutePosition.X
         local mousePos = input.Position.X
         
+        -- Garante que o slider não quebre se for zero
+        if railAbsoluteSize <= 0 then return end
+        
         local percent = math.clamp((mousePos - railAbsolutePos) / railAbsoluteSize, 0, 1)
         local rawValue = min + (percent * (max - min))
-        local snappedValue = math.round(rawValue)
         
-        if snappedValue ~= currentValue then
-            currentValue = snappedValue
-            lblValue.Text = tostring(currentValue)
-            fill.Size = UDim2.fromScale((currentValue - min) / (max - min), 1)
-            valueChanged:Fire(currentValue)
-        end
+        -- Chama o SetValue, forçando o envio para o Orquestrador (silent = false)
+        self:SetValue(rawValue, false)
     end
 
     maid:GiveTask(container.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDragging = true
-            updateValue(input)
+            processMouseInput(input)
         end
     end))
 
@@ -117,27 +151,17 @@ function SliderFactory.new(title: string, min: number, max: number, default: num
 
     maid:GiveTask(UserInputService.InputChanged:Connect(function(input)
         if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updateValue(input)
+            processMouseInput(input)
         end
     end))
 
     maid:GiveTask(container)
 
-    local self = {}
-    self.Instance = container
-    self.OnValueChanged = valueChanged.Event
-
-    function self:SetValue(value: number)
-        currentValue = math.clamp(math.round(value), min, max)
-        lblValue.Text = tostring(currentValue)
-        fill.Size = UDim2.fromScale((currentValue - min) / (max - min), 1)
-    end
-
     function self:Destroy()
         maid:Destroy()
     end
 
-    return self
+    return self :: Slider
 end
 
 return SliderFactory
