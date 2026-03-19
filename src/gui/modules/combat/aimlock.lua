@@ -30,87 +30,6 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
 -- =========================================================================
--- SMART BINDER (Universal, Blindado e com Raio-X profundo)
--- =========================================================================
-local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid: any)
-    if not state or not sectionTable then return end
-
-    -- 1. TOGGLES (Wall Check, Knock Check, Key Hold)
-    local targetToggle = (sectionTable.Toggled and sectionTable) or sectionTable.Toggle or sectionTable.ToggleButton
-    if targetToggle and targetToggle.Toggled and targetToggle.SetState then
-        local savedVal = state.Get(stateKey, false)
-        pcall(function() targetToggle:SetState(savedVal, true) end)
-        maid:GiveTask(targetToggle.Toggled:Connect(function(val: boolean) state.Set(stateKey, val) end))
-        return
-    end
-
-    -- 2. SLIDERS (Predict, Smooth)
-    local targetSlider = (sectionTable.OnValueChanged and sectionTable) or sectionTable.Slider
-    if targetSlider and targetSlider.OnValueChanged and targetSlider.SetValue then
-        local savedVal = state.Get(stateKey)
-        if savedVal ~= nil then pcall(function() targetSlider:SetValue(savedVal) end) end
-        maid:GiveTask(targetSlider.OnValueChanged:Connect(function(val: number) state.Set(stateKey, val) end))
-        return
-    end
-
-    -- 3. DROPDOWNS (Aim Part)
-    local targetDropdown = (sectionTable.OnSelectionChanged and sectionTable) or sectionTable.Dropdown
-    if targetDropdown and targetDropdown.OnSelectionChanged and targetDropdown.SetSelected then
-        local savedVal = state.Get(stateKey)
-        if savedVal then pcall(function() targetDropdown:SetSelected(savedVal) end) end
-        maid:GiveTask(targetDropdown.OnSelectionChanged:Connect(function(val: string) state.Set(stateKey, val) end))
-        return
-    end
-
-    -- 4. KEYBINDS (A que já estava funcionando)
-    local targetKey = (sectionTable.KeyChanged and sectionTable) or sectionTable.Keybox or sectionTable.KeyBind
-    if targetKey and targetKey.KeyChanged and targetKey.SetKey then
-        local savedVal = state.Get(stateKey)
-        if savedVal and type(savedVal) == "string" then
-            pcall(function() targetKey:SetKey(Enum.KeyCode[savedVal]) end)
-        end
-        maid:GiveTask(targetKey.KeyChanged:Connect(function(keyEnum: Enum.KeyCode?)
-            state.Set(stateKey, keyEnum and keyEnum.Name or nil)
-        end))
-        return
-    end
-
-    -- 5. FALLBACK: TEXTBOXES DIRETO NA UI (Caso Predict/Smooth usem apenas caixas de texto)
-    local root = sectionTable.Instance
-    if root then
-        local box = root:FindFirstChildWhichIsA("TextBox", true)
-        if box then
-            local savedText = state.Get(stateKey)
-            if savedText ~= nil then box.Text = tostring(savedText) end
-            
-            maid:GiveTask(box.FocusLost:Connect(function()
-                state.Set(stateKey, box.Text)
-            end))
-            return
-        end
-
-        -- 6. FALLBACK: TEXTLABELS SIMULANDO DROPDOWNS
-        local displayLabel = nil
-        for _, child in ipairs(root:GetDescendants()) do
-            if child:IsA("TextLabel") and child.Parent and child.Parent:IsA("TextButton") then
-                if child.Name ~= "Label" and child.Text ~= ">" and child.Text ~= "v" then
-                    displayLabel = child
-                    break
-                end
-            end
-        end
-        if displayLabel then
-            local savedText = state.Get(stateKey)
-            if savedText ~= nil then displayLabel.Text = tostring(savedText) end
-            
-            maid:GiveTask(displayLabel:GetPropertyChangedSignal("Text"):Connect(function()
-                state.Set(stateKey, displayLabel.Text)
-            end))
-        end
-    end
-end
-
--- =========================================================================
 -- CONSTRUTOR DA UI
 -- =========================================================================
 function AimlockFactory.new(): AimlockUI
@@ -156,7 +75,7 @@ function AimlockFactory.new(): AimlockUI
     controls.BackgroundTransparency = 1
     controls.Parent = header
 
-    -- Puxa o estado apenas do botão de Ligar/Desligar (Toggle)
+    -- Puxa o estado apenas do botão de Ligar/Desligar (Toggle Principal)
     local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
 
     local toggleBtn
@@ -209,7 +128,7 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME MODO SILENT AIM (Nasce fechado, quem manda nele é o ContentArea)
+    -- SUBFRAME (Nasce fechado, gerenciado externamente)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 320)
@@ -237,18 +156,21 @@ function AimlockFactory.new(): AimlockUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local function safeLoadSection(moduleType: any, sectionID: string, order: number, parentInstance: Instance, state: any)
+    -- Função de Carregamento modificada para nos DEVOLVER o componente (Para o Orquestrador ler)
+    local function loadSec(moduleType: any, order: number, parentInstance: Instance)
         if typeof(moduleType) == "table" and moduleType.new then
-            local success, instance = pcall(function() return moduleType.new(order, state) end)
+            local success, instance = pcall(function() return moduleType.new(order) end)
             if success and instance then
                 instance.Instance.Parent = parentInstance
-                SmartBinder(instance, "Aimlock_" .. sectionID, state, maid)
                 maid:GiveTask(instance)
+                return instance -- Agora a gente tem acesso ao componente!
             end
         end
+        return nil
     end
 
-    safeLoadSection(KeybindSection, "Keybind", 1, rightContent, UIState)
+    -- CARREGAMENTO DAS SEÇÕES (Apenas monta o visual)
+    local secKeybind = loadSec(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -276,14 +198,14 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    safeLoadSection(KeyHoldSection,   "KeyHold",   1, inputsScroll, UIState)
-    safeLoadSection(PredictSection,   "Predict",   2, inputsScroll, UIState)
-    safeLoadSection(SmoothSection,    "Smooth",    3, inputsScroll, UIState)
-    safeLoadSection(AimPartSection,   "AimPart",   4, inputsScroll, UIState)
-    safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
-    safeLoadSection(KnockCheckSection, "KnockCheck", 6, inputsScroll, UIState)
+    local secAimPart   = loadSec(AimPartSection,   1, inputsScroll)
+    local secPredict   = loadSec(PredictSection,   2, inputsScroll)
+    local secSmooth    = loadSec(SmoothSection,    3, inputsScroll)
+    local secKeyHold   = loadSec(KeyHoldSection,   4, inputsScroll)
+    local secWallCheck = loadSec(WallCheckSection, 5, inputsScroll)
+    local secKnockCheck= loadSec(KnockCheckSection,6, inputsScroll)
 
-    -- EVENTO APENAS PARA O TOGGLE PRINCIPAL E A GLOWBAR
+    -- EVENTO PRINCIPAL
     if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             if glowBar then glowBar:SetState(state) end
@@ -291,7 +213,58 @@ function AimlockFactory.new(): AimlockUI
         end))
     end
 
-    -- SEM EVENTO DE ARROW.TOGGLED AQUI! Deixe o Gerenciador Central trabalhar!
+    -- =========================================================================
+    -- 👑 ORQUESTRADOR DE ESTADOS (CLIENT SYNC)
+    -- =========================================================================
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section, stateKey, componentType)
+        if not section or not UIState then return end
+        
+        if componentType == "TextBox" then
+            -- Força Bruta: Procura a caixa de texto dentro da interface e salva os números
+            local box = section.Instance:FindFirstChildWhichIsA("TextBox", true)
+            if box then
+                box.Text = tostring(UIState.Get(stateKey, box.Text))
+                maid:GiveTask(box.FocusLost:Connect(function() UIState.Set(stateKey, box.Text) end))
+            end
+            
+        elseif componentType == "Keybind" then
+            local targetKey = section.Keybox or section.KeyBind or section
+            if targetKey.SetKey and targetKey.KeyChanged then
+                local saved = UIState.Get(stateKey)
+                if saved then pcall(function() targetKey:SetKey(Enum.KeyCode[saved]) end) end
+                maid:GiveTask(targetKey.KeyChanged:Connect(function(k) UIState.Set(stateKey, k and k.Name or nil) end))
+            end
+            
+        elseif componentType == "Toggle" then
+            local toggle = section.Toggle or section.ToggleButton
+            if toggle and toggle.SetState and toggle.Toggled then
+                toggle:SetState(UIState.Get(stateKey, false), true)
+                maid:GiveTask(toggle.Toggled:Connect(function(val) UIState.Set(stateKey, val) end))
+            else
+                warn("[Orquestrador] Aviso: " .. stateKey .. " nao tem 'self.Toggle' exportado.")
+            end
+            
+        elseif componentType == "Dropdown" then
+            local dropdown = section.Dropdown
+            if dropdown and dropdown.SetSelected then
+                local saved = UIState.Get(stateKey)
+                if saved then pcall(function() dropdown:SetSelected(saved) end) end
+                maid:GiveTask(dropdown.OnSelectionChanged:Connect(function(val) UIState.Set(stateKey, val) end))
+            end
+        end
+    end
+
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (Fácil de ler, manter e editar)
+    Orchestrator.Bind(secKeybind,   "Aimlock_Keybind",   "Keybind")
+    Orchestrator.Bind(secAimPart,   "Aimlock_AimPart",   "Dropdown")
+    Orchestrator.Bind(secPredict,   "Aimlock_Predict",   "TextBox")
+    Orchestrator.Bind(secSmooth,    "Aimlock_Smooth",    "TextBox")
+    Orchestrator.Bind(secKeyHold,   "Aimlock_KeyHold",   "Toggle")
+    Orchestrator.Bind(secWallCheck, "Aimlock_WallCheck", "Toggle")
+    Orchestrator.Bind(secKnockCheck,"Aimlock_KnockCheck","Toggle")
+    -- =========================================================================
 
     maid:GiveTask(container)
     local self = {}
