@@ -1,107 +1,118 @@
 --!strict
---[[
-    SACRAMENT | Combat: Aimlock Module
-    Gerencia a interface de Aimlock, vinculando componentes visuais ao estado global.
---]]
-
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
 
 local function SafeImport(path: string): any?
     local success, result = pcall(function() return Import(path) end)
-    if not success then 
-        warn("[SACRAMENT] Erro crítico ao carregar sub-módulo: " .. path) 
-        return nil 
-    end
+    if not success then warn("[Sacrament] Falha ao importar: " .. path) return nil end
     return result
 end
 
--- Camada de Estado
 local UIState = SafeImport("state/uistate")
 
--- Camada de Componentes (Paths atualizados)
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
 local Sidebar = SafeImport("gui/modules/components/sidebar")
 
--- Seções Internas
 local KeybindSection = SafeImport("gui/modules/combat/sections/shared/keybind")
-local KeyHoldSection = SafeImport("gui/modules/combat/sections/shared/keyhold")
+local AimPartSection = SafeImport("gui/modules/combat/sections/shared/aimpart")
 local PredictSection = SafeImport("gui/modules/combat/sections/shared/predict")
 local SmoothSection = SafeImport("gui/modules/combat/sections/aimlock/smooth")
-local AimPartSection = SafeImport("gui/modules/combat/sections/shared/aimpart")
+local KeyHoldSection = SafeImport("gui/modules/combat/sections/shared/keyhold")
 local WallCheckSection = SafeImport("gui/modules/combat/sections/shared/wallcheck")
 local KnockCheckSection = SafeImport("gui/modules/combat/sections/shared/knockcheck")
 
-export type AimlockUI = { 
-    Instance: Frame, 
-    Destroy: (self: AimlockUI) -> () 
-}
-
+export type AimlockUI = { Instance: Frame, Destroy: (self: AimlockUI) -> () }
 local AimlockFactory = {}
 
 local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
---[[ 
-    MÁQUINA DE BINDING UNIVERSAL (V6 - INTEGRADA COM KEYBOX)
-    Esta função garante que qualquer mudança na UI salve no Estado, e vice-versa.
-]]
-local function UniversalStateBinder(sectionTable: any, stateKey: string, state: any, maid: any)
+-- =========================================================================
+-- SMART BINDER V6 (Memória Absoluta para qualquer Componente)
+-- =========================================================================
+local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid: any)
     if not state or not sectionTable then return end
-    local root = sectionTable.Instance
-    if not root then return end
 
-    -- [CASO 1: TOGGLES / CHECKBOXES]
-    if sectionTable.Toggled and sectionTable.SetState then
+    -- 1. PROCURA POR TOGGLES (Botões de Ligar/Desligar)
+    local toggle = sectionTable.Toggle or sectionTable.ToggleButton
+    if toggle and toggle.Toggled and toggle.SetState then
         local savedVal = state.Get(stateKey, false)
-        sectionTable:SetState(savedVal, true)
-        maid:GiveTask(sectionTable.Toggled:Connect(function(val: boolean)
-            state.Set(stateKey, val)
-        end))
+        toggle:SetState(savedVal, true)
+        maid:GiveTask(toggle.Toggled:Connect(function(val: boolean) state.Set(stateKey, val) end))
         return
     end
 
-    -- [CASO 2: SLIDERS]
-    if sectionTable.OnValueChanged and sectionTable.SetValue then
+    -- 2. PROCURA POR SLIDERS
+    local slider = sectionTable.Slider
+    if slider and slider.OnValueChanged and slider.SetValue then
         local savedVal = state.Get(stateKey)
-        if savedVal ~= nil then sectionTable:SetValue(savedVal) end
-        maid:GiveTask(sectionTable.OnValueChanged:Connect(function(val: number)
-            state.Set(stateKey, val)
-        end))
+        if savedVal ~= nil then slider:SetValue(savedVal) end
+        maid:GiveTask(slider.OnValueChanged:Connect(function(val: number) state.Set(stateKey, val) end))
         return
     end
 
-    -- [CASO 3: KEYBINDS (Integrado com o novo Keybox Component)]
-    if sectionTable.KeyChanged and sectionTable.SetKey then
-        local savedKeyName = state.Get(stateKey)
-        if savedKeyName and type(savedKeyName) == "string" then
-            -- Converte string do state de volta para Enum
-            pcall(function() 
-                local isMouse = savedKeyName:match("MouseButton")
-                local enumType = isMouse and Enum.UserInputType or Enum.KeyCode
-                sectionTable:SetKey(enumType[savedKeyName]) 
-            end)
+    -- 3. PROCURA POR DROPDOWNS (Ex: Aim Part)
+    local dropdown = sectionTable.Dropdown
+    if dropdown and dropdown.OnSelectionChanged and dropdown.SetSelected then
+        local savedVal = state.Get(stateKey)
+        if savedVal then dropdown:SetSelected(savedVal) end
+        maid:GiveTask(dropdown.OnSelectionChanged:Connect(function(val: string) state.Set(stateKey, val) end))
+        return
+    end
+
+    -- 4. PROCURA PELA KEYBIND
+    local keybox = sectionTable.Keybox or sectionTable.KeyBind
+    if keybox or (sectionTable.KeyChanged and sectionTable.SetKey) then
+        local target = keybox or sectionTable
+        local savedVal = state.Get(stateKey)
+        if savedVal and type(savedVal) == "string" then
+            pcall(function() target:SetKey(Enum.KeyCode[savedVal]) end)
         end
-        maid:GiveTask(sectionTable.KeyChanged:Connect(function(keyEnum: any)
+        maid:GiveTask(target.KeyChanged:Connect(function(keyEnum: Enum.KeyCode?)
             state.Set(stateKey, keyEnum and keyEnum.Name or nil)
         end))
         return
     end
 
-    -- [CASO 4: DROPDOWNS / TEXTBOXES]
-    -- (Mantido conforme lógica original do projeto)
+    -- 5. FALLBACK: TEXTBOXES SOLTAS (Se o Predict/Smooth não usarem Slider)
+    local root = sectionTable.Instance
+    if root then
+        local box = root:FindFirstChildWhichIsA("TextBox", true)
+        if box then
+            box.Text = tostring(state.Get(stateKey, box.Text))
+            maid:GiveTask(box.FocusLost:Connect(function()
+                state.Set(stateKey, box.Text)
+            end))
+            return
+        end
+
+        -- FALLBACK: DROPDOWNS SIMPLES (Baseado em texto)
+        local displayLabel = nil
+        for _, child in ipairs(root:GetDescendants()) do
+            if child:IsA("TextLabel") and child.Parent and child.Parent:IsA("TextButton") then
+                if child.Name ~= "Label" and child.Text ~= ">" and child.Text ~= "v" then
+                    displayLabel = child
+                    break
+                end
+            end
+        end
+        if displayLabel then
+            displayLabel.Text = tostring(state.Get(stateKey, displayLabel.Text))
+            maid:GiveTask(displayLabel:GetPropertyChangedSignal("Text"):Connect(function()
+                state.Set(stateKey, displayLabel.Text)
+            end))
+        end
+    end
 end
 
+-- =========================================================================
+-- CONSTRUTOR DA UI
+-- =========================================================================
 function AimlockFactory.new(): AimlockUI
     local maid = Maid.new()
 
-    -- Recuperação imediata de Estado para evitar Desync visual
-    local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
-    local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
-
-    -- Container Principal
     local container = Instance.new("Frame")
     container.Name = "AimlockContainer"
     container.Size = UDim2.new(1, 0, 0, 0)
@@ -109,15 +120,16 @@ function AimlockFactory.new(): AimlockUI
     container.AutomaticSize = Enum.AutomaticSize.Y
 
     local containerLayout = Instance.new("UIListLayout")
+    containerLayout.FillDirection = Enum.FillDirection.Vertical
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 50)
+    header.Size = UDim2.new(0, 280, 0, 50)
     header.BackgroundTransparency = 1
     header.LayoutOrder = 1
+    header.ClipsDescendants = true
     header.Parent = container
 
     local title = Instance.new("TextLabel")
@@ -141,73 +153,80 @@ function AimlockFactory.new(): AimlockUI
     controls.BackgroundTransparency = 1
     controls.Parent = header
 
-    -- COMPONENTES DO HEADER
-    local toggleBtn, arrow, glowBar
+    -- Pega os estados da Memória Volátil
+    local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
+    local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
 
-    if ToggleButton then
+    local toggleBtn
+    if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
-        toggleBtn.Instance.Position = UDim2.fromScale(0, 0.5)
+        toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
         if toggleBtn.SetState then toggleBtn:SetState(isEnabled, true) end
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
 
-    if Arrow then
+    local arrow
+    if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.fromScale(1, 0.5)
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         if arrow.SetState then arrow:SetState(isExpanded, true) end
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
 
-    -- GLOW BAR (Visual Feedback)
     local glowWrapper = Instance.new("Frame")
     glowWrapper.Name = "GlowWrapper"
     glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
     glowWrapper.BackgroundTransparency = 1
     glowWrapper.Parent = header
 
-    if GlowBar then
+    local glowBar
+    if GlowBar and type(GlowBar.new) == "function" then
         glowBar = GlowBar.new()
+        glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
         if glowBar.SetState then glowBar:SetState(isEnabled) end
         glowBar.Instance.Parent = glowWrapper
         maid:GiveTask(glowBar)
     end
 
-    -- Lógica de Posicionamento do Glow (Dinâmica)
     local function updateGlowBar()
         if header.AbsoluteSize.X == 0 then return end
-        local startX = title.AbsolutePosition.X + title.AbsoluteSize.X + 10
-        local endX = controls.AbsolutePosition.X - 10
-        local width = math.max(0, endX - startX)
-        glowWrapper.Position = UDim2.new(0, startX - header.AbsolutePosition.X, 0.5, 0)
-        glowWrapper.Size = UDim2.fromOffset(width, 2)
+        local titleRight = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeft = controls.AbsolutePosition.X
+        local startX = (titleRight - header.AbsolutePosition.X) + 5
+        local width = math.max(0, (controlsLeft - header.AbsolutePosition.X) - 5 - startX)
+        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
+        glowWrapper.Size = UDim2.fromOffset(width, 32)
     end
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME (Conteúdo Expansível)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 320)
     subFrame.BackgroundTransparency = 1
-    subFrame.Visible = isExpanded -- SINCRONIA TOTAL
+    subFrame.BorderSizePixel = 0
+    subFrame.Visible = isExpanded 
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
-    if Sidebar then
+    if Sidebar and type(Sidebar.createVertical) == "function" then
         local vLine = Sidebar.createVertical()
+        vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
         vLine.Instance.Parent = subFrame
         maid:GiveTask(vLine)
     end
 
     local rightContent = Instance.new("Frame")
     rightContent.Name = "RightContent"
-    rightContent.Size = UDim2.new(1, -5, 1, 0)
-    rightContent.Position = UDim2.fromOffset(5, 0)
+    rightContent.Size = UDim2.new(1, -2, 1, 0)
+    rightContent.Position = UDim2.fromOffset(2, 0)
     rightContent.BackgroundTransparency = 1
     rightContent.Parent = subFrame
 
@@ -215,65 +234,65 @@ function AimlockFactory.new(): AimlockUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    --[[ CARREGAMENTO DE SEÇÕES COM BINDING AUTOMÁTICO ]]--
-
-    local function safeLoadSection(module: any, sectionID: string, order: number, parent: Instance)
-        if module and type(module.new) == "function" then
-            local success, inst = pcall(function() return module.new(order) end)
-            if success and inst then
-                inst.Instance.Parent = parent
-                UniversalStateBinder(inst, "Aimlock_" .. sectionID, UIState, maid)
-                maid:GiveTask(inst)
+    local function safeLoadSection(moduleType: any, sectionID: string, order: number, parentInstance: Instance, state: any)
+        if typeof(moduleType) == "table" and moduleType.new then
+            local success, instance = pcall(function() return moduleType.new(order, state) end)
+            if success and instance then
+                instance.Instance.Parent = parentInstance
+                SmartBinder(instance, "Aimlock_" .. sectionID, state, maid)
+                maid:GiveTask(instance)
+            else
+                warn("[SACRAMENT] Falha ao renderizar a sub-secao: " .. sectionID)
             end
         end
     end
 
-    -- Seção de Keybind (Fixa no topo)
-    safeLoadSection(KeybindSection, "MainKey", 1, rightContent)
+    -- 1º: A Keybind fica fixa no topo
+    safeLoadSection(KeybindSection, "Keybind", 1, rightContent, UIState)
 
-    if Sidebar then
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
         hLine.Instance.Parent = rightContent
         maid:GiveTask(hLine)
     end
 
-    -- Área de Scroll para as demais opções
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Name = "OptionsScroll"
-    scroll.Size = UDim2.new(1, 0, 1, -60)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 0
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.LayoutOrder = 3
-    scroll.Parent = rightContent
+    local inputsScroll = Instance.new("ScrollingFrame")
+    inputsScroll.Name = "InputsScroll"
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+    inputsScroll.BackgroundTransparency = 1
+    inputsScroll.BorderSizePixel = 0
+    inputsScroll.ScrollBarThickness = 0
+    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    inputsScroll.LayoutOrder = 3
+    inputsScroll.Parent = rightContent
 
-    local scrollLayout = Instance.new("UIListLayout")
-    scrollLayout.Padding = UDim.new(0, 10)
-    scrollLayout.Parent = scroll
+    local inputsLayout = Instance.new("UIListLayout")
+    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    inputsLayout.Padding = UDim.new(0, 15) -- Espaçamento limpo entre os botões
+    inputsLayout.Parent = inputsScroll
 
-    local scrollPad = Instance.new("UIPadding")
-    scrollPad.PaddingTop = UDim.new(0, 10)
-    scrollPad.PaddingLeft = UDim.new(0, 20)
-    scrollPad.Parent = scroll
+    local inputsPadding = Instance.new("UIPadding")
+    inputsPadding.PaddingTop = UDim.new(0, 15)
+    inputsPadding.PaddingBottom = UDim.new(0, 20)
+    inputsPadding.Parent = inputsScroll
 
-    -- Carregamento das opções granulares
-    safeLoadSection(KeyHoldSection, "Mode", 1, scroll)
-    safeLoadSection(PredictSection, "Prediction", 2, scroll)
-    safeLoadSection(SmoothSection, "Smoothness", 3, scroll)
-    safeLoadSection(AimPartSection, "TargetPart", 4, scroll)
-    safeLoadSection(WallCheckSection, "WallCheck", 5, scroll)
-    safeLoadSection(KnockCheckSection, "KnockCheck", 6, scroll)
+    -- ORDEM LÓGICA DE COMBATE CORRIGIDA
+    safeLoadSection(KeyHoldSection,   "KeyHold",   1, inputsScroll, UIState)
+    safeLoadSection(PredictSection,   "Predict",   2, inputsScroll, UIState)
+    safeLoadSection(SmoothSection,    "Smooth",    3, inputsScroll, UIState)
+    safeLoadSection(AimPartSection,   "AimPart",   4, inputsScroll, UIState)
+    safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
+    safeLoadSection(KnockCheckSection, "KnockCheck", 6, inputsScroll, UIState)
 
-    -- CONEXÕES DE CONTROLE
-    if toggleBtn then
+    -- EVENTOS DIRETOS DA HEADER
+    if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             if glowBar then glowBar:SetState(state) end
             UIState.Set("AimlockEnabled", state)
         end))
     end
 
-    if arrow then
+    if arrow and UIState then
         maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
             subFrame.Visible = state
             UIState.Set("AimlockExpanded", state)
