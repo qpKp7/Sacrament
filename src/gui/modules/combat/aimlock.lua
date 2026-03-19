@@ -198,10 +198,10 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    local secAimPart   = loadSec(AimPartSection,   1, inputsScroll)
+    local secKeyHold   = loadSec(KeyHoldSection,   1, inputsScroll)
     local secPredict   = loadSec(PredictSection,   2, inputsScroll)
     local secSmooth    = loadSec(SmoothSection,    3, inputsScroll)
-    local secKeyHold   = loadSec(KeyHoldSection,   4, inputsScroll)
+    local secAimPart   = loadSec(AimPartSection,   4, inputsScroll)
     local secWallCheck = loadSec(WallCheckSection, 5, inputsScroll)
     local secKnockCheck= loadSec(KnockCheckSection,6, inputsScroll)
 
@@ -214,49 +214,80 @@ function AimlockFactory.new(): AimlockUI
     end
 
     -- =========================================================================
-    -- 👑 ORQUESTRADOR DE ESTADOS (CLIENT SYNC)
+    -- 👑 ORQUESTRADOR DE ESTADOS (CLIENT SYNC) - CONTRATO ESTRITO
     -- =========================================================================
     local Orchestrator = {}
     
-    function Orchestrator.Bind(section, stateKey, componentType)
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
         if not section or not UIState then return end
         
-        if componentType == "TextBox" then
-            -- Força Bruta: Procura a caixa de texto dentro da interface e salva os números
-            local box = section.Instance:FindFirstChildWhichIsA("TextBox", true)
-            if box then
-                box.Text = tostring(UIState.Get(stateKey, box.Text))
-                maid:GiveTask(box.FocusLost:Connect(function() UIState.Set(stateKey, box.Text) end))
-            end
-            
-        elseif componentType == "Keybind" then
-            local targetKey = section.Keybox or section.KeyBind or section
-            if targetKey.SetKey and targetKey.KeyChanged then
-                local saved = UIState.Get(stateKey)
-                if saved then pcall(function() targetKey:SetKey(Enum.KeyCode[saved]) end) end
-                maid:GiveTask(targetKey.KeyChanged:Connect(function(k) UIState.Set(stateKey, k and k.Name or nil) end))
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "TextBox" or componentType == "ValueBox" then
+            -- Exige que a seção exporte o componente real (ex: self.ValueBox = meuComponenteBox)
+            local component = section.ValueBox or section.TextBox
+            if component then
+                -- 1. Restaura silenciosamente
+                if savedValue ~= nil and component.SetValue then
+                    pcall(function() component:SetValue(savedValue, true) end) -- true = silent
+                end
+                -- 2. Ouve a fonte da verdade já sanitizada
+                if component.OnValueChanged then
+                    maid:GiveTask(component.OnValueChanged:Connect(function(finalValue)
+                        UIState.Set(stateKey, finalValue)
+                    end))
+                end
+            else
+                warn("[Orquestrador] Falha: " .. stateKey .. " nao exporta 'self.ValueBox' ou 'self.TextBox'.")
             end
             
         elseif componentType == "Toggle" then
-            local toggle = section.Toggle or section.ToggleButton
-            if toggle and toggle.SetState and toggle.Toggled then
-                toggle:SetState(UIState.Get(stateKey, false), true)
-                maid:GiveTask(toggle.Toggled:Connect(function(val) UIState.Set(stateKey, val) end))
+            local component = section.Toggle or section.ToggleButton
+            if component then
+                if savedValue ~= nil and component.SetState then
+                    pcall(function() component:SetState(savedValue, true) end) -- true = silent
+                end
+                if component.Toggled then
+                    maid:GiveTask(component.Toggled:Connect(function(val: boolean)
+                        UIState.Set(stateKey, val)
+                    end))
+                end
             else
-                warn("[Orquestrador] Aviso: " .. stateKey .. " nao tem 'self.Toggle' exportado.")
+                warn("[Orquestrador] Falha: " .. stateKey .. " nao exporta 'self.Toggle'.")
             end
             
         elseif componentType == "Dropdown" then
-            local dropdown = section.Dropdown
-            if dropdown and dropdown.SetSelected then
-                local saved = UIState.Get(stateKey)
-                if saved then pcall(function() dropdown:SetSelected(saved) end) end
-                maid:GiveTask(dropdown.OnSelectionChanged:Connect(function(val) UIState.Set(stateKey, val) end))
+            local component = section.Dropdown
+            if component then
+                if savedValue ~= nil and component.SetSelected then
+                    pcall(function() component:SetSelected(savedValue, true) end) -- true = silent
+                end
+                if component.OnSelectionChanged then
+                    maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string)
+                        UIState.Set(stateKey, val)
+                    end))
+                end
+            else
+                warn("[Orquestrador] Falha: " .. stateKey .. " nao exporta 'self.Dropdown'.")
+            end
+
+        elseif componentType == "Keybind" then
+            local component = section.Keybox or section.KeyBind or section
+            if component then
+                -- Keybind mantida conforme regra obrigatória 8
+                if savedValue and type(savedValue) == "string" and component.SetKey then
+                    pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end)
+                end
+                if component.KeyChanged then
+                    maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?)
+                        UIState.Set(stateKey, k and k.Name or nil)
+                    end))
+                end
             end
         end
     end
 
-    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (Fácil de ler, manter e editar)
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA
     Orchestrator.Bind(secKeybind,   "Aimlock_Keybind",   "Keybind")
     Orchestrator.Bind(secKeyHold,   "Aimlock_KeyHold",   "Toggle")
     Orchestrator.Bind(secPredict,   "Aimlock_Predict",   "TextBox")
