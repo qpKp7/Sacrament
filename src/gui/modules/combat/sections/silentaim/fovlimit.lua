@@ -19,6 +19,8 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type FovLimitSection = {
     Instance: Frame,
+    Toggle: any,  -- [NOVO] Exportado para a memória do Show FOV
+    Slider: any,  -- [NOVO] Exportado para a memória do FOV Limit
     Destroy: (self: FovLimitSection) -> ()
 }
 
@@ -48,7 +50,7 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     toggleRow.Size = UDim2.new(1, 0, 0, 40)
     toggleRow.BackgroundTransparency = 1
     toggleRow.BorderSizePixel = 0
-    toggleRow.LayoutOrder = 1 -- Movido para cima (ordem primária)
+    toggleRow.LayoutOrder = 1
     toggleRow.Parent = container
 
     local toggleLayout = Instance.new("UIListLayout")
@@ -80,35 +82,47 @@ function FovLimitFactory.new(layoutOrder: number): FovLimitSection
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = toggleRow
 
-    local toggle = nil
+    local self = {} :: any
+    self.Instance = container
+
+    -- 1. Cria e exporta o Toggle
     if ToggleButton and type(ToggleButton.new) == "function" then
-        toggle = ToggleButton.new()
+        local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = toggleCont
         maid:GiveTask(toggle)
+        
+        self.Toggle = toggle
     end
 
-    local fovSlider = nil
+    -- 2. Cria e exporta o Slider (Ajustado para 4 argumentos)
     if Slider and type(Slider.new) == "function" then
-        fovSlider = Slider.new("FOV Limit", 0, 300, 150, 1) -- Range ajustado (0 a 300)
-        fovSlider.Instance.LayoutOrder = 2 -- Aparece abaixo do Toggle
-        fovSlider.Instance.Visible = false -- Oculto por padrão
+        local fovSlider = Slider.new("FOV Limit", 0, 300, 150) 
+        fovSlider.Instance.LayoutOrder = 2
+        fovSlider.Instance.Visible = false
         fovSlider.Instance.Parent = container
         maid:GiveTask(fovSlider)
+        
+        self.Slider = fovSlider
     end
 
-    -- Evento para exibir/ocultar o Slider dinamicamente
-    if toggle and fovSlider then
-        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
-            fovSlider.Instance.Visible = state
+    -- 3. Lógica de visibilidade dinâmica
+    if self.Toggle and self.Slider then
+        -- Evento quando o usuário clica com o mouse
+        maid:GiveTask(self.Toggle.Toggled:Connect(function(state: boolean)
+            self.Slider.Instance.Visible = state
         end))
+        
+        -- Intercepta o carregamento silencioso da memória pelo Orquestrador!
+        local originalSetState = self.Toggle.SetState
+        self.Toggle.SetState = function(toggleSelf, state, silent)
+            originalSetState(toggleSelf, state, silent)
+            self.Slider.Instance.Visible = state
+        end
     end
 
     maid:GiveTask(container)
-
-    local self = {}
-    self.Instance = container
 
     function self:Destroy()
         maid:Destroy()
