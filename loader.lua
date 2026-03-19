@@ -17,23 +17,38 @@ function Sacrament:Init()
     local baseUrl = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/"
     local moduleCache = {}
 
+    -- LISTA DAS PASTAS (Corta requisições HTTP perdidas pela raiz)
+    local FolderModules = {
+        ["gui/modules/combat"] = true,
+        ["gui/modules/player"] = true,
+        ["gui/modules/visual"] = true,
+        ["gui/modules/misc"] = true,
+        ["gui/modules/info"] = true,
+        ["gui/modules/components"] = true -- Adicionado suporte para componentes
+    }
+
     (_G :: any).SacramentImport = function(path: string): any
         if moduleCache[path] then
             return moduleCache[path]
         end
 
-        local url = baseUrl .. path .. ".lua?cb=" .. cacheBuster
+        -- LÓGICA DE PATH CORRETA: Pasta usa /init.lua, arquivo usa .lua
+        local isFolder = FolderModules[path]
+        local fullPath = isFolder and (path .. "/init.lua") or (path .. ".lua")
+        
+        local url = baseUrl .. fullPath .. "?cb=" .. cacheBuster
         local success, response = pcall(function()
             return (game :: any):HttpGet(url, true)
         end)
 
-        if not success or type(response) ~= "string" then
-            error("[Sacrament] Falha de rede ao carregar módulo: " .. path)
+        -- Checa se o GitHub retornou 404
+        if not success or type(response) ~= "string" or response:find("404: Not Found") then
+            error("[Sacrament] Falha de rede ou Arquivo Morto: " .. fullPath)
         end
 
-        local loadFn = loadstring(response)
+        local loadFn, syntaxErr = loadstring(response, fullPath)
         if type(loadFn) ~= "function" then
-            error("[Sacrament] Erro de sintaxe no módulo remoto: " .. path)
+            error(string.format("[Sacrament] Erro de sintaxe em %s:\n%s", fullPath, tostring(syntaxErr)))
         end
 
         local result = loadFn()
