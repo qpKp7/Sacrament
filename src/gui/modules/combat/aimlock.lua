@@ -258,10 +258,10 @@ function AimlockFactory.new(): AimlockUI
 
     -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (Fácil de ler, manter e editar)
     Orchestrator.Bind(secKeybind,   "Aimlock_Keybind",   "Keybind")
-    Orchestrator.Bind(secAimPart,   "Aimlock_AimPart",   "Dropdown")
+    Orchestrator.Bind(secKeyHold,   "Aimlock_KeyHold",   "Toggle")
     Orchestrator.Bind(secPredict,   "Aimlock_Predict",   "TextBox")
     Orchestrator.Bind(secSmooth,    "Aimlock_Smooth",    "TextBox")
-    Orchestrator.Bind(secKeyHold,   "Aimlock_KeyHold",   "Toggle")
+    Orchestrator.Bind(secAimPart,   "Aimlock_AimPart",   "Dropdown")
     Orchestrator.Bind(secWallCheck, "Aimlock_WallCheck", "Toggle")
     Orchestrator.Bind(secKnockCheck,"Aimlock_KnockCheck","Toggle")
     -- =========================================================================
