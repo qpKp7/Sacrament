@@ -30,15 +30,14 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
 -- =========================================================================
--- SMART BINDER V6
+-- SMART BINDER (Garante a memória das opções internas, mas ignora a Arrow)
 -- =========================================================================
 local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid: any)
     if not state or not sectionTable then return end
 
     local toggle = sectionTable.Toggle or sectionTable.ToggleButton
     if toggle and toggle.Toggled and toggle.SetState then
-        local savedVal = state.Get(stateKey, false)
-        toggle:SetState(savedVal, true)
+        toggle:SetState(state.Get(stateKey, false), true)
         maid:GiveTask(toggle.Toggled:Connect(function(val: boolean) state.Set(stateKey, val) end))
         return
     end
@@ -70,34 +69,6 @@ local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid
             state.Set(stateKey, keyEnum and keyEnum.Name or nil)
         end))
         return
-    end
-
-    local root = sectionTable.Instance
-    if root then
-        local box = root:FindFirstChildWhichIsA("TextBox", true)
-        if box then
-            box.Text = tostring(state.Get(stateKey, box.Text))
-            maid:GiveTask(box.FocusLost:Connect(function()
-                state.Set(stateKey, box.Text)
-            end))
-            return
-        end
-
-        local displayLabel = nil
-        for _, child in ipairs(root:GetDescendants()) do
-            if child:IsA("TextLabel") and child.Parent and child.Parent:IsA("TextButton") then
-                if child.Name ~= "Label" and child.Text ~= ">" and child.Text ~= "v" then
-                    displayLabel = child
-                    break
-                end
-            end
-        end
-        if displayLabel then
-            displayLabel.Text = tostring(state.Get(stateKey, displayLabel.Text))
-            maid:GiveTask(displayLabel:GetPropertyChangedSignal("Text"):Connect(function()
-                state.Set(stateKey, displayLabel.Text)
-            end))
-        end
     end
 end
 
@@ -147,8 +118,8 @@ function AimlockFactory.new(): AimlockUI
     controls.BackgroundTransparency = 1
     controls.Parent = header
 
+    -- Puxa o estado apenas do botão de Ligar/Desligar (Toggle)
     local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
-    local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
 
     local toggleBtn
     if ToggleButton and type(ToggleButton.new) == "function" then
@@ -160,19 +131,12 @@ function AimlockFactory.new(): AimlockUI
         maid:GiveTask(toggleBtn)
     end
 
+    -- ARROW MODO SILENT AIM (Sem interferência)
     local arrow
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-        
-        if arrow.SetState then pcall(function() arrow:SetState(isExpanded, true) end) end
-        
-        local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
-        if arrowBtn then
-            arrowBtn.Text = isExpanded and "v" or ">"
-        end
-        
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -207,12 +171,13 @@ function AimlockFactory.new(): AimlockUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
+    -- SUBFRAME MODO SILENT AIM (Nasce fechado, quem manda nele é o ContentArea)
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 320)
     subFrame.BackgroundTransparency = 1
     subFrame.BorderSizePixel = 0
-    subFrame.Visible = isExpanded 
+    subFrame.Visible = false 
     subFrame.LayoutOrder = 2
     subFrame.Parent = container
 
@@ -280,9 +245,7 @@ function AimlockFactory.new(): AimlockUI
     safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
     safeLoadSection(KnockCheckSection,"Knock",     6, inputsScroll, UIState)
 
-    -- =========================================================================
-    -- EVENTOS DIRETOS (Com Auto-Cura Anti-Acordeão)
-    -- =========================================================================
+    -- EVENTO APENAS PARA O TOGGLE PRINCIPAL E A GLOWBAR
     if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             if glowBar then glowBar:SetState(state) end
@@ -290,35 +253,7 @@ function AimlockFactory.new(): AimlockUI
         end))
     end
 
-    -- Variável de Verdade Absoluta
-    local currentArrowState = isExpanded
-
-    if arrow and UIState then
-        local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
-        
-        maid:GiveTask(arrow.Toggled:Connect(function()
-            -- [AUTO-CURA] Se o Silent Aim escondeu a aba nas nossas costas, corrigimos isso primeiro!
-            if subFrame.Visible == false and currentArrowState == true then
-                currentArrowState = false
-            end
-            
-            -- Inverte com segurança
-            currentArrowState = not currentArrowState
-            
-            -- Aplica na UI
-            subFrame.Visible = currentArrowState
-            UIState.Set("AimlockExpanded", currentArrowState)
-            
-            -- Força o texto visual correto sem depender do Arrow.lua
-            if arrowBtn then
-                arrowBtn.Text = currentArrowState and "v" or ">"
-            end
-            
-            -- [BUGFIX ROBLOX ENGINE] Força o container a atualizar a altura
-            container.AutomaticSize = Enum.AutomaticSize.None
-            container.AutomaticSize = Enum.AutomaticSize.Y
-        end))
-    end
+    -- SEM EVENTO DE ARROW.TOGGLED AQUI! Deixe o Gerenciador Central trabalhar!
 
     maid:GiveTask(container)
     local self = {}
