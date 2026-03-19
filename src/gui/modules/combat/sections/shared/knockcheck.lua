@@ -18,6 +18,7 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type KnockCheckSection = {
     Instance: Frame,
+    Toggle: any, -- Exportado para o Orquestrador achar!
     Destroy: (self: KnockCheckSection) -> ()
 }
 
@@ -65,18 +66,21 @@ function KnockCheckFactory.new(layoutOrder: number): KnockCheckSection
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
+    local self = {} :: any
+    self.Instance = row
+
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = toggleCont
         maid:GiveTask(toggle)
+        
+        -- EXPORTANDO PARA A MEMÓRIA!
+        self.Toggle = toggle
     end
 
     maid:GiveTask(row)
-
-    local self = {}
-    self.Instance = row
 
     function self:Destroy()
         maid:Destroy()
