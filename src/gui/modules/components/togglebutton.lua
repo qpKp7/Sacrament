@@ -6,7 +6,8 @@ local Maid = Import("utils/maid")
 export type ToggleButton = {
     Instance: TextButton,
     Toggled: RBXScriptSignal,
-    SetState: (self: ToggleButton, state: boolean, instant: boolean?) -> (),
+    GetValue: (self: ToggleButton) -> boolean,
+    SetState: (self: ToggleButton, state: boolean, silent: boolean?) -> (),
     Destroy: (self: ToggleButton) -> (),
 }
 
@@ -49,42 +50,49 @@ function ToggleButtonFactory.new(initialState: boolean?): ToggleButton
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = knob
 
-    -- Função de atualização visual com suporte a modo instantâneo
-    local function updateVisuals(state: boolean, instant: boolean?)
+    local self = {} :: any
+    self.Instance = button
+    self.Toggled = toggledEvent.Event
+
+    -- =========================================================
+    -- CONTRATO OBRIGATÓRIO: SetState Unificado
+    -- =========================================================
+    function self:SetState(state: boolean, silent: boolean?)
+        isEnabled = state
+        
         local targetPos = state and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
         local targetColor = state and COLOR_BG_ON or COLOR_BG_OFF
 
-        if instant then
+        if silent then
+            -- Se for o Orquestrador injetando a memória, muda instantaneamente e sem gritar
             knob.Position = targetPos
             button.BackgroundColor3 = targetColor
         else
+            -- Se for o usuário interagindo, anima e grita pro Orquestrador salvar
             local tweenPos = TweenService:Create(knob, tInfo, { Position = targetPos })
             local tweenColor = TweenService:Create(button, tInfo, { BackgroundColor3 = targetColor })
             
             tweenPos:Play()
             tweenColor:Play()
 
-            maid:GiveTask(tweenPos.Completed:Connect(function() tweenPos:Destroy() end))
-            maid:GiveTask(tweenColor.Completed:Connect(function() tweenColor:Destroy() end))
+            -- Limpeza limpa sem atrapalhar a thread
+            task.delay(0.25, function()
+                tweenPos:Destroy()
+                tweenColor:Destroy()
+            end)
+
+            toggledEvent:Fire(isEnabled)
         end
     end
 
-    -- Evento de clique do usuário (sempre animado)
-    maid:GiveTask(button.MouseButton1Click:Connect(function()
-        isEnabled = not isEnabled
-        updateVisuals(isEnabled, false)
-        toggledEvent:Fire(isEnabled)
-    end))
-
-    local self = {}
-    self.Instance = button
-    self.Toggled = toggledEvent.Event
-
-    -- Método para alterar o estado via código (suporta modo silencioso para o Loader)
-    function self:SetState(state: boolean, instant: boolean?)
-        isEnabled = state
-        updateVisuals(state, instant)
+    function self:GetValue()
+        return isEnabled
     end
+
+    -- O clique do usuário agora chama o Contrato dizendo: "Muda aí, e não é silencioso!"
+    maid:GiveTask(button.MouseButton1Click:Connect(function()
+        self:SetState(not isEnabled, false)
+    end))
 
     function self:Destroy()
         maid:Destroy()
