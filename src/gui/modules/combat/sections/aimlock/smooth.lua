@@ -1,53 +1,18 @@
 --!strict
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
+local ValueBox = Import("gui/modules/components/valuebox") -- Puxamos a nossa fábrica de inputs!
 
 export type SmoothSection = {
     Instance: Frame,
+    ValueBox: any, -- Adicionamos no contrato para o Orquestrador achar
     Destroy: (self: SmoothSection) -> ()
 }
 
 local SmoothFactory = {}
 
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
-local COLOR_WHITE = Color3.fromHex("FFFFFF")
-local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
-local COLOR_BOX_BORDER = Color3.fromHex("333333")
 local FONT_MAIN = Enum.Font.GothamBold
-
-local DEFAULT_SMOOTH = "0.50"
-
-local function enforceDecimalBox(maid: any, box: TextBox, default: string, decimals: number, maxLen: number)
-    maid:GiveTask(box:GetPropertyChangedSignal("Text"):Connect(function()
-        local text = box.Text
-        local clean = string.gsub(text, "[^%d%.]", "")
-        local dots = 0
-        
-        clean = string.gsub(clean, "%.", function()
-            dots = dots + 1
-            return dots == 1 and "." or ""
-        end)
-        
-        if #clean > maxLen then
-            clean = string.sub(clean, 1, maxLen)
-        end
-        
-        if box.Text ~= clean then
-            box.Text = clean
-        end
-    end))
-    
-    maid:GiveTask(box.FocusLost:Connect(function()
-        local num = tonumber(box.Text)
-        if not num then
-            box.Text = default
-            return
-        end
-        
-        num = math.clamp(num, 0, 1)
-        box.Text = string.format("%." .. tostring(decimals) .. "f", num)
-    end))
-end
 
 function SmoothFactory.new(layoutOrder: number): SmoothSection
     local maid = Maid.new()
@@ -82,44 +47,23 @@ function SmoothFactory.new(layoutOrder: number): SmoothSection
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
-    local inputCont = Instance.new("Frame")
-    inputCont.Name = "InputContainer"
-    inputCont.Size = UDim2.new(0, 120, 0, 32)
-    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
-    inputCont.AnchorPoint = Vector2.new(1, 0.5)
-    inputCont.BackgroundColor3 = COLOR_BOX_BG
-    inputCont.BorderSizePixel = 0
-    inputCont.Parent = row
-
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 6)
-    inputCorner.Parent = inputCont
-
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = COLOR_BOX_BORDER
-    inputStroke.Thickness = 1
-    inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    inputStroke.Parent = inputCont
-
-    local smoothBox = Instance.new("TextBox")
-    smoothBox.Name = "SmoothBox"
-    smoothBox.Size = UDim2.fromScale(1, 1)
-    smoothBox.BackgroundColor3 = COLOR_BOX_BG
-    smoothBox.BackgroundTransparency = 1
-    smoothBox.BorderSizePixel = 0
-    smoothBox.Text = DEFAULT_SMOOTH
-    smoothBox.TextColor3 = COLOR_WHITE
-    smoothBox.Font = FONT_MAIN
-    smoothBox.TextSize = 16
-    smoothBox.ClearTextOnFocus = false
-    smoothBox.Parent = inputCont
-    
-    enforceDecimalBox(maid, smoothBox, DEFAULT_SMOOTH, 2, 4)
+    -- =========================================================
+    -- NOSSO COMPONENTE MÁGICO
+    -- Default: 0.50 | Min: 0 | Max: 1 | Casas Decimais: 2 | Max Caracteres: 4
+    -- =========================================================
+    local smoothInput = ValueBox.new(0.50, 0, 1, 2, 4)
+    smoothInput.Instance.AnchorPoint = Vector2.new(1, 0.5)
+    smoothInput.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+    smoothInput.Instance.Parent = row
+    maid:GiveTask(smoothInput)
 
     maid:GiveTask(row)
 
     local self = {}
     self.Instance = row
+    
+    -- EXPORTA A VARIÁVEL PARA O ORQUESTRADOR GRUDAR A MEMÓRIA!
+    self.ValueBox = smoothInput
 
     function self:Destroy()
         maid:Destroy()
