@@ -1,53 +1,18 @@
 --!strict
 local Import = (_G :: any).SacramentImport
 local Maid = Import("utils/maid")
+local ValueBox = Import("gui/modules/components/valuebox") -- Importando a fábrica!
 
 export type PredictSection = {
     Instance: Frame,
+    ValueBox: any, -- Exportado para o Orquestrador
     Destroy: (self: PredictSection) -> ()
 }
 
 local PredictFactory = {}
 
 local COLOR_LABEL = Color3.fromRGB(200, 200, 200)
-local COLOR_WHITE = Color3.fromHex("FFFFFF")
-local COLOR_BOX_BG = Color3.fromHex("1A1A1A")
-local COLOR_BOX_BORDER = Color3.fromHex("333333")
 local FONT_MAIN = Enum.Font.GothamBold
-
-local DEFAULT_PREDICT = "0.135"
-
-local function enforceDecimalBox(maid: any, box: TextBox, default: string, decimals: number, maxLen: number)
-    maid:GiveTask(box:GetPropertyChangedSignal("Text"):Connect(function()
-        local text = box.Text
-        local clean = string.gsub(text, "[^%d%.]", "")
-        local dots = 0
-        
-        clean = string.gsub(clean, "%.", function()
-            dots = dots + 1
-            return dots == 1 and "." or ""
-        end)
-        
-        if #clean > maxLen then
-            clean = string.sub(clean, 1, maxLen)
-        end
-        
-        if box.Text ~= clean then
-            box.Text = clean
-        end
-    end))
-    
-    maid:GiveTask(box.FocusLost:Connect(function()
-        local num = tonumber(box.Text)
-        if not num then
-            box.Text = default
-            return
-        end
-        
-        num = math.clamp(num, 0, 1)
-        box.Text = string.format("%." .. tostring(decimals) .. "f", num)
-    end))
-end
 
 function PredictFactory.new(layoutOrder: number): PredictSection
     local maid = Maid.new()
@@ -81,42 +46,23 @@ function PredictFactory.new(layoutOrder: number): PredictSection
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
 
-    local inputCont = Instance.new("Frame")
-    inputCont.Size = UDim2.new(0, 120, 0, 32)
-    inputCont.Position = UDim2.new(1, 0, 0.5, 0)
-    inputCont.AnchorPoint = Vector2.new(1, 0.5)
-    inputCont.BackgroundColor3 = COLOR_BOX_BG
-    inputCont.BorderSizePixel = 0
-    inputCont.Parent = row
-
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 6)
-    inputCorner.Parent = inputCont
-
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = COLOR_BOX_BORDER
-    inputStroke.Thickness = 1
-    inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    inputStroke.Parent = inputCont
-
-    local predBox = Instance.new("TextBox")
-    predBox.Size = UDim2.fromScale(1, 1)
-    predBox.BackgroundColor3 = COLOR_BOX_BG
-    predBox.BackgroundTransparency = 1
-    predBox.BorderSizePixel = 0
-    predBox.Text = DEFAULT_PREDICT
-    predBox.TextColor3 = COLOR_WHITE
-    predBox.Font = FONT_MAIN
-    predBox.TextSize = 16
-    predBox.ClearTextOnFocus = false
-    predBox.Parent = inputCont
-    
-    enforceDecimalBox(maid, predBox, DEFAULT_PREDICT, 3, 5)
+    -- =========================================================
+    -- NOSSO COMPONENTE MÁGICO
+    -- Default: 0.135 | Min: 0 | Max: 1 | Casas Decimais: 3 | Max Caracteres: 5
+    -- =========================================================
+    local predictInput = ValueBox.new(0.135, 0, 1, 3, 5)
+    predictInput.Instance.AnchorPoint = Vector2.new(1, 0.5)
+    predictInput.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+    predictInput.Instance.Parent = row
+    maid:GiveTask(predictInput)
 
     maid:GiveTask(row)
 
     local self = {}
     self.Instance = row
+    
+    -- EXPORTA A VARIÁVEL PARA O ORQUESTRADOR!
+    self.ValueBox = predictInput
 
     function self:Destroy()
         maid:Destroy()
