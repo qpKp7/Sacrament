@@ -18,6 +18,7 @@ local Slider = SafeImport("gui/modules/components/slider")
 
 export type HitChanceSection = {
     Instance: Frame,
+    Slider: any, -- [NOVO] Exportado para o Orquestrador ler a memória!
     Destroy: (self: HitChanceSection) -> ()
 }
 
@@ -27,12 +28,17 @@ function HitChanceFactory.new(layoutOrder: number): HitChanceSection
     local maid = Maid.new()
     
     local targetInstance: Frame
+    local self = {} :: any
     
     if Slider and type(Slider.new) == "function" then
-        local slider = Slider.new("Hit Chance", 0, 100, 95, 1)
+        -- Usando o nosso novo padrão de 4 argumentos: (Título, Mínimo, Máximo, Padrão)
+        local slider = Slider.new("Hit Chance", 0, 100, 95)
         slider.Instance.LayoutOrder = layoutOrder
         maid:GiveTask(slider)
         targetInstance = slider.Instance
+        
+        -- [O SEGREDO] Entregando o Slider para o Orquestrador plugar a memória
+        self.Slider = slider
     else
         -- Fallback seguro para evitar que a interface crashe se o Slider falhar
         targetInstance = Instance.new("Frame")
@@ -44,7 +50,6 @@ function HitChanceFactory.new(layoutOrder: number): HitChanceSection
         maid:GiveTask(targetInstance)
     end
 
-    local self = {}
     self.Instance = targetInstance
 
     function self:Destroy()
