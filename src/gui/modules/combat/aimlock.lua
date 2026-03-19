@@ -238,12 +238,12 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    safeLoadSection(AimPartSection,   "AimPart",   1, inputsScroll, UIState)
+    safeLoadSection(KeyHoldSection,   "KeyHold",   1, inputsScroll, UIState)
     safeLoadSection(PredictSection,   "Predict",   2, inputsScroll, UIState)
     safeLoadSection(SmoothSection,    "Smooth",    3, inputsScroll, UIState)
-    safeLoadSection(KeyHoldSection,   "KeyHold",   4, inputsScroll, UIState)
+    safeLoadSection(AimPartSection,   "AimPart",   4, inputsScroll, UIState)
     safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
-    safeLoadSection(KnockCheckSection,"Knock",     6, inputsScroll, UIState)
+    safeLoadSection(KnockCheckSection, "KnockCheck", 6, inputsScroll, UIState)
 
     -- EVENTO APENAS PARA O TOGGLE PRINCIPAL E A GLOWBAR
     if toggleBtn and UIState then
