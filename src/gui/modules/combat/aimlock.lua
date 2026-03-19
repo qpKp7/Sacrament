@@ -30,7 +30,7 @@ local COLOR_WHITE = Color3.fromHex("B4B4B4")
 local FONT_MAIN = Enum.Font.GothamBold
 
 -- =========================================================================
--- SMART BINDER V6 (Memória Absoluta para qualquer Componente)
+-- SMART BINDER V6
 -- =========================================================================
 local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid: any)
     if not state or not sectionTable then return end
@@ -147,7 +147,6 @@ function AimlockFactory.new(): AimlockUI
     controls.BackgroundTransparency = 1
     controls.Parent = header
 
-    -- CHAVE DE MEMÓRIA (Se for copiar para o Silent Aim, mude o nome disso!)
     local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
     local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
 
@@ -167,10 +166,8 @@ function AimlockFactory.new(): AimlockUI
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         
-        -- Sincroniza o componente
         if arrow.SetState then pcall(function() arrow:SetState(isExpanded, true) end) end
         
-        -- [BLINDAGEM ANTI-DESYNC] Força o botão de texto a ter a string correta na inicialização
         local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
         if arrowBtn then
             arrowBtn.Text = isExpanded and "v" or ">"
@@ -244,8 +241,6 @@ function AimlockFactory.new(): AimlockUI
                 instance.Instance.Parent = parentInstance
                 SmartBinder(instance, "Aimlock_" .. sectionID, state, maid)
                 maid:GiveTask(instance)
-            else
-                warn("[SACRAMENT] Falha ao renderizar a sub-secao: " .. sectionID)
             end
         end
     end
@@ -286,7 +281,7 @@ function AimlockFactory.new(): AimlockUI
     safeLoadSection(KnockCheckSection,"Knock",     6, inputsScroll, UIState)
 
     -- =========================================================================
-    -- EVENTOS DIRETOS (Com Blindagem Visual)
+    -- EVENTOS DIRETOS (Com Auto-Cura Anti-Acordeão)
     -- =========================================================================
     if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
@@ -295,16 +290,33 @@ function AimlockFactory.new(): AimlockUI
         end))
     end
 
+    -- Variável de Verdade Absoluta
+    local currentArrowState = isExpanded
+
     if arrow and UIState then
-        maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
-            subFrame.Visible = state
-            UIState.Set("AimlockExpanded", state)
-            
-            -- [BLINDAGEM ANTI-DESYNC] Garante que a imagem visual acompanhe o subframe
-            local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
-            if arrowBtn then
-                arrowBtn.Text = state and "v" or ">"
+        local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
+        
+        maid:GiveTask(arrow.Toggled:Connect(function()
+            -- [AUTO-CURA] Se o Silent Aim escondeu a aba nas nossas costas, corrigimos isso primeiro!
+            if subFrame.Visible == false and currentArrowState == true then
+                currentArrowState = false
             end
+            
+            -- Inverte com segurança
+            currentArrowState = not currentArrowState
+            
+            -- Aplica na UI
+            subFrame.Visible = currentArrowState
+            UIState.Set("AimlockExpanded", currentArrowState)
+            
+            -- Força o texto visual correto sem depender do Arrow.lua
+            if arrowBtn then
+                arrowBtn.Text = currentArrowState and "v" or ">"
+            end
+            
+            -- [BUGFIX ROBLOX ENGINE] Força o container a atualizar a altura
+            container.AutomaticSize = Enum.AutomaticSize.None
+            container.AutomaticSize = Enum.AutomaticSize.Y
         end))
     end
 
