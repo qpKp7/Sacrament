@@ -13,6 +13,8 @@ local function SafeImport(path: string): any?
     return result
 end
 
+local UIState = SafeImport("state/uistate") -- [NOVO] Importando o Cofre Global
+
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
@@ -85,11 +87,15 @@ function SilentAimFactory.new(): SilentAimUI
     controls.Active = false
     controls.Parent = header
 
+    -- Puxa o estado do botão principal de Ligar/Desligar
+    local isEnabled = UIState and UIState.Get("SilentAimEnabled", false) or false
+
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        if toggleBtn.SetState then pcall(function() toggleBtn:SetState(isEnabled, true) end) end
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -98,7 +104,7 @@ function SilentAimFactory.new(): SilentAimUI
     if Arrow and type(Arrow.new) == "function" then
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
-        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0) -- Correção: Offset -20 removido
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -117,6 +123,7 @@ function SilentAimFactory.new(): SilentAimUI
         glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        if glowBar.SetState then glowBar:SetState(isEnabled) end
         glowBar.Instance.Parent = glowWrapper
 
         local gObj = glowBar.Instance
@@ -180,7 +187,8 @@ function SilentAimFactory.new(): SilentAimUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+    -- [MODIFICADO] Função alterada para nos devolver a instância da seção
+    local function loadSec(moduleType: any, order: number, parentInstance: Instance)
         if type(moduleType) == "table" and type(moduleType.new) == "function" then
             local success, instance = pcall(function()
                 return moduleType.new(order)
@@ -188,11 +196,13 @@ function SilentAimFactory.new(): SilentAimUI
             if success and instance and instance.Instance then
                 instance.Instance.Parent = parentInstance
                 maid:GiveTask(instance)
+                return instance
             end
         end
+        return nil
     end
 
-    safeLoadSection(KeybindSection, 1, rightContent)
+    local secKeybind = loadSec(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -219,25 +229,101 @@ function SilentAimFactory.new(): SilentAimUI
     local inputsPadding = Instance.new("UIPadding")
     inputsPadding.PaddingTop = UDim.new(0, 20)
     inputsPadding.PaddingBottom = UDim.new(0, 20)
-    -- PaddingRight removido para alinhar perfeitamente com o Fly
     inputsPadding.Parent = inputsScroll
 
-    safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(PredictSection, 2, inputsScroll)
-    safeLoadSection(HitChanceSection, 3, inputsScroll)
-    safeLoadSection(MarkStyleSection, 4, inputsScroll)
-    safeLoadSection(FovLimitSection, 5, inputsScroll)
-    safeLoadSection(AimPartSection, 6, inputsScroll)
-    safeLoadSection(WallCheckSection, 7, inputsScroll)
-    safeLoadSection(KnockCheckSection, 8, inputsScroll)
+    -- CARREGAMENTO E CAPTURA DOS COMPONENTES
+    local secKeyHold   = loadSec(KeyHoldSection, 1, inputsScroll)
+    local secPredict   = loadSec(PredictSection, 2, inputsScroll)
+    local secHitChance = loadSec(HitChanceSection, 3, inputsScroll)
+    local secMarkStyle = loadSec(MarkStyleSection, 4, inputsScroll)
+    local secFovLimit  = loadSec(FovLimitSection, 5, inputsScroll)
+    local secAimPart   = loadSec(AimPartSection, 6, inputsScroll)
+    local secWallCheck = loadSec(WallCheckSection, 7, inputsScroll)
+    local secKnockCheck= loadSec(KnockCheckSection, 8, inputsScroll)
 
-    if toggleBtn and glowBar then
+    -- EVENTO DO TOGGLE PRINCIPAL DO SILENT AIM
+    if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-            glowBar:SetState(state)
+            if glowBar then glowBar:SetState(state) end
+            UIState.Set("SilentAimEnabled", state)
         end))
     end
 
-    -- CORREÇÃO DO DUPLO CLIQUE: A conexão de arrow.Toggled que forçava subFrame.Visible foi removida.
+    -- =========================================================================
+    -- 👑 ORQUESTRADOR DE ESTADOS (Idêntico ao do Aimlock)
+    -- =========================================================================
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
+        if not section or not UIState then return end
+        
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "TextBox" or componentType == "ValueBox" then
+            local component = section.ValueBox or section.TextBox
+            if component then
+                if savedValue ~= nil and component.SetValue then
+                    pcall(function() component:SetValue(savedValue, true) end)
+                end
+                if component.OnValueChanged then
+                    maid:GiveTask(component.OnValueChanged:Connect(function(finalValue)
+                        UIState.Set(stateKey, finalValue)
+                    end))
+                end
+            end
+            
+        elseif componentType == "Toggle" then
+            local component = section.Toggle or section.ToggleButton
+            if component then
+                if savedValue ~= nil and component.SetState then
+                    pcall(function() component:SetState(savedValue, true) end)
+                end
+                if component.Toggled then
+                    maid:GiveTask(component.Toggled:Connect(function(val: boolean)
+                        UIState.Set(stateKey, val)
+                    end))
+                end
+            end
+            
+        elseif componentType == "Dropdown" then
+            local component = section.Dropdown
+            if component then
+                if savedValue ~= nil and component.SetSelected then
+                    pcall(function() component:SetSelected(savedValue, true) end)
+                end
+                if component.OnSelectionChanged then
+                    maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string)
+                        UIState.Set(stateKey, val)
+                    end))
+                end
+            end
+
+        elseif componentType == "Keybind" then
+            local component = section.Keybox or section.KeyBind or section
+            if component then
+                if savedValue and type(savedValue) == "string" and component.SetKey then
+                    pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end)
+                end
+                if component.KeyChanged then
+                    maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?)
+                        UIState.Set(stateKey, k and k.Name or nil)
+                    end))
+                end
+            end
+        end
+    end
+
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (CHAVES DO SILENT AIM)
+    Orchestrator.Bind(secKeybind,   "SilentAim_Keybind",   "Keybind")
+    Orchestrator.Bind(secKeyHold,   "SilentAim_KeyHold",   "Toggle")
+    Orchestrator.Bind(secPredict,   "SilentAim_Predict",   "ValueBox")
+    Orchestrator.Bind(secHitChance, "SilentAim_HitChance", "ValueBox")
+    Orchestrator.Bind(secMarkStyle, "SilentAim_MarkStyle", "Dropdown")
+    Orchestrator.Bind(secFovLimit,  "SilentAim_FovLimit",  "ValueBox")
+    Orchestrator.Bind(secAimPart,   "SilentAim_AimPart",   "Dropdown")
+    Orchestrator.Bind(secWallCheck, "SilentAim_WallCheck", "Toggle")
+    Orchestrator.Bind(secKnockCheck,"SilentAim_KnockCheck","Toggle")
+    -- =========================================================================
 
     maid:GiveTask(container)
     
