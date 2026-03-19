@@ -35,7 +35,6 @@ local FONT_MAIN = Enum.Font.GothamBold
 local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid: any)
     if not state or not sectionTable then return end
 
-    -- 1. PROCURA POR TOGGLES (Botões de Ligar/Desligar)
     local toggle = sectionTable.Toggle or sectionTable.ToggleButton
     if toggle and toggle.Toggled and toggle.SetState then
         local savedVal = state.Get(stateKey, false)
@@ -44,7 +43,6 @@ local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid
         return
     end
 
-    -- 2. PROCURA POR SLIDERS
     local slider = sectionTable.Slider
     if slider and slider.OnValueChanged and slider.SetValue then
         local savedVal = state.Get(stateKey)
@@ -53,7 +51,6 @@ local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid
         return
     end
 
-    -- 3. PROCURA POR DROPDOWNS (Ex: Aim Part)
     local dropdown = sectionTable.Dropdown
     if dropdown and dropdown.OnSelectionChanged and dropdown.SetSelected then
         local savedVal = state.Get(stateKey)
@@ -62,7 +59,6 @@ local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid
         return
     end
 
-    -- 4. PROCURA PELA KEYBIND
     local keybox = sectionTable.Keybox or sectionTable.KeyBind
     if keybox or (sectionTable.KeyChanged and sectionTable.SetKey) then
         local target = keybox or sectionTable
@@ -76,7 +72,6 @@ local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid
         return
     end
 
-    -- 5. FALLBACK: TEXTBOXES SOLTAS (Se o Predict/Smooth não usarem Slider)
     local root = sectionTable.Instance
     if root then
         local box = root:FindFirstChildWhichIsA("TextBox", true)
@@ -88,7 +83,6 @@ local function SmartBinder(sectionTable: any, stateKey: string, state: any, maid
             return
         end
 
-        -- FALLBACK: DROPDOWNS SIMPLES (Baseado em texto)
         local displayLabel = nil
         for _, child in ipairs(root:GetDescendants()) do
             if child:IsA("TextLabel") and child.Parent and child.Parent:IsA("TextButton") then
@@ -153,7 +147,7 @@ function AimlockFactory.new(): AimlockUI
     controls.BackgroundTransparency = 1
     controls.Parent = header
 
-    -- Pega os estados da Memória Volátil
+    -- CHAVE DE MEMÓRIA (Se for copiar para o Silent Aim, mude o nome disso!)
     local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
     local isExpanded = UIState and UIState.Get("AimlockExpanded", false) or false
 
@@ -162,7 +156,7 @@ function AimlockFactory.new(): AimlockUI
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
-        if toggleBtn.SetState then toggleBtn:SetState(isEnabled, true) end
+        if toggleBtn.SetState then pcall(function() toggleBtn:SetState(isEnabled, true) end) end
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -172,7 +166,16 @@ function AimlockFactory.new(): AimlockUI
         arrow = Arrow.new()
         arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
         arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
-        if arrow.SetState then arrow:SetState(isExpanded, true) end
+        
+        -- Sincroniza o componente
+        if arrow.SetState then pcall(function() arrow:SetState(isExpanded, true) end) end
+        
+        -- [BLINDAGEM ANTI-DESYNC] Força o botão de texto a ter a string correta na inicialização
+        local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
+        if arrowBtn then
+            arrowBtn.Text = isExpanded and "v" or ">"
+        end
+        
         arrow.Instance.Parent = controls
         maid:GiveTask(arrow)
     end
@@ -247,7 +250,6 @@ function AimlockFactory.new(): AimlockUI
         end
     end
 
-    -- 1º: A Keybind fica fixa no topo
     safeLoadSection(KeybindSection, "Keybind", 1, rightContent, UIState)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
@@ -268,7 +270,7 @@ function AimlockFactory.new(): AimlockUI
 
     local inputsLayout = Instance.new("UIListLayout")
     inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    inputsLayout.Padding = UDim.new(0, 15) -- Espaçamento limpo entre os botões
+    inputsLayout.Padding = UDim.new(0, 15)
     inputsLayout.Parent = inputsScroll
 
     local inputsPadding = Instance.new("UIPadding")
@@ -276,15 +278,16 @@ function AimlockFactory.new(): AimlockUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    -- ORDEM LÓGICA DE COMBATE CORRIGIDA
-    safeLoadSection(KeyHoldSection,   "KeyHold",   1, inputsScroll, UIState)
+    safeLoadSection(AimPartSection,   "AimPart",   1, inputsScroll, UIState)
     safeLoadSection(PredictSection,   "Predict",   2, inputsScroll, UIState)
     safeLoadSection(SmoothSection,    "Smooth",    3, inputsScroll, UIState)
-    safeLoadSection(AimPartSection,   "AimPart",   4, inputsScroll, UIState)
+    safeLoadSection(KeyHoldSection,   "KeyHold",   4, inputsScroll, UIState)
     safeLoadSection(WallCheckSection, "WallCheck", 5, inputsScroll, UIState)
-    safeLoadSection(KnockCheckSection, "KnockCheck", 6, inputsScroll, UIState)
+    safeLoadSection(KnockCheckSection,"Knock",     6, inputsScroll, UIState)
 
-    -- EVENTOS DIRETOS DA HEADER
+    -- =========================================================================
+    -- EVENTOS DIRETOS (Com Blindagem Visual)
+    -- =========================================================================
     if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
             if glowBar then glowBar:SetState(state) end
@@ -296,6 +299,12 @@ function AimlockFactory.new(): AimlockUI
         maid:GiveTask(arrow.Toggled:Connect(function(state: boolean)
             subFrame.Visible = state
             UIState.Set("AimlockExpanded", state)
+            
+            -- [BLINDAGEM ANTI-DESYNC] Garante que a imagem visual acompanhe o subframe
+            local arrowBtn = arrow.Instance:IsA("TextButton") and arrow.Instance or arrow.Instance:FindFirstChildWhichIsA("TextButton", true)
+            if arrowBtn then
+                arrowBtn.Text = state and "v" or ">"
+            end
         end))
     end
 
