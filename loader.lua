@@ -17,14 +17,14 @@ function Sacrament:Init()
     local baseUrl = "https://raw.githubusercontent.com/qpKp7/Sacrament/main/src/"
     local moduleCache = {}
 
-    -- LISTA DAS PASTAS (Corta requisições HTTP perdidas pela raiz)
+    -- Dicionário de Pastas: Adicione aqui qualquer outra pasta que você criar no futuro
     local FolderModules = {
         ["gui/modules/combat"] = true,
         ["gui/modules/player"] = true,
         ["gui/modules/visual"] = true,
         ["gui/modules/misc"] = true,
         ["gui/modules/info"] = true,
-        ["gui/modules/components"] = true -- Adicionado suporte para componentes
+        ["gui/modules/components"] = true
     }
 
     (_G :: any).SacramentImport = function(path: string): any
@@ -32,7 +32,7 @@ function Sacrament:Init()
             return moduleCache[path]
         end
 
-        -- LÓGICA DE PATH CORRETA: Pasta usa /init.lua, arquivo usa .lua
+        -- Roteamento automático: Se for pasta, usa /init.lua. Se for arquivo, usa .lua
         local isFolder = FolderModules[path]
         local fullPath = isFolder and (path .. "/init.lua") or (path .. ".lua")
         
@@ -41,7 +41,6 @@ function Sacrament:Init()
             return (game :: any):HttpGet(url, true)
         end)
 
-        -- Checa se o GitHub retornou 404
         if not success or type(response) ~= "string" or response:find("404: Not Found") then
             error("[Sacrament] Falha de rede ou Arquivo Morto: " .. fullPath)
         end
