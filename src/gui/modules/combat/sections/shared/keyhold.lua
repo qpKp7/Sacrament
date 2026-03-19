@@ -17,9 +17,7 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type KeyHoldSection = {
     Instance: Frame,
-    Toggled: RBXScriptSignal, -- [NOVO] Expõe o evento para o Aimlock
-    GetState: (self: KeyHoldSection) -> boolean,
-    SetState: (self: KeyHoldSection, state: boolean, instant: boolean?) -> (), -- [NOVO] Permite injeção de memória
+    Toggle: any, -- [O SEGREDO] Exportado direto para o Orquestrador!
     Destroy: (self: KeyHoldSection) -> ()
 }
 
@@ -30,11 +28,6 @@ local FONT_MAIN = Enum.Font.GothamBold
 
 function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     local maid = Maid.new()
-    local state = false
-    
-    -- Evento de fallback caso o ToggleButton falhe ao carregar
-    local fallbackEvent = Instance.new("BindableEvent")
-    maid:GiveTask(fallbackEvent)
 
     local row = Instance.new("Frame")
     row.Name = "KeyHoldRow"
@@ -73,7 +66,7 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
     toggleCont.BackgroundTransparency = 1
     toggleCont.Parent = row
 
-    local self = {}
+    local self = {} :: any
     self.Instance = row
 
     if ToggleButton and type(ToggleButton.new) == "function" then
@@ -83,23 +76,13 @@ function KeyHoldFactory.new(layoutOrder: number): KeyHoldSection
         toggle.Instance.Parent = toggleCont
         maid:GiveTask(toggle)
 
-        maid:GiveTask(toggle.Toggled:Connect(function(newState: boolean)
-            state = newState
-        end))
-        
-        -- [O SEGREDO]: Exportamos as funções do filho para que o aimlock.lua os veja
-        self.Toggled = toggle.Toggled
-        function self:SetState(newState: boolean, instant: boolean?)
-            state = newState
-            if toggle.SetState then toggle:SetState(newState, instant) end
-        end
-    else
-        self.Toggled = fallbackEvent.Event
-        function self:SetState(newState: boolean) state = newState end
+        -- Apenas entregamos o componente pronto para o Orquestrador fazer a mágica!
+        self.Toggle = toggle
     end
 
-    function self:GetState() return state end
-    function self:Destroy() maid:Destroy() end
+    function self:Destroy() 
+        maid:Destroy() 
+    end
 
     return self :: KeyHoldSection
 end
