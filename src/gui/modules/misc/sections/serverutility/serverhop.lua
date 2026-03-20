@@ -4,7 +4,7 @@ local Maid = Import("utils/maid")
 
 export type ServerHopUI = {
     Instance: Frame,
-    Clicked: RBXScriptSignal,
+    Action: TextButton, -- [NOVO] Exportado diretamente para a lógica
     Destroy: (self: ServerHopUI) -> ()
 }
 
@@ -74,9 +74,6 @@ function ServerHopFactory.new(layoutOrder: number?): ServerHopUI
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = textContainer
 
-    local clickedEvent = Instance.new("BindableEvent")
-    maid:GiveTask(clickedEvent)
-
     local button = Instance.new("TextButton")
     button.Name = "ActionBtn"
     button.Size = UDim2.new(0, 80, 0, 30)
@@ -100,17 +97,15 @@ function ServerHopFactory.new(layoutOrder: number?): ServerHopUI
     btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     btnStroke.Parent = button
 
-    maid:GiveTask(button.MouseButton1Click:Connect(function()
-        clickedEvent:Fire()
-    end))
-
     maid:GiveTask(row)
 
-    local self = {}
+    local self = {} :: any
     self.Instance = row
-    self.Clicked = clickedEvent.Event
+    self.Action = button
     
-    function self:Destroy() maid:Destroy() end
+    function self:Destroy() 
+        maid:Destroy() 
+    end
     
     return self :: ServerHopUI
 end
