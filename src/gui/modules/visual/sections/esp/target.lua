@@ -12,6 +12,8 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type TargetUI = {
     Instance: Frame,
+    Toggle: any,   -- [NOVO] Exportado para a memória do Target Mode
+    TextBox: any,  -- [NOVO] Exportado para a memória do Target Name
     Destroy: (self: TargetUI) -> ()
 }
 
@@ -62,6 +64,10 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     mainLabel.TextXAlignment = Enum.TextXAlignment.Left
     mainLabel.Parent = mainRow
 
+    local self = {} :: any
+    self.Instance = container
+
+    -- 1. Cria e exporta o Toggle
     local mainToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         mainToggle = ToggleButton.new()
@@ -69,6 +75,8 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
         mainToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         mainToggle.Instance.Parent = mainRow
         maid:GiveTask(mainToggle)
+        
+        self.Toggle = mainToggle
     end
 
     -- CONTÊINER DE SUB-OPÇÕES
@@ -94,7 +102,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     inputRow.Parent = optionsContainer
 
     local inputPad = Instance.new("UIPadding")
-    inputPad.PaddingLeft = UDim.new(0, 20) -- Ajustado para 20px (Alinhado com o Título)
+    inputPad.PaddingLeft = UDim.new(0, 20)
     inputPad.PaddingRight = UDim.new(0, 25)
     inputPad.Parent = inputRow
 
@@ -133,6 +141,30 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     inputStroke.Parent = nameInput
 
+    -- =========================================================
+    -- 2. COMPONENTE TEXTBOX "FALSO" PARA O ORQUESTRADOR
+    -- Como o Orquestrador espera um "SetValue" e "OnValueChanged",
+    -- nós empacotamos o Roblox TextBox nativo dentro dessa tabela:
+    -- =========================================================
+    local textChanged = Instance.new("BindableEvent")
+    maid:GiveTask(textChanged)
+    
+    local textBoxComponent = {}
+    textBoxComponent.OnValueChanged = textChanged.Event
+    function textBoxComponent:SetValue(text: string, silent: boolean?)
+        nameInput.Text = tostring(text or "")
+        if not silent then
+            textChanged:Fire(nameInput.Text)
+        end
+    end
+    
+    maid:GiveTask(nameInput.FocusLost:Connect(function()
+        textBoxComponent:SetValue(nameInput.Text, false)
+    end))
+    
+    self.TextBox = textBoxComponent
+    -- =========================================================
+
     -- CARTÃO DE INFORMAÇÕES DO ALVO
     local infoRow = Instance.new("Frame")
     infoRow.Name = "InfoRow"
@@ -142,7 +174,7 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     infoRow.Parent = optionsContainer
 
     local infoPad = Instance.new("UIPadding")
-    infoPad.PaddingLeft = UDim.new(0, 20) -- Ajustado para 20px (Alinhado com o Título)
+    infoPad.PaddingLeft = UDim.new(0, 20)
     infoPad.PaddingRight = UDim.new(0, 25)
     infoPad.PaddingTop = UDim.new(0, 5)
     infoPad.PaddingBottom = UDim.new(0, 5)
@@ -206,17 +238,27 @@ function TargetFactory.new(layoutOrder: number?): TargetUI
     distLabel.TextXAlignment = Enum.TextXAlignment.Left
     distLabel.Parent = card
 
-    -- EVENTO DE EXPANSÃO
-    if mainToggle then
-        maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
+    -- 3. Lógica de visibilidade dinâmica (Expansão)
+    if self.Toggle then
+        -- Quando o usuário clica
+        maid:GiveTask(self.Toggle.Toggled:Connect(function(state: boolean)
             optionsContainer.Visible = state
         end))
+        
+        -- Quando o Orquestrador carrega da memória (silencioso)
+        local originalSetState = self.Toggle.SetState
+        self.Toggle.SetState = function(toggleSelf, state, silent)
+            originalSetState(toggleSelf, state, silent)
+            optionsContainer.Visible = state
+        end
     end
 
     maid:GiveTask(container)
-    local self = {}
-    self.Instance = container
-    function self:Destroy() maid:Destroy() end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
     return self :: TargetUI
 end
 
