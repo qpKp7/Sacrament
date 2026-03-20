@@ -12,12 +12,9 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local DynamicList = SafeImport("gui/modules/components/dynamiclist")
 
 export type NameCheckUI = {
-    ToggleInstance: Frame,
-    ListInstance: Frame?,
-    Toggled: RBXScriptSignal,
-    ListChanged: RBXScriptSignal,
-    GetState: (self: NameCheckUI) -> boolean,
-    GetList: (self: NameCheckUI) -> {string},
+    Instance: Frame,
+    Toggle: any,      -- [NOVO] Exportado para o Orquestrador (Ligar/Desligar)
+    DynamicList: any, -- [NOVO] Exportado para o Orquestrador (Salvar a lista)
     Destroy: (self: NameCheckUI) -> ()
 }
 
@@ -31,21 +28,36 @@ local FONT_MAIN = Enum.Font.GothamBold
 
 function NameCheckFactory.new(layoutOrder: number?): NameCheckUI
     local maid = Maid.new()
-    local currentState = false
+
+    -- Container invisível para agrupar o Card e a Lista de forma limpa
+    local container = Instance.new("Frame")
+    container.Name = "NameCheckContainer"
+    container.Size = UDim2.new(1, 0, 0, 0)
+    container.AutomaticSize = Enum.AutomaticSize.Y
+    container.BackgroundTransparency = 1
+    container.LayoutOrder = layoutOrder or 1
+
+    local containerLayout = Instance.new("UIListLayout")
+    containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    containerLayout.Padding = UDim.new(0, 8) -- Espaço entre o botão e a lista
+    containerLayout.Parent = container
 
     local toggleCard = Instance.new("Frame")
     toggleCard.Name = "NameToggleCard"
     toggleCard.Size = UDim2.new(1, 0, 0, 55)
     toggleCard.BackgroundColor3 = COLOR_BG
-    toggleCard.LayoutOrder = layoutOrder or 1
+    toggleCard.LayoutOrder = 1
+    toggleCard.Parent = container
 
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 6)
     corner.Parent = toggleCard
+    
     local stroke = Instance.new("UIStroke")
     stroke.Color = COLOR_BORDER
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = toggleCard
+    
     local pad = Instance.new("UIPadding")
     pad.PaddingLeft = UDim.new(0, 15)
     pad.PaddingRight = UDim.new(0, 15)
@@ -75,44 +87,52 @@ function NameCheckFactory.new(layoutOrder: number?): NameCheckUI
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = toggleCard
 
-    local toggledEvent = Instance.new("BindableEvent")
-    maid:GiveTask(toggledEvent)
+    local self = {} :: any
+    self.Instance = container
 
+    -- Inicia a DynamicList
     local listPanel = nil
     if DynamicList and type(DynamicList.new) == "function" then
-        listPanel = DynamicList.new("User Name List", layoutOrder)
+        listPanel = DynamicList.new("User Name List", 2)
         listPanel.Instance.Size = UDim2.new(1, 0, 0, 0)
         listPanel.Instance.Visible = false -- Inicia oculta
+        listPanel.Instance.Parent = container
         maid:GiveTask(listPanel)
+        
+        self.DynamicList = listPanel
     end
 
+    -- Inicia o Toggle
+    local toggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
-        local toggle = ToggleButton.new()
+        toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = toggleCard
-        
-        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
-            currentState = state
-            if listPanel then
-                listPanel.Instance.Visible = state
-            end
-            toggledEvent:Fire(state)
-        end))
         maid:GiveTask(toggle)
+        
+        self.Toggle = toggle
     end
 
-    maid:GiveTask(toggleCard)
+    -- Lógica de expansão e interceptação de memória
+    if toggle and listPanel then
+        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
+            listPanel.Instance.Visible = state
+        end))
+        
+        -- Intercepta para abrir silenciosamente se a memória disser "true"
+        local originalSetState = toggle.SetState
+        toggle.SetState = function(toggleSelf, state, silent)
+            if originalSetState then originalSetState(toggleSelf, state, silent) end
+            listPanel.Instance.Visible = state
+        end
+    end
 
-    local self = {}
-    self.ToggleInstance = toggleCard
-    self.ListInstance = listPanel and listPanel.Instance or nil
-    self.Toggled = toggledEvent.Event
-    self.ListChanged = listPanel and listPanel.ListChanged or Instance.new("BindableEvent").Event
+    maid:GiveTask(container)
 
-    function self:GetState() return currentState end
-    function self:GetList() return listPanel and listPanel:GetValues() or {} end
-    function self:Destroy() maid:Destroy() end
+    function self:Destroy() 
+        maid:Destroy() 
+    end
 
     return self :: NameCheckUI
 end
