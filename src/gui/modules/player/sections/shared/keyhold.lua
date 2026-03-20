@@ -18,7 +18,7 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type KeyHoldUI = {
     Instance: Frame,
-    Toggled: RBXScriptSignal,
+    Toggle: any, -- [NOVO] Exportado para o Orquestrador ler e escrever a memória
     Destroy: (self: KeyHoldUI) -> ()
 }
 
@@ -52,8 +52,8 @@ function KeyHoldFactory.new(layoutOrder: number?): KeyHoldUI
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = container
 
-    local toggledEvent = Instance.new("BindableEvent")
-    maid:GiveTask(toggledEvent)
+    local self = {} :: any
+    self.Instance = container
 
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
@@ -61,17 +61,12 @@ function KeyHoldFactory.new(layoutOrder: number?): KeyHoldUI
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = container
         maid:GiveTask(toggle)
-
-        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
-            toggledEvent:Fire(state)
-        end))
+        
+        -- [O SEGREDO] Entregando o componente direto para o Orquestrador!
+        self.Toggle = toggle
     end
 
     maid:GiveTask(container)
-
-    local self = {}
-    self.Instance = container
-    self.Toggled = toggledEvent.Event
 
     function self:Destroy()
         maid:Destroy()
