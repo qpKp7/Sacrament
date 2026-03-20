@@ -36,13 +36,27 @@ function ContentAreaModule.new(settings: any): ContentArea
     leftStraightEdge.Active = false
     leftStraightEdge.Parent = content
 
-    local currentModuleMaid = Maid.new()
-    maid:GiveTask(currentModuleMaid)
+    -- O Segredo Profissional: O Cache de Instâncias!
+    local tabCache = {} 
+    local activeTabInstance = nil
 
     local function loadTabContent(tabName: string)
-        currentModuleMaid:DoCleaning()
+        local lowerName = string.lower(tabName)
         
-        local modulePath = "gui/modules/" .. string.lower(tabName)
+        -- Esconde a aba atual, se existir (Não destrói, apenas esconde!)
+        if activeTabInstance then
+            activeTabInstance.Visible = false
+        end
+
+        -- Se a aba já foi carregada antes (Está no Cache), apenas exibe ela instantaneamente.
+        if tabCache[lowerName] then
+            tabCache[lowerName].Visible = true
+            activeTabInstance = tabCache[lowerName]
+            return
+        end
+
+        -- Se a aba NÃO existe no Cache, nós carregamos ela pela primeira e única vez.
+        local modulePath = "gui/modules/" .. lowerName
         local success, result = pcall(function()
             return Import(modulePath)
         end)
@@ -54,7 +68,16 @@ function ContentAreaModule.new(settings: any): ContentArea
 
             if successCreate and moduleInstance and moduleInstance.Instance then
                 moduleInstance.Instance.Parent = content
-                currentModuleMaid:GiveTask(moduleInstance)
+                
+                -- Limpa a posição se houver sobra da ancoragem anterior e garante visibilidade
+                moduleInstance.Instance.Visible = true 
+                
+                -- Salva a gaveta (Maid) na Main para não vazar memória quando a UI inteira fechar
+                maid:GiveTask(moduleInstance)
+                
+                -- Salva no Cache para acesso futuro
+                tabCache[lowerName] = moduleInstance.Instance
+                activeTabInstance = moduleInstance.Instance
             else
                 warn(string.format("[Sacrament] Erro ao instanciar módulo %s: %s", tabName, tostring(moduleInstance)))
             end
@@ -70,6 +93,9 @@ function ContentAreaModule.new(settings: any): ContentArea
     self.Instance = content
 
     function self:Destroy()
+        -- Limpa todo o cache e detona a UI de forma segura
+        tabCache = {}
+        activeTabInstance = nil
         maid:Destroy()
         content:Destroy()
     end
