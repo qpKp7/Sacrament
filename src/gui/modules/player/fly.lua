@@ -15,6 +15,8 @@ local function SafeImport(path: string): any?
     return result
 end
 
+local UIState = SafeImport("state/uistate") -- [NOVO] Importando o Cofre Global
+
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
@@ -83,11 +85,15 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     controls.Active = false
     controls.Parent = header
     
+    -- Puxa o estado do botão principal de Ligar/Desligar
+    local isEnabled = UIState and UIState.Get("FlyEnabled", false) or false
+
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        if toggleBtn.SetState then pcall(function() toggleBtn:SetState(isEnabled, true) end) end
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -115,6 +121,7 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
         glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        if glowBar.SetState then glowBar:SetState(isEnabled) end
         glowBar.Instance.Parent = glowWrapper
 
         local gObj = glowBar.Instance
@@ -179,7 +186,8 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+    -- [MODIFICADO] Função alterada para nos devolver a instância da seção
+    local function loadSec(moduleType: any, order: number, parentInstance: Instance)
         if type(moduleType) == "table" and type(moduleType.new) == "function" then
             local success, instance = pcall(function()
                 return moduleType.new(order)
@@ -187,11 +195,13 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
             if success and instance and instance.Instance then
                 instance.Instance.Parent = parentInstance
                 maid:GiveTask(instance)
+                return instance
             end
         end
+        return nil
     end
 
-    safeLoadSection(KeybindSection, 1, rightContent)
+    local secKeybind = loadSec(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -220,17 +230,67 @@ function FlyFactory.new(layoutOrder: number?): FlyUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(SpeedSection, 2, inputsScroll)
-    safeLoadSection(AnimationsSection, 3, inputsScroll)
+    -- CARREGAMENTO E CAPTURA DOS COMPONENTES
+    local secKeyHold   = loadSec(KeyHoldSection, 1, inputsScroll)
+    local secSpeed     = loadSec(SpeedSection, 2, inputsScroll)
+    local secAnimation = loadSec(AnimationsSection, 3, inputsScroll)
 
-    if toggleBtn and glowBar then
+    -- EVENTO DO TOGGLE PRINCIPAL DO FLY
+    if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-            glowBar:SetState(state)
+            if glowBar then glowBar:SetState(state) end
+            UIState.Set("FlyEnabled", state)
         end))
     end
 
-    -- CORREÇÃO DO DUPLO CLIQUE: A conexão de arrow.Toggled que forçava subFrame.Visible foi removida.
+    -- =========================================================================
+    -- 👑 ORQUESTRADOR DE ESTADOS
+    -- =========================================================================
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
+        if not section or not UIState then return end
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "TextBox" or componentType == "ValueBox" then
+            local component = section.ValueBox or section.TextBox
+            if component then
+                if savedValue ~= nil and component.SetValue then pcall(function() component:SetValue(savedValue, true) end) end
+                if component.OnValueChanged then maid:GiveTask(component.OnValueChanged:Connect(function(val) UIState.Set(stateKey, val) end)) end
+            end
+        elseif componentType == "Toggle" then
+            local component = section.Toggle or section.ToggleButton
+            if component then
+                if savedValue ~= nil and component.SetState then pcall(function() component:SetState(savedValue, true) end) end
+                if component.Toggled then maid:GiveTask(component.Toggled:Connect(function(val: boolean) UIState.Set(stateKey, val) end)) end
+            end
+        elseif componentType == "Dropdown" then
+            local component = section.Dropdown
+            if component then
+                if savedValue ~= nil and component.SetSelected then pcall(function() component:SetSelected(savedValue, true) end) end
+                if component.OnSelectionChanged then maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string) UIState.Set(stateKey, val) end)) end
+            end
+        elseif componentType == "Slider" then
+            local component = section.Slider
+            if component then
+                if savedValue ~= nil and component.SetValue then pcall(function() component:SetValue(savedValue, true) end) end
+                if component.OnValueChanged then maid:GiveTask(component.OnValueChanged:Connect(function(val: number) UIState.Set(stateKey, val) end)) end
+            end
+        elseif componentType == "Keybind" then
+            local component = section.Keybox or section.KeyBind or section
+            if component then
+                if savedValue and type(savedValue) == "string" and component.SetKey then pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end) end
+                if component.KeyChanged then maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?) UIState.Set(stateKey, k and k.Name or nil) end)) end
+            end
+        end
+    end
+
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA DO FLY
+    Orchestrator.Bind(secKeybind,   "Fly_Keybind",   "Keybind")
+    Orchestrator.Bind(secKeyHold,   "Fly_KeyHold",   "Toggle")
+    Orchestrator.Bind(secSpeed,     "Fly_Speed",     "Slider")
+    Orchestrator.Bind(secAnimation, "Fly_Animation", "Dropdown")
+    -- =========================================================================
 
     maid:GiveTask(container)
     local self = {}
