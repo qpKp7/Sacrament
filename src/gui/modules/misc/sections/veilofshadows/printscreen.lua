@@ -12,8 +12,7 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type PrintScreenUI = {
     Instance: Frame,
-    Toggled: RBXScriptSignal,
-    GetState: (self: PrintScreenUI) -> boolean,
+    Toggle: any, -- [NOVO] Exportado para o Orquestrador plugar a memória
     Destroy: (self: PrintScreenUI) -> ()
 }
 
@@ -27,7 +26,6 @@ local FONT_MAIN = Enum.Font.GothamBold
 
 function PrintScreenFactory.new(layoutOrder: number?): PrintScreenUI
     local maid = Maid.new()
-    local currentState = false
 
     local row = Instance.new("Frame")
     row.Name = "PrintScreenRow"
@@ -83,30 +81,25 @@ function PrintScreenFactory.new(layoutOrder: number?): PrintScreenUI
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = textContainer
 
-    local toggledEvent = Instance.new("BindableEvent")
-    maid:GiveTask(toggledEvent)
+    local self = {} :: any
+    self.Instance = row
 
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = row
-        
-        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
-            currentState = state
-            toggledEvent:Fire(state)
-        end))
         maid:GiveTask(toggle)
+        
+        -- [O SEGREDO] Exportando para a memória
+        self.Toggle = toggle
     end
 
     maid:GiveTask(row)
 
-    local self = {}
-    self.Instance = row
-    self.Toggled = toggledEvent.Event
-    
-    function self:GetState() return currentState end
-    function self:Destroy() maid:Destroy() end
+    function self:Destroy() 
+        maid:Destroy() 
+    end
     
     return self :: PrintScreenUI
 end
