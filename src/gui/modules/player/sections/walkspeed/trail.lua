@@ -13,6 +13,8 @@ local Slider = SafeImport("gui/modules/components/slider")
 
 export type TrailUI = {
     Instance: Frame,
+    Toggle: any, -- [NOVO] Exportado para a memória do Ghost Trail
+    Slider: any, -- [NOVO] Exportado para a memória do Drift Strength
     Destroy: (self: TrailUI) -> ()
 }
 
@@ -59,6 +61,10 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
     trailLabel.TextXAlignment = Enum.TextXAlignment.Left
     trailLabel.Parent = trailRow
 
+    local self = {} :: any
+    self.Instance = container
+
+    -- 1. Cria e exporta o Toggle
     local trailToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         trailToggle = ToggleButton.new()
@@ -66,38 +72,53 @@ function TrailFactory.new(layoutOrder: number?): TrailUI
         trailToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         trailToggle.Instance.Parent = trailRow
         maid:GiveTask(trailToggle)
+        
+        self.Toggle = trailToggle
     end
 
-   -- ROW DRIFT STRENGTH (Slider Decimal 0.0 a 10.0)
+   -- ROW DRIFT STRENGTH
     local driftRow = Instance.new("Frame")
     driftRow.Name = "DriftRow"
-    driftRow.Size = UDim2.new(1, 0, 0, 45) -- Altura simétrica ao Key Hold
+    driftRow.Size = UDim2.new(1, 0, 0, 45)
     driftRow.BackgroundTransparency = 1
     driftRow.LayoutOrder = 2
     driftRow.Visible = false
     driftRow.Parent = container
 
+    -- 2. Cria e exporta o Slider (Ajustado para 4 argumentos, pulando de 1 em 1)
     local driftSlider = nil
     if Slider and type(Slider.new) == "function" then
-        -- Parâmetros: Título, Mín, Máx, Padrão, Incremento
-        driftSlider = Slider.new("Drift Strength", 0.0, 10.0, 0.3, 0.1)
+        driftSlider = Slider.new("Drift Strength", 0, 10, 0)
         driftSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
         driftSlider.Instance.Position = UDim2.fromScale(0, 0.5)
         driftSlider.Instance.Size = UDim2.fromScale(1, 1)
         driftSlider.Instance.Parent = driftRow
         maid:GiveTask(driftSlider)
+        
+        self.Slider = driftSlider
     end
 
-    if trailToggle then
-        maid:GiveTask(trailToggle.Toggled:Connect(function(state: boolean)
+    -- 3. Lógica de visibilidade dinâmica com interceptação de memória
+    if self.Toggle and self.Slider then
+        -- Evento de clique do usuário
+        maid:GiveTask(self.Toggle.Toggled:Connect(function(state: boolean)
             driftRow.Visible = state
         end))
+        
+        -- Intercepta o carregamento silencioso do Orquestrador
+        local originalSetState = self.Toggle.SetState
+        self.Toggle.SetState = function(toggleSelf, state, silent)
+            originalSetState(toggleSelf, state, silent)
+            driftRow.Visible = state
+        end
     end
 
     maid:GiveTask(container)
-    local self = {}
-    self.Instance = container
-    function self:Destroy() maid:Destroy() end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
     return self :: TrailUI
 end
 
