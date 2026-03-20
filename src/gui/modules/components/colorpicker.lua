@@ -6,7 +6,7 @@ local Maid = Import("utils/maid")
 export type ColorPickerUI = {
     Instance: Frame,
     Changed: RBXScriptSignal,
-    SetColor: (self: ColorPickerUI, color: Color3) -> (),
+    SetColor: (self: ColorPickerUI, color: Color3, silent: boolean?) -> (), -- [NOVO] Adicionado "silent"
     Destroy: (self: ColorPickerUI) -> ()
 }
 
@@ -65,21 +65,44 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     pad.PaddingRight = UDim.new(0, 10)
     pad.Parent = container
 
-    -- SV Canvas (Branco à esquerda, Cor à direita, Preto no fundo)
+    -- [NOVO] Preview da cor atual no topo do Picker
+    local previewHeader = Instance.new("Frame")
+    previewHeader.Name = "PreviewHeader"
+    previewHeader.Size = UDim2.new(1, 0, 0, 24)
+    previewHeader.BackgroundTransparency = 1
+    previewHeader.LayoutOrder = 1
+    previewHeader.Parent = container
+
+    local previewBox = Instance.new("Frame")
+    previewBox.Name = "ColorBox"
+    previewBox.Size = UDim2.new(1, 0, 1, 0)
+    previewBox.BackgroundColor3 = currentColor
+    previewBox.Parent = previewHeader
+
+    local previewCorner = Instance.new("UICorner")
+    previewCorner.CornerRadius = UDim.new(0, 4)
+    previewCorner.Parent = previewBox
+
+    local previewStroke = Instance.new("UIStroke")
+    previewStroke.Color = COLOR_BORDER
+    previewStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    previewStroke.Parent = previewBox
+
+    -- SV Canvas (Saturação/Valor)
     local svCanvas = Instance.new("TextButton")
     svCanvas.Name = "SVCanvas"
     svCanvas.Size = UDim2.new(1, 0, 0, 120)
     svCanvas.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
     svCanvas.AutoButtonColor = false
     svCanvas.Text = ""
-    svCanvas.LayoutOrder = 1
+    svCanvas.LayoutOrder = 2
     svCanvas.Parent = container
 
     local svCorner = Instance.new("UICorner")
     svCorner.CornerRadius = UDim.new(0, 4)
     svCorner.Parent = svCanvas
 
-    -- Camada 1: Branco para Transparente (Esquerda para Direita)
+    -- Camada 1: Branco para Transparente (Saturação)
     local whiteGradient = Instance.new("UIGradient")
     whiteGradient.Color = ColorSequence.new(Color3.new(1, 1, 1))
     whiteGradient.Transparency = NumberSequence.new({
@@ -88,7 +111,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     })
     whiteGradient.Parent = svCanvas
 
-    -- Camada 2: Overlay Preto (Cima Transparente para Baixo Preto)
+    -- Camada 2: Overlay Preto (Valor)
     local blackOverlay = Instance.new("Frame")
     blackOverlay.Size = UDim2.fromScale(1, 1)
     blackOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -120,18 +143,18 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     svKnobCorner.Parent = svKnob
 
     local svKnobStroke = Instance.new("UIStroke")
-    svKnobStroke.Color = Color3.new(1, 1, 1) -- Borda branca para contraste
+    svKnobStroke.Color = Color3.new(1, 1, 1)
     svKnobStroke.Thickness = 1
     svKnobStroke.Parent = svKnob
 
-    -- Hue Slider
+    -- Hue Canvas (Matiz)
     local hueCanvas = Instance.new("TextButton")
     hueCanvas.Name = "HueCanvas"
     hueCanvas.Size = UDim2.new(1, 0, 0, 12)
     hueCanvas.BackgroundColor3 = Color3.new(1, 1, 1)
     hueCanvas.AutoButtonColor = false
     hueCanvas.Text = ""
-    hueCanvas.LayoutOrder = 2
+    hueCanvas.LayoutOrder = 3
     hueCanvas.Parent = container
 
     local hueCorner = Instance.new("UICorner")
@@ -163,7 +186,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     inputsFrame.Name = "Inputs"
     inputsFrame.Size = UDim2.new(1, 0, 0, 28)
     inputsFrame.BackgroundTransparency = 1
-    inputsFrame.LayoutOrder = 3
+    inputsFrame.LayoutOrder = 4
     inputsFrame.Parent = container
 
     local inputLayout = Instance.new("UIListLayout")
@@ -210,6 +233,9 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
         svKnob.BackgroundColor3 = currentColor
         hueKnob.Position = UDim2.fromScale(1 - h, 0.5)
         hueKnob.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+        
+        -- [NOVO] Atualiza a caixa de preview
+        previewBox.BackgroundColor3 = currentColor
 
         if not isUpdatingInternal then
             hexInput.Text = "#" .. currentColor:ToHex():upper()
@@ -217,60 +243,78 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
         end
     end
 
-    local function setColorInternal(newH: number, newS: number, newV: number)
+    local function setColorInternal(newH: number, newS: number, newV: number, silent: boolean?)
         h = math.clamp(newH, 0, 1)
         s = math.clamp(newS, 0, 1)
         v = math.clamp(newV, 0, 1)
+        
+        -- Prevenção contra a "cor branca acidental"
+        if h == 1 then h = 0 end 
+        
         currentColor = Color3.fromHSV(h, s, v)
         updateVisuals()
-        changedEvent:Fire(currentColor)
+        
+        if not silent then
+            changedEvent:Fire(currentColor)
+        end
     end
 
-    local function bindDrag(canvas: TextButton, isHue: boolean)
-        local dragging = false
-        maid:GiveTask(canvas.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                local pos = input.Position
-                local absPos = canvas.AbsolutePosition
-                local absSize = canvas.AbsoluteSize
-                if isHue then
-                    local newH = 1 - math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
-                    setColorInternal(newH, s, v)
-                else
-                    local newS = math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
-                    local newV = 1 - math.clamp((pos.Y - absPos.Y) / absSize.Y, 0, 1)
-                    setColorInternal(h, newS, newV)
-                end
-            end
-        end))
+    -- =========================================================================
+    -- LÓGICA DE ARRASTE CORRIGIDA (Prevenindo perda de foco e cores brancas)
+    -- =========================================================================
+    local dragConnection = nil
+    local endConnection = nil
+    
+    local function startDrag(canvas: TextButton, isHue: boolean, input: InputObject)
+        if dragConnection then dragConnection:Disconnect() end
+        if endConnection then endConnection:Disconnect() end
 
-        maid:GiveTask(UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
+        local function updateColor(inputPos: Vector3)
+            local pos = inputPos
+            local absPos = canvas.AbsolutePosition
+            local absSize = canvas.AbsoluteSize
+            
+            if isHue then
+                -- O 1 - math.clamp garante que o cálculo não zere completamente se o mouse sair da tela
+                local newH = 1 - math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
+                setColorInternal(newH, s, v, false)
+            else
+                local newS = math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
+                local newV = 1 - math.clamp((pos.Y - absPos.Y) / absSize.Y, 0, 1)
+                setColorInternal(h, newS, newV, false)
             end
-        end))
+        end
 
-        maid:GiveTask(UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local pos = input.Position
-                local absPos = canvas.AbsolutePosition
-                local absSize = canvas.AbsoluteSize
+        updateColor(input.Position)
 
-                if isHue then
-                    local newH = 1 - math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
-                    setColorInternal(newH, s, v)
-                else
-                    local newS = math.clamp((pos.X - absPos.X) / absSize.X, 0, 1)
-                    local newV = 1 - math.clamp((pos.Y - absPos.Y) / absSize.Y, 0, 1)
-                    setColorInternal(h, newS, newV)
-                end
+        dragConnection = UserInputService.InputChanged:Connect(function(moveInput)
+            if moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch then
+                updateColor(moveInput.Position)
             end
-        end))
+        end)
+
+        endConnection = UserInputService.InputEnded:Connect(function(endInput)
+            if endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch then
+                if dragConnection then dragConnection:Disconnect() end
+                if endConnection then endConnection:Disconnect() end
+            end
+        end)
+        
+        maid:GiveTask(dragConnection)
+        maid:GiveTask(endConnection)
     end
 
-    bindDrag(svCanvas, false)
-    bindDrag(hueCanvas, true)
+    maid:GiveTask(svCanvas.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDrag(svCanvas, false, input)
+        end
+    end))
+
+    maid:GiveTask(hueCanvas.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            startDrag(hueCanvas, true, input)
+        end
+    end))
 
     -- Filtros Rigorosos de Texto (Tempo Real)
     maid:GiveTask(hexInput:GetPropertyChangedSignal("Text"):Connect(function()
@@ -286,7 +330,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
         if isUpdatingInternal then return end
         isUpdatingInternal = true
         local cleaned = rgbInput.Text:gsub("[^%d, ]", "")
-        cleaned = string.sub(cleaned, 1, 13) -- Máximo de caracteres para "255, 255, 255"
+        cleaned = string.sub(cleaned, 1, 13)
         rgbInput.Text = cleaned
         isUpdatingInternal = false
     end))
@@ -299,7 +343,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
             local success, c = pcall(function() return Color3.fromHex(txt) end)
             if success and c then
                 local newH, newS, newV = c:ToHSV()
-                setColorInternal(newH, newS, newV)
+                setColorInternal(newH, newS, newV, false)
             end
         end
         isUpdatingInternal = false
@@ -314,7 +358,7 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
             if nr and ng and nb then
                 local c = Color3.fromRGB(math.clamp(nr, 0, 255), math.clamp(ng, 0, 255), math.clamp(nb, 0, 255))
                 local newH, newS, newV = c:ToHSV()
-                setColorInternal(newH, newS, newV)
+                setColorInternal(newH, newS, newV, false)
             end
         end
         isUpdatingInternal = false
@@ -324,13 +368,15 @@ function ColorPickerFactory.new(defaultColor: Color3?): ColorPickerUI
     updateVisuals()
 
     maid:GiveTask(container)
+    
     local self = {}
     self.Instance = container
     self.Changed = changedEvent.Event
 
-    function self:SetColor(color: Color3)
+    -- [MODIFICADO] Adicionado "silent" para o Orquestrador injetar sem loop
+    function self:SetColor(color: Color3, silent: boolean?)
         local newH, newS, newV = color:ToHSV()
-        setColorInternal(newH, newS, newV)
+        setColorInternal(newH, newS, newV, silent)
     end
 
     function self:Destroy()
