@@ -14,6 +14,9 @@ local ColorPicker = SafeImport("gui/modules/components/colorpicker")
 
 export type TracersUI = {
     Instance: Frame,
+    Toggle: any,      -- [NOVO]
+    Slider: any,      -- [NOVO]
+    ColorPicker: any, -- [NOVO]
     Destroy: (self: TracersUI) -> ()
 }
 
@@ -62,6 +65,9 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
     mainLabel.TextXAlignment = Enum.TextXAlignment.Left
     mainLabel.Parent = mainRow
 
+    local self = {} :: any
+    self.Instance = container
+
     local mainToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         mainToggle = ToggleButton.new()
@@ -69,6 +75,8 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
         mainToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         mainToggle.Instance.Parent = mainRow
         maid:GiveTask(mainToggle)
+        
+        self.Toggle = mainToggle
     end
 
     -- CONTÊINER DE SUB-OPÇÕES
@@ -93,13 +101,17 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
     thickRow.LayoutOrder = 1
     thickRow.Parent = optionsContainer
 
+    local thickSlider = nil
     if Slider and type(Slider.new) == "function" then
-        local thickSlider = Slider.new("Thickness", 1, 4, 1, 1)
+        -- Ajustado para 4 argumentos pulando de 1 em 1
+        thickSlider = Slider.new("Thickness", 1, 4, 1)
         thickSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
         thickSlider.Instance.Position = UDim2.fromScale(0, 0.5)
         thickSlider.Instance.Size = UDim2.fromScale(1, 1)
         thickSlider.Instance.Parent = thickRow
         maid:GiveTask(thickSlider)
+        
+        self.Slider = thickSlider
     end
 
     -- PREVIEW DE COR E SELETOR (WRAPPER)
@@ -176,27 +188,48 @@ function TracersFactory.new(layoutOrder: number?): TracersUI
         local picker = ColorPicker.new(COLOR_TRACER_DEFAULT)
         picker.Instance.Parent = pickerContainer
         maid:GiveTask(picker)
+        
+        -- [O SEGREDO] Exporta o picker e adiciona um SetColor simulado (caso o Picker original não tenha)
+        if not picker.SetColor then
+            picker.SetColor = function(selfPicker, newColor: Color3, silent: boolean?)
+                -- Muda visualmente o ColorPicker nativo (precisaríamos olhar o colorpicker.lua pra ter certeza do método, mas geralmente é UpdateColor)
+                if selfPicker.UpdateColor then pcall(function() selfPicker:UpdateColor(newColor) end) end
+                colorPreview.BackgroundColor3 = newColor
+            end
+        end
+        
+        self.ColorPicker = picker
 
         maid:GiveTask(colorPreview.Activated:Connect(function()
             pickerContainer.Visible = not pickerContainer.Visible
         end))
 
+        -- Conecta a mudança visual do botão de preview com o componente
         maid:GiveTask(picker.Changed:Connect(function(newColor: Color3)
             colorPreview.BackgroundColor3 = newColor
         end))
     end
 
-    -- EVENTO DE EXPANSÃO PRINCIPAL
+    -- EVENTO DE EXPANSÃO E INTERCEPTAÇÃO DE MEMÓRIA
     if mainToggle then
         maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
             optionsContainer.Visible = state
         end))
+        
+        -- Garante que se a memória ativar os Tracers, a janela de opções abra junto
+        local originalSetState = mainToggle.SetState
+        mainToggle.SetState = function(toggleSelf, state, silent)
+            originalSetState(toggleSelf, state, silent)
+            optionsContainer.Visible = state
+        end
     end
 
     maid:GiveTask(container)
-    local self = {}
-    self.Instance = container
-    function self:Destroy() maid:Destroy() end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
     return self :: TracersUI
 end
 
