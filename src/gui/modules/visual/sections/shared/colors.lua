@@ -13,6 +13,8 @@ local ColorPicker = SafeImport("gui/modules/components/colorpicker")
 
 export type ColorsUI = {
     Instance: Frame,
+    Toggle: any,      -- [NOVO] Exportado para o Toggle principal
+    ColorPicker: any, -- [NOVO] Exportado para salvar a cor
     Destroy: (self: ColorsUI) -> ()
 }
 
@@ -59,6 +61,9 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
     mainLabel.TextXAlignment = Enum.TextXAlignment.Left
     mainLabel.Parent = mainRow
 
+    local self = {} :: any
+    self.Instance = container
+
     local mainToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         mainToggle = ToggleButton.new()
@@ -66,40 +71,53 @@ function ColorsFactory.new(layoutOrder: number?): ColorsUI
         mainToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         mainToggle.Instance.Parent = mainRow
         maid:GiveTask(mainToggle)
+        
+        self.Toggle = mainToggle
     end
 
     -- COLOR PICKER EMBUTIDO (Visível apenas se Toggle == true)
+    local pickerContainer = Instance.new("Frame")
+    pickerContainer.Name = "PickerContainer"
+    pickerContainer.Size = UDim2.new(1, 0, 0, 0)
+    pickerContainer.AutomaticSize = Enum.AutomaticSize.Y
+    pickerContainer.BackgroundTransparency = 1
+    pickerContainer.Visible = false
+    pickerContainer.LayoutOrder = 2
+    pickerContainer.Parent = container
+
+    local pPad = Instance.new("UIPadding")
+    pPad.PaddingLeft = UDim.new(0, 20)
+    pPad.PaddingRight = UDim.new(0, 25)
+    pPad.PaddingBottom = UDim.new(0, 10)
+    pPad.Parent = pickerContainer
+
     if ColorPicker and type(ColorPicker.new) == "function" then
-        local pickerContainer = Instance.new("Frame")
-        pickerContainer.Name = "PickerContainer"
-        pickerContainer.Size = UDim2.new(1, 0, 0, 0)
-        pickerContainer.AutomaticSize = Enum.AutomaticSize.Y
-        pickerContainer.BackgroundTransparency = 1
-        pickerContainer.Visible = false
-        pickerContainer.LayoutOrder = 2
-        pickerContainer.Parent = container
-
-        local pPad = Instance.new("UIPadding")
-        pPad.PaddingLeft = UDim.new(0, 20)
-        pPad.PaddingRight = UDim.new(0, 25)
-        pPad.PaddingBottom = UDim.new(0, 10)
-        pPad.Parent = pickerContainer
-
         local picker = ColorPicker.new(Color3.fromHex("C80000"))
         picker.Instance.Parent = pickerContainer
         maid:GiveTask(picker)
+        
+        self.ColorPicker = picker
+    end
 
-        if mainToggle then
-            maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
-                pickerContainer.Visible = state
-            end))
+    -- LÓGICA DE EXPANSÃO + INTERCEPTAÇÃO DE MEMÓRIA
+    if mainToggle then
+        maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
+            pickerContainer.Visible = state
+        end))
+        
+        local originalSetState = mainToggle.SetState
+        mainToggle.SetState = function(toggleSelf, state, silent)
+            if originalSetState then originalSetState(toggleSelf, state, silent) end
+            pickerContainer.Visible = state
         end
     end
 
     maid:GiveTask(container)
-    local self = {}
-    self.Instance = container
-    function self:Destroy() maid:Destroy() end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
     return self :: ColorsUI
 end
 
