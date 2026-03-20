@@ -13,6 +13,9 @@ local Checkbox = SafeImport("gui/modules/components/checkbox")
 
 export type NameUI = {
     Instance: Frame,
+    Toggle: any,       -- [NOVO] Toggle principal (Name)
+    UserCheck: any,    -- [NOVO] Checkbox de User Name
+    DisplayCheck: any, -- [NOVO] Checkbox de Display Name
     Destroy: (self: NameUI) -> ()
 }
 
@@ -59,6 +62,10 @@ function NameFactory.new(layoutOrder: number?): NameUI
     mainLabel.TextXAlignment = Enum.TextXAlignment.Left
     mainLabel.Parent = mainRow
 
+    local self = {} :: any
+    self.Instance = container
+
+    -- 1. Cria e exporta o Toggle
     local mainToggle = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         mainToggle = ToggleButton.new()
@@ -66,6 +73,8 @@ function NameFactory.new(layoutOrder: number?): NameUI
         mainToggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         mainToggle.Instance.Parent = mainRow
         maid:GiveTask(mainToggle)
+        
+        self.Toggle = mainToggle
     end
 
     -- CONTÊINER DE SUB-OPÇÕES
@@ -91,8 +100,8 @@ function NameFactory.new(layoutOrder: number?): NameUI
         row.Parent = optionsContainer
 
         local pad = Instance.new("UIPadding")
-        pad.PaddingLeft = UDim.new(0, 30) -- Reduzido de 40 para 30
-        pad.PaddingRight = UDim.new(0, 25) -- Alinhamento milimétrico com o Toggle da MainRow
+        pad.PaddingLeft = UDim.new(0, 30) 
+        pad.PaddingRight = UDim.new(0, 25) 
         pad.Parent = row
 
         local lbl = Instance.new("TextLabel")
@@ -121,9 +130,14 @@ function NameFactory.new(layoutOrder: number?): NameUI
     local userRow, userCheck = createCheckRow("User Name", 1)
     local displayRow, displayCheck = createCheckRow("Display Name", 2)
 
-    -- LÓGICA RADIO BUTTON MUTUAMENTE EXCLUSIVA
+    -- 2. Exporta os Checkboxes
+    self.UserCheck = userCheck
+    self.DisplayCheck = displayCheck
+
+    -- LÓGICA RADIO BUTTON MUTUAMENTE EXCLUSIVA (Agora protegida com silent state)
     if userCheck and displayCheck then
-        userCheck:SetState(true)
+        -- Default inicial, sem disparar evento
+        if userCheck.SetState then userCheck:SetState(true, true) end
 
         local isUpdating = false
 
@@ -132,10 +146,10 @@ function NameFactory.new(layoutOrder: number?): NameUI
             isUpdating = true
 
             if state == true then
-                displayCheck:SetState(false)
+                displayCheck:SetState(false, false) -- Exige atualização com aviso
             else
-                if displayCheck:GetState() == false then
-                    userCheck:SetState(true)
+                if (displayCheck.GetState and displayCheck:GetState() == false) or (displayCheck.GetValue and displayCheck:GetValue() == false) then
+                    userCheck:SetState(true, true) -- Impede que fique sem nenhum marcado
                 end
             end
 
@@ -147,10 +161,10 @@ function NameFactory.new(layoutOrder: number?): NameUI
             isUpdating = true
 
             if state == true then
-                userCheck:SetState(false)
+                userCheck:SetState(false, false) -- Exige atualização com aviso
             else
-                if userCheck:GetState() == false then
-                    displayCheck:SetState(true)
+                if (userCheck.GetState and userCheck:GetState() == false) or (userCheck.GetValue and userCheck:GetValue() == false) then
+                    displayCheck:SetState(true, true) -- Impede que fique sem nenhum marcado
                 end
             end
 
@@ -158,16 +172,26 @@ function NameFactory.new(layoutOrder: number?): NameUI
         end))
     end
 
+    -- 3. EVENTO DE EXPANSÃO PRINCIPAL + INTERCEPTAÇÃO DE MEMÓRIA
     if mainToggle then
         maid:GiveTask(mainToggle.Toggled:Connect(function(state: boolean)
             optionsContainer.Visible = state
         end))
+        
+        -- Garante que o painel abra quando a memória carregar "true"
+        local originalSetState = mainToggle.SetState
+        mainToggle.SetState = function(toggleSelf, state, silent)
+            originalSetState(toggleSelf, state, silent)
+            optionsContainer.Visible = state
+        end
     end
 
     maid:GiveTask(container)
-    local self = {}
-    self.Instance = container
-    function self:Destroy() maid:Destroy() end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
     return self :: NameUI
 end
 
