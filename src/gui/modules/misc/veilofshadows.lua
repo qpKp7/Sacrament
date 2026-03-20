@@ -8,29 +8,25 @@ local function SafeImport(path: string): any?
     return result
 end
 
+local UIState = SafeImport("state/uistate") -- [NOVO] O Cofre de Memória
+
 local BentoCard = SafeImport("gui/modules/components/bentocard")
 local PrintScreen = SafeImport("gui/modules/misc/sections/veilofshadows/printscreen")
 local RecorderScreen = SafeImport("gui/modules/misc/sections/veilofshadows/recorderscreen")
 
-export type VeilData = {
-    MasterEnabled: boolean,
-    CleanPrintScreen: boolean,
-    OBSBypass: boolean
-}
-
 export type VeilUI = {
     Instance: Frame,
-    GetData: (self: VeilUI) -> VeilData,
+    PrintScreen: any,    -- [NOVO] Exportado
+    RecorderScreen: any, -- [NOVO] Exportado
     Destroy: (self: VeilUI) -> ()
 }
 
 local VeilFactory = {}
--- NOTA: O ID 75507316618777 é um Decal ID. Se não carregar, use o Image ID gerado pelo Studio.
-local ICON_ID = "rbxassetid://75507316618777"
+-- [CORREÇÃO DO ÍCONE] Usando rbxthumb para carregar o Decal perfeitamente
+local ICON_ID = "rbxthumb://type=Asset&id=75507316618777&w=150&h=150"
 
 function VeilFactory.new(layoutOrder: number?): VeilUI
     local maid = Maid.new()
-    local masterState = false
 
     local card = BentoCard.new(
         "Veil of Shadows",
@@ -40,10 +36,6 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
         layoutOrder or 1
     )
     maid:GiveTask(card)
-
-    maid:GiveTask(card.Toggled:Connect(function(state: boolean)
-        masterState = state
-    end))
 
     local container = Instance.new("Frame")
     container.Name = "RowsContainer"
@@ -61,11 +53,16 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
     layout.Padding = UDim.new(0, 10)
     layout.Parent = container
 
+    local self = {} :: any
+    self.Instance = card.Instance
+
     local printScreenInst = nil
     if PrintScreen and type(PrintScreen.new) == "function" then
         printScreenInst = PrintScreen.new(1)
         printScreenInst.Instance.Parent = container
         maid:GiveTask(printScreenInst)
+        
+        self.PrintScreen = printScreenInst
     end
 
     local recorderScreenInst = nil
@@ -73,18 +70,41 @@ function VeilFactory.new(layoutOrder: number?): VeilUI
         recorderScreenInst = RecorderScreen.new(2)
         recorderScreenInst.Instance.Parent = container
         maid:GiveTask(recorderScreenInst)
+        
+        self.RecorderScreen = recorderScreenInst
     end
 
-    local self = {}
-    self.Instance = card.Instance
-
-    function self:GetData(): VeilData
-        return {
-            MasterEnabled = masterState,
-            CleanPrintScreen = printScreenInst and printScreenInst:GetState() or false,
-            OBSBypass = recorderScreenInst and recorderScreenInst:GetState() or false
-        }
+    -- =========================================================================
+    -- 👑 ORQUESTRADOR DE ESTADOS
+    -- =========================================================================
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
+        if not section or not UIState then return end
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "Toggle" then
+            local component = section.Toggle or section.ToggleButton or section
+            if component then
+                if savedValue ~= nil and component.SetState then pcall(function() component:SetState(savedValue, true) end) end
+                if component.Toggled then maid:GiveTask(component.Toggled:Connect(function(val: boolean) UIState.Set(stateKey, val) end)) end
+            end
+        end
     end
+
+    -- EVENTO DO BENTOCARD PRINCIPAL (VEIL OF SHADOWS)
+    if card and UIState then
+        local savedMaster = UIState.Get("Misc_Veil_Master", false)
+        if savedMaster and card.SetState then pcall(function() card:SetState(savedMaster, true) end) end
+        maid:GiveTask(card.Toggled:Connect(function(state: boolean)
+            UIState.Set("Misc_Veil_Master", state)
+        end))
+    end
+
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA
+    Orchestrator.Bind(printScreenInst,    "Misc_Veil_PrintScreen",  "Toggle")
+    Orchestrator.Bind(recorderScreenInst, "Misc_Veil_OBSBypass",    "Toggle")
+    -- =========================================================================
 
     function self:Destroy() 
         maid:Destroy() 
