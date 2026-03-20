@@ -5,6 +5,8 @@ local Maid = Import("utils/maid")
 
 export type KeybindSection = {
     Instance: Frame,
+    KeyChanged: RBXScriptSignal, -- [NOVO] Evento para a memória
+    SetKey: (self: KeybindSection, key: any, silent: boolean?) -> (), -- [NOVO] Injetor de memória
     Destroy: (self: KeybindSection) -> ()
 }
 
@@ -29,6 +31,10 @@ end
 function KeybindFactory.new(layoutOrder: number): KeybindSection
     local maid = Maid.new()
     local capturingKey = false
+    
+    -- [NOVO] Evento que o Orquestrador vai escutar
+    local keyChangedEvent = Instance.new("BindableEvent")
+    maid:GiveTask(keyChangedEvent)
 
     local row = Instance.new("Frame")
     row.Name = "KeyRow"
@@ -82,6 +88,26 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     keyBtn.TextSize = 16
     keyBtn.Parent = inputCont
 
+    local self = {} :: any
+    self.Instance = row
+    self.KeyChanged = keyChangedEvent.Event
+
+    -- =========================================================
+    -- CONTRATO OBRIGATÓRIO: SetKey
+    -- =========================================================
+    function self:SetKey(keyEnum: any, silent: boolean?)
+        if not keyEnum then return end
+        
+        -- Funciona com EnumItem ou Strings
+        local keyName = typeof(keyEnum) == "EnumItem" and keyEnum.Name or tostring(keyEnum)
+        keyBtn.Text = formatKeyName(keyName)
+        
+        if not silent then
+            local safeEnum = typeof(keyEnum) == "EnumItem" and keyEnum or {Name = keyName}
+            keyChangedEvent:Fire(safeEnum)
+        end
+    end
+
     maid:GiveTask(keyBtn.MouseButton1Click:Connect(function()
         if capturingKey then return end
         capturingKey = true
@@ -90,11 +116,11 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
         local connection: RBXScriptConnection
         connection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
-                keyBtn.Text = formatKeyName(input.KeyCode.Name)
+                self:SetKey(input.KeyCode, false)
                 capturingKey = false
                 connection:Disconnect()
             elseif input.UserInputType.Name:match("Mouse") then
-                keyBtn.Text = formatKeyName(input.UserInputType.Name)
+                self:SetKey(input.UserInputType, false)
                 capturingKey = false
                 connection:Disconnect()
             end
@@ -104,10 +130,12 @@ function KeybindFactory.new(layoutOrder: number): KeybindSection
     end))
 
     maid:GiveTask(row)
-    local self = {}
-    self.Instance = row
-    function self:Destroy() maid:Destroy() end
-    return self
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
+    return self :: KeybindSection
 end
 
 return KeybindFactory
