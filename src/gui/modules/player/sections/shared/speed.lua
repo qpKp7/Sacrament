@@ -12,6 +12,7 @@ local Slider = SafeImport("gui/modules/components/slider")
 
 export type SpeedSectionUI = {
     Instance: Frame,
+    Slider: any, -- [NOVO] Exportado para a memória!
     Destroy: (self: SpeedSectionUI) -> ()
 }
 
@@ -27,8 +28,12 @@ function SpeedFactory.new(layoutOrder: number?): SpeedSectionUI
     container.BackgroundTransparency = 1
     container.LayoutOrder = layoutOrder or 2
 
+    local self = {} :: any
+    self.Instance = container
+
     if Slider and type(Slider.new) == "function" then
-        local speedSlider = Slider.new("Speed", 0, 300, 32, 1)
+        -- [AJUSTADO] Apenas 4 argumentos: Título, Mínimo, Máximo e Padrão (32)
+        local speedSlider = Slider.new("Speed", 0, 300, 32)
         
         -- Centralizado perfeitamente no Y, aproveitando a margem X nativa do slider.lua
         speedSlider.Instance.AnchorPoint = Vector2.new(0, 0.5)
@@ -37,12 +42,17 @@ function SpeedFactory.new(layoutOrder: number?): SpeedSectionUI
         speedSlider.Instance.Parent = container
         
         maid:GiveTask(speedSlider)
+        
+        -- [O SEGREDO] Entregando a chave pro Orquestrador fazer a mágica!
+        self.Slider = speedSlider
     end
 
     maid:GiveTask(container)
-    local self = {}
-    self.Instance = container
-    function self:Destroy() maid:Destroy() end
+
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+
     return self :: SpeedSectionUI
 end
 
