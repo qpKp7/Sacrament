@@ -8,6 +8,14 @@ local Import = (_G :: any).SacramentImport
 local UIState = Import("state/uistate")
 local Maid = Import("utils/maid")
 
+-- [NOVO] Importando o módulo de Proteção de forma segura
+local function SafeImport(path: string): any?
+    local success, result = pcall(function() return Import(path) end)
+    if not success then return nil end
+    return result
+end
+local Protection = SafeImport("logic/security/protection")
+
 -- O SmartImport cuidará se o mainframe estiver em gui/ ou gui/components/
 local MainFrameModule = Import("gui/components/mainframe")
 
@@ -44,16 +52,21 @@ function UIManager.Init(adapter: any?, settings: any)
     mainFrame.Instance.Parent = screenGui
     uiMaid:GiveTask(mainFrame)
 
-    -- Lógica de Injeção (Adapter ou PlayerGui)
+    -- Lógica de Injeção Blindada (Adapter ou CoreGui/gethui)
     if adapter and adapter.mountGui then
         adapter.mountGui(screenGui)
     else
-        local player = game:GetService("Players").LocalPlayer
-        if player then
-            -- Deferimos para garantir que o ambiente do player está pronto
-            task.defer(function()
-                screenGui.Parent = player:WaitForChild("PlayerGui")
-            end)
+        -- [NOVO] Usa o nosso Escudo para esconder a UI dos Anti-Cheats!
+        if Protection and type(Protection.ProtectUI) == "function" then
+            Protection.ProtectUI(screenGui)
+        else
+            -- Fallback de emergência (Executor fraco)
+            local player = game:GetService("Players").LocalPlayer
+            if player then
+                task.defer(function()
+                    screenGui.Parent = player:WaitForChild("PlayerGui")
+                end)
+            end
         end
     end
 
