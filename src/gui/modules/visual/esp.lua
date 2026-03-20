@@ -8,6 +8,8 @@ local function SafeImport(path: string): any?
     return result
 end
 
+local UIState = SafeImport("state/uistate") -- [NOVO] O Cofre de Memória
+
 local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 local Arrow = SafeImport("gui/modules/components/arrow")
 local GlowBar = SafeImport("gui/modules/components/glowbar")
@@ -49,7 +51,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
     containerLayout.Parent = container
 
-    -- HEADER CORE: Largura oficial de 280px para o LeftPanel
+    -- HEADER CORE
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(0, 280, 0, 50)
@@ -82,11 +84,15 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     controls.Active = false
     controls.Parent = header
     
+    -- Puxa o estado do botão principal de ESP
+    local isEnabled = UIState and UIState.Get("ESPEnabled", false) or false
+
     local toggleBtn = nil
     if ToggleButton and type(ToggleButton.new) == "function" then
         toggleBtn = ToggleButton.new()
         toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
         toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        if toggleBtn.SetState then pcall(function() toggleBtn:SetState(isEnabled, true) end) end
         toggleBtn.Instance.Parent = controls
         maid:GiveTask(toggleBtn)
     end
@@ -114,6 +120,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
         glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
         glowBar.Instance.AutomaticSize = Enum.AutomaticSize.None
         glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        if glowBar.SetState then glowBar:SetState(isEnabled) end
         glowBar.Instance.Parent = glowWrapper
 
         local gObj = glowBar.Instance
@@ -145,7 +152,7 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     maid:GiveTask(header:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateGlowBar))
     task.defer(updateGlowBar)
 
-    -- SUBFRAME CORE: 420px de altura base
+    -- SUBFRAME CORE
     local subFrame = Instance.new("Frame")
     subFrame.Name = "SubFrame"
     subFrame.Size = UDim2.new(1, 0, 0, 420)
@@ -175,18 +182,21 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
     rightLayout.Parent = rightContent
 
-    local function safeLoadSection(moduleType: any, order: number, parentInstance: Instance)
+    -- [MODIFICADO] Devolve a instância para que possamos capturar a tabela da seção
+    local function loadSec(moduleType: any, order: number, parentInstance: Instance)
         if type(moduleType) == "table" and type(moduleType.new) == "function" then
             local success, instance = pcall(function() return moduleType.new(order) end)
             if success and instance and instance.Instance then
                 instance.Instance.Parent = parentInstance
                 maid:GiveTask(instance)
+                return instance
             end
         end
+        return nil
     end
 
-    -- Seção de Keybind (Fixa no topo do conteúdo direito)
-    safeLoadSection(KeybindSection, 1, rightContent)
+    -- Seção de Keybind
+    local secKeybind = loadSec(KeybindSection, 1, rightContent)
 
     if Sidebar and type(Sidebar.createHorizontal) == "function" then
         local hLine = Sidebar.createHorizontal(2)
@@ -216,20 +226,103 @@ function ESPFactory.new(layoutOrder: number?): ESPUI
     inputsPadding.PaddingBottom = UDim.new(0, 20)
     inputsPadding.Parent = inputsScroll
 
-    -- SEQUÊNCIA DE CARREGAMENTO SOLICITADA
-    safeLoadSection(KeyHoldSection, 1, inputsScroll)
-    safeLoadSection(DistanceSection, 2, inputsScroll)
-    safeLoadSection(StyleSection, 3, inputsScroll)
-    safeLoadSection(ColorsSection, 4, inputsScroll)
-    safeLoadSection(NameSection, 5, inputsScroll)
-    safeLoadSection(TracersSection, 6, inputsScroll)
-    safeLoadSection(TargetSection, 7, inputsScroll)
+    -- CARREGAMENTO E CAPTURA DOS COMPONENTES
+    local secKeyHold = loadSec(KeyHoldSection, 1, inputsScroll)
+    local secDistance= loadSec(DistanceSection, 2, inputsScroll)
+    local secStyle   = loadSec(StyleSection, 3, inputsScroll)
+    local secColors  = loadSec(ColorsSection, 4, inputsScroll)
+    local secName    = loadSec(NameSection, 5, inputsScroll)
+    local secTracers = loadSec(TracersSection, 6, inputsScroll)
+    local secTarget  = loadSec(TargetSection, 7, inputsScroll)
 
-    if toggleBtn and glowBar then
+    -- EVENTO DO TOGGLE PRINCIPAL
+    if toggleBtn and UIState then
         maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
-            glowBar:SetState(state)
+            if glowBar then glowBar:SetState(state) end
+            UIState.Set("ESPEnabled", state)
         end))
     end
+
+    -- =========================================================================
+    -- 👑 ORQUESTRADOR DE ESTADOS (AGORA COMPATÍVEL COM COLORPICKER)
+    -- =========================================================================
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
+        if not section or not UIState then return end
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "TextBox" or componentType == "ValueBox" then
+            local component = section.ValueBox or section.TextBox
+            if component then
+                if savedValue ~= nil and component.SetValue then pcall(function() component:SetValue(savedValue, true) end) end
+                if component.OnValueChanged then maid:GiveTask(component.OnValueChanged:Connect(function(val) UIState.Set(stateKey, val) end)) end
+            end
+            
+        elseif componentType == "Toggle" then
+            local component = section.Toggle or section.ToggleButton or section
+            if component then
+                if savedValue ~= nil and component.SetState then pcall(function() component:SetState(savedValue, true) end) end
+                if component.Toggled then maid:GiveTask(component.Toggled:Connect(function(val: boolean) UIState.Set(stateKey, val) end)) end
+            end
+            
+        elseif componentType == "Dropdown" then
+            local component = section.Dropdown
+            if component then
+                if savedValue ~= nil and component.SetSelected then pcall(function() component:SetSelected(savedValue, true) end) end
+                if component.OnSelectionChanged then maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string) UIState.Set(stateKey, val) end)) end
+            end
+            
+        elseif componentType == "Slider" then
+            local component = section.Slider
+            if component then
+                if savedValue ~= nil and component.SetValue then pcall(function() component:SetValue(savedValue, true) end) end
+                if component.OnValueChanged then maid:GiveTask(component.OnValueChanged:Connect(function(val: number) UIState.Set(stateKey, val) end)) end
+            end
+
+        -- 👉 NOVA MAGIA: Leitura e escrita de Cores em Hex
+        elseif componentType == "ColorPicker" then
+            local component = section.ColorPicker
+            if component then
+                if savedValue and type(savedValue) == "string" and component.SetColor then 
+                    pcall(function() component:SetColor(Color3.fromHex(savedValue), true) end) 
+                end
+                if component.Changed then 
+                    maid:GiveTask(component.Changed:Connect(function(color: Color3) UIState.Set(stateKey, color:ToHex()) end)) 
+                end
+            end
+
+        elseif componentType == "Keybind" then
+            local component = section.Keybox or section.KeyBind or section
+            if component then
+                if savedValue and type(savedValue) == "string" and component.SetKey then pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end) end
+                if component.KeyChanged then maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?) UIState.Set(stateKey, k and k.Name or nil) end)) end
+            end
+        end
+    end
+
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA DO ESP
+    Orchestrator.Bind(secKeybind,   "ESP_Keybind",        "Keybind")
+    Orchestrator.Bind(secKeyHold,   "ESP_KeyHold",        "Toggle")
+    Orchestrator.Bind(secDistance,  "ESP_MaxDistance",    "Slider")
+    Orchestrator.Bind(secStyle,     "ESP_Style",          "Dropdown")
+    
+    Orchestrator.Bind(secColors,    "ESP_CustomColors",   "Toggle")
+    Orchestrator.Bind(secColors,    "ESP_ColorHex",       "ColorPicker")
+    
+    Orchestrator.Bind(secName,      "ESP_NameShow",       "Toggle")
+    if secName and secName.UserCheck then
+        Orchestrator.Bind(secName.UserCheck,    "ESP_NameUser",    "Toggle")
+        Orchestrator.Bind(secName.DisplayCheck, "ESP_NameDisplay", "Toggle")
+    end
+    
+    Orchestrator.Bind(secTracers,   "ESP_TracersShow",    "Toggle")
+    Orchestrator.Bind(secTracers,   "ESP_TracersThick",   "Slider")
+    Orchestrator.Bind(secTracers,   "ESP_TracersColor",   "ColorPicker")
+    
+    Orchestrator.Bind(secTarget,    "ESP_TargetMode",     "Toggle")
+    Orchestrator.Bind(secTarget,    "ESP_TargetName",     "TextBox")
+    -- =========================================================================
 
     maid:GiveTask(container)
     local self = {}
