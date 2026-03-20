@@ -12,8 +12,7 @@ local ToggleButton = SafeImport("gui/modules/components/togglebutton")
 
 export type FriendCheckUI = {
     Instance: Frame,
-    Toggled: RBXScriptSignal,
-    GetState: (self: FriendCheckUI) -> boolean,
+    Toggle: any, -- [NOVO] Exportado para o Orquestrador!
     Destroy: (self: FriendCheckUI) -> ()
 }
 
@@ -27,7 +26,6 @@ local FONT_MAIN = Enum.Font.GothamBold
 
 function FriendCheckFactory.new(layoutOrder: number?): FriendCheckUI
     local maid = Maid.new()
-    local currentState = false
 
     local card = Instance.new("Frame")
     card.Name = "FriendCheckCard"
@@ -73,31 +71,21 @@ function FriendCheckFactory.new(layoutOrder: number?): FriendCheckUI
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = card
 
-    local toggledEvent = Instance.new("BindableEvent")
-    maid:GiveTask(toggledEvent)
+    local self = {} :: any
+    self.Instance = card
 
     if ToggleButton and type(ToggleButton.new) == "function" then
         local toggle = ToggleButton.new()
         toggle.Instance.AnchorPoint = Vector2.new(1, 0.5)
         toggle.Instance.Position = UDim2.new(1, 0, 0.5, 0)
         toggle.Instance.Parent = card
-        
-        maid:GiveTask(toggle.Toggled:Connect(function(state: boolean)
-            currentState = state
-            toggledEvent:Fire(state)
-        end))
         maid:GiveTask(toggle)
+        
+        -- [O SEGREDO] Chave para a memória!
+        self.Toggle = toggle
     end
 
     maid:GiveTask(card)
-
-    local self = {}
-    self.Instance = card
-    self.Toggled = toggledEvent.Event
-
-    function self:GetState()
-        return currentState
-    end
 
     function self:Destroy()
         maid:Destroy()
