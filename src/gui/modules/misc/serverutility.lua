@@ -8,28 +8,28 @@ local function SafeImport(path: string): any?
     return result
 end
 
+local UIState = SafeImport("state/uistate") -- [NOVO] O Cofre de Memória
+
 local BentoCard = SafeImport("gui/modules/components/bentocard")
 local Rejoin = SafeImport("gui/modules/misc/sections/serverutility/rejoin")
 local ServerHop = SafeImport("gui/modules/misc/sections/serverutility/serverhop")
 local InstantRejoin = SafeImport("gui/modules/misc/sections/serverutility/instantrejoin")
 
-export type ServerUtilityData = {
-    MasterEnabled: boolean,
-    InstantRejoinEnabled: boolean
-}
-
 export type ServerUtilityUI = {
     Instance: Frame,
-    GetData: (self: ServerUtilityUI) -> ServerUtilityData,
+    Rejoin: any,        -- [NOVO] Exportado para conectar a lógica de Teleport
+    ServerHop: any,     -- [NOVO] Exportado para conectar a lógica de Teleport
+    InstantRejoin: any, -- [NOVO] Exportado para o Orquestrador
     Destroy: (self: ServerUtilityUI) -> ()
 }
 
 local ServerUtilityFactory = {}
-local ICON_ID = "rbxassetid://111933292722916"
+
+-- [CORREÇÃO DO ÍCONE] Usando rbxthumb para forçar o carregamento mesmo se for um Decal ID
+local ICON_ID = "rbxthumb://type=Asset&id=111933292722916&w=150&h=150"
 
 function ServerUtilityFactory.new(layoutOrder: any): ServerUtilityUI
     local maid = Maid.new()
-    local masterState = false
     
     -- Barreira de proteção contra injeção de tabelas pelo loader dinâmico
     local actualOrder = type(layoutOrder) == "number" and layoutOrder or 2
@@ -42,10 +42,6 @@ function ServerUtilityFactory.new(layoutOrder: any): ServerUtilityUI
         actualOrder
     )
     maid:GiveTask(card)
-
-    maid:GiveTask(card.Toggled:Connect(function(state: boolean)
-        masterState = state
-    end))
 
     local container = Instance.new("Frame")
     container.Name = "RowsContainer"
@@ -63,16 +59,16 @@ function ServerUtilityFactory.new(layoutOrder: any): ServerUtilityUI
     layout.Padding = UDim.new(0, 10)
     layout.Parent = container
 
+    local self = {} :: any
+    self.Instance = card.Instance
+
     local rejoinInst = nil
     if Rejoin and type(Rejoin.new) == "function" then
         rejoinInst = Rejoin.new(1)
         rejoinInst.Instance.Parent = container
         maid:GiveTask(rejoinInst)
         
-        maid:GiveTask(rejoinInst.Clicked:Connect(function()
-            if not masterState then return end
-            -- Lógica de TeleportService (Rejoin)
-        end))
+        self.Rejoin = rejoinInst
     end
 
     local serverHopInst = nil
@@ -81,10 +77,7 @@ function ServerUtilityFactory.new(layoutOrder: any): ServerUtilityUI
         serverHopInst.Instance.Parent = container
         maid:GiveTask(serverHopInst)
         
-        maid:GiveTask(serverHopInst.Clicked:Connect(function()
-            if not masterState then return end
-            -- Lógica de TeleportService + HttpService (Hop)
-        end))
+        self.ServerHop = serverHopInst
     end
 
     local instantRejoinInst = nil
@@ -92,17 +85,40 @@ function ServerUtilityFactory.new(layoutOrder: any): ServerUtilityUI
         instantRejoinInst = InstantRejoin.new(3)
         instantRejoinInst.Instance.Parent = container
         maid:GiveTask(instantRejoinInst)
+        
+        self.InstantRejoin = instantRejoinInst
     end
 
-    local self = {}
-    self.Instance = card.Instance
-
-    function self:GetData(): ServerUtilityData
-        return {
-            MasterEnabled = masterState,
-            InstantRejoinEnabled = instantRejoinInst and instantRejoinInst:GetState() or false
-        }
+    -- =========================================================================
+    -- 👑 ORQUESTRADOR DE ESTADOS
+    -- =========================================================================
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
+        if not section or not UIState then return end
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "Toggle" then
+            local component = section.Toggle or section.ToggleButton or section
+            if component then
+                if savedValue ~= nil and component.SetState then pcall(function() component:SetState(savedValue, true) end) end
+                if component.Toggled then maid:GiveTask(component.Toggled:Connect(function(val: boolean) UIState.Set(stateKey, val) end)) end
+            end
+        end
     end
+
+    -- EVENTO DO BENTOCARD PRINCIPAL (SERVER UTILITY)
+    if card and UIState then
+        local savedMaster = UIState.Get("Misc_ServerUtility_Master", false)
+        if savedMaster and card.SetState then pcall(function() card:SetState(savedMaster, true) end) end
+        maid:GiveTask(card.Toggled:Connect(function(state: boolean)
+            UIState.Set("Misc_ServerUtility_Master", state)
+        end))
+    end
+
+    -- 🎯 PAINEL DE CONTROLE DE MEMÓRIA (Rejoin e Hop são ações, então não salvam estado)
+    Orchestrator.Bind(instantRejoinInst, "Misc_ServerUtility_InstantRejoin", "Toggle")
+    -- =========================================================================
 
     function self:Destroy() 
         maid:Destroy() 
