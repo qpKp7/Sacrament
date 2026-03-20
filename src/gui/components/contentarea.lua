@@ -36,22 +36,22 @@ function ContentAreaModule.new(settings: any): ContentArea
     leftStraightEdge.Active = false
     leftStraightEdge.Parent = content
 
-    -- O Segredo Profissional: O Cache de Instâncias!
+    -- O Cache e o Ticket de Prevenção de Condição de Corrida
     local tabCache = {} 
-    local activeTabInstance = nil
+    local currentRequestedTab = ""
 
     local function loadTabContent(tabName: string)
         local lowerName = string.lower(tabName)
-        
-        -- Esconde a aba atual, se existir (Não destrói, apenas esconde!)
-        if activeTabInstance then
-            activeTabInstance.Visible = false
+        currentRequestedTab = lowerName -- Atualiza o "Ticket" atual
+
+        -- MATA A SOBREPOSIÇÃO: Força todas as abas carregadas a ficarem invisíveis imediatamente
+        for name, inst in pairs(tabCache) do
+            inst.Visible = false
         end
 
-        -- Se a aba já foi carregada antes (Está no Cache), apenas exibe ela instantaneamente.
+        -- Se a aba já foi carregada antes (Está no Cache), apenas exibe ela instantaneamente!
         if tabCache[lowerName] then
             tabCache[lowerName].Visible = true
-            activeTabInstance = tabCache[lowerName]
             return
         end
 
@@ -68,21 +68,23 @@ function ContentAreaModule.new(settings: any): ContentArea
 
             if successCreate and moduleInstance and moduleInstance.Instance then
                 moduleInstance.Instance.Parent = content
-                
-                -- Limpa a posição se houver sobra da ancoragem anterior e garante visibilidade
-                moduleInstance.Instance.Visible = true 
-                
-                -- Salva a gaveta (Maid) na Main para não vazar memória quando a UI inteira fechar
                 maid:GiveTask(moduleInstance)
                 
                 -- Salva no Cache para acesso futuro
                 tabCache[lowerName] = moduleInstance.Instance
-                activeTabInstance = moduleInstance.Instance
+                
+                -- O CHEQUE DE SEGURANÇA:
+                -- Se eu terminei de carregar, mas o usuário já clicou em outra aba enquanto eu carregava, eu fico invisível!
+                if currentRequestedTab == lowerName then
+                    moduleInstance.Instance.Visible = true
+                else
+                    moduleInstance.Instance.Visible = false
+                end
             else
-                warn(string.format("[Sacrament] Erro ao instanciar módulo %s: %s", tabName, tostring(moduleInstance)))
+                warn(string.format("[Sacrament] Erro ao instanciar módulo %s", tabName))
             end
         else
-            warn(string.format("[Sacrament] Módulo não encontrado ou erro de sintaxe (%s): %s", tabName, tostring(result)))
+            warn(string.format("[Sacrament] Módulo não encontrado ou erro de sintaxe (%s)", tabName))
         end
     end
 
@@ -93,9 +95,7 @@ function ContentAreaModule.new(settings: any): ContentArea
     self.Instance = content
 
     function self:Destroy()
-        -- Limpa todo o cache e detona a UI de forma segura
         tabCache = {}
-        activeTabInstance = nil
         maid:Destroy()
         content:Destroy()
     end
