@@ -4,7 +4,7 @@ local Maid = Import("utils/maid")
 
 export type RejoinUI = {
     Instance: Frame,
-    Clicked: RBXScriptSignal,
+    Action: TextButton, -- [NOVO] Exportado para o script de lógica
     Destroy: (self: RejoinUI) -> ()
 }
 
@@ -74,12 +74,9 @@ function RejoinFactory.new(layoutOrder: number?): RejoinUI
     subtitle.TextXAlignment = Enum.TextXAlignment.Left
     subtitle.Parent = textContainer
 
-    local clickedEvent = Instance.new("BindableEvent")
-    maid:GiveTask(clickedEvent)
-
     local button = Instance.new("TextButton")
     button.Name = "ActionBtn"
-    button.Size = UDim2.new(0, 80, 0, 30)
+    button.Size = UDim2.fromOffset(80, 30)
     button.AnchorPoint = Vector2.new(1, 0.5)
     button.Position = UDim2.new(1, 0, 0.5, 0)
     button.BackgroundColor3 = COLOR_BTN
@@ -100,17 +97,15 @@ function RejoinFactory.new(layoutOrder: number?): RejoinUI
     btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     btnStroke.Parent = button
 
-    maid:GiveTask(button.MouseButton1Click:Connect(function()
-        clickedEvent:Fire()
-    end))
-
-    maid:GiveTask(row)
-
-    local self = {}
+    local self = {} :: any
     self.Instance = row
-    self.Clicked = clickedEvent.Event
+    self.Action = button -- Exportado para fácil acesso via .MouseButton1Click no orquestrador
     
-    function self:Destroy() maid:Destroy() end
+    function self:Destroy() 
+        maid:Destroy() 
+    end
+    
+    maid:GiveTask(row)
     
     return self :: RejoinUI
 end
