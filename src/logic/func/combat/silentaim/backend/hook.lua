@@ -1,10 +1,9 @@
 --!strict
 --[[
     SACRAMENT | Mathematical Redirection (True Silent Aim)
-    - Sem Hitbox falsa. Usa interceptação de Vetores na Rede.
+    - Suporte a Jogos Modernos (Raycast) e Clássicos (FindPartOnRay).
     - Exclusivo por BIND (Sem auto-target).
     - Disparo só redireciona se o ALVO TRAVADO estiver DENTRO DO FOV.
-    - Padrão MarkStyle corrigido para Highlight.
 ]]
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
@@ -32,11 +31,13 @@ local KEY_HOLD        = "SilentAim_KeyHold"
 
 local oldFireServer: any
 local oldRaycast: any
+local oldFindPartIgnore: any
+local oldFindPart: any
 
 -- Memória do alvo travado
 local lockedCharacter: Model? = nil
 
--- Busca o Character apenas no milissegundo em que você aperta a Bind
+-- Busca o Character apenas no momento em que aperta a Bind
 local function GetCharacterAtCursor(): Model?
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
@@ -49,11 +50,8 @@ local function GetCharacterAtCursor(): Model?
     return nil
 end
 
--- =======================================================
--- A CONDIÇÃO DE DISPARO (A MÁGICA DO FOV)
--- =======================================================
+-- Condição de disparo: Só atira dobrado se o alvo travado estiver na tela e dentro do FOV
 local function GetValidLockedPartForShooting(): BasePart?
-    -- Se não tem ninguém travado, não atira dobrado
     if not lockedCharacter or not lockedCharacter.Parent then return nil end
     
     local hum = lockedCharacter:FindFirstChildOfClass("Humanoid")
@@ -61,26 +59,22 @@ local function GetValidLockedPartForShooting(): BasePart?
 
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
     local realPart = lockedCharacter:FindFirstChild(aimPartName) or lockedCharacter:FindFirstChild("HumanoidRootPart")
-    
     if not realPart or not realPart:IsA("BasePart") then return nil end
 
-    -- Pega a câmera para calcular se o cara travado está DENTRO do Círculo na tela
     local camera = Workspace.CurrentCamera
     if not camera then return nil end
 
     local screenPos, onScreen = camera:WorldToViewportPoint(realPart.Position)
-    if not onScreen then return nil end -- Se o cara não tá nem na sua tela, atira normal
+    if not onScreen then return nil end 
 
     local mousePos = UserInputService:GetMouseLocation()
     local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
 
-    -- SE O CARA ESTIVER DENTRO DO CÍRCULO BRANCO, RETORNA A PEÇA PARA A BALA ACERTAR
     if dist <= fovRadius then
         return realPart
     end
 
-    -- Se ele estiver travado, mas você mirou muito longe (fora do FOV), atira normal
     return nil
 end
 
@@ -122,7 +116,7 @@ function HookBackend.load()
     end)
 
     -- =======================================================
-    -- RENDERIZAÇÃO VISUAL (Bolinha/Highlight)
+    -- RENDERIZAÇÃO VISUAL
     -- =======================================================
     Loop.BindToRender("SilentAim_Visuals", function()
         if not UIState.Get(KEY_ENABLED, false) or not lockedCharacter then
@@ -141,7 +135,6 @@ function HookBackend.load()
         local targetPart = lockedCharacter:FindFirstChild(aimPartName) or lockedCharacter:FindFirstChild("HumanoidRootPart")
         
         if targetPart then
-            -- [CORRIGIDO] Padrão setado para "Highlight" direto!
             MarkStyle.Mark(targetPart, UIState.Get(KEY_MARK_STYLE, "Highlight"))
         else
             MarkStyle.Clear()
@@ -149,19 +142,55 @@ function HookBackend.load()
     end)
 
     -- =======================================================
-    -- A MATEMÁTICA DO TIRO (INTERCEPTAÇÃO DA ARMA)
+    -- A MATEMÁTICA DO TIRO (INTERCEPTAÇÃO UNIVERSAL)
     -- =======================================================
     local success, err = pcall(function()
         
-        -- Da Hood / Jogos com RemoteEvent
-        local fakeEvent = Instance.new("RemoteEvent")
-        oldFireServer = hookfunction(fakeEvent.FireServer, function(self, ...)
-            local args = {...}
-            
+        -- 1. Jogos Modernos (Arsenal, Phantom Forces, etc)
+        oldRaycast = hookfunction(Workspace.Raycast, function(self, origin, direction, params)
             if UIState.Get(KEY_ENABLED, false) then
                 local target = GetValidLockedPartForShooting()
                 if target then
-                    -- Se a arma mandou um Vector3 pro servidor, troca pra cabeça do inimigo
+                    local newDirection = (target.Position - origin).Unit * direction.Magnitude
+                    return oldRaycast(self, origin, newDirection, params)
+                end
+            end
+            return oldRaycast(self, origin, direction, params)
+        end)
+
+        -- 2. Jogos Clássicos (Prison Life, Da Hood) - IGNORANDO PAREDES
+        oldFindPartIgnore = hookfunction(Workspace.FindPartOnRayWithIgnoreList, function(self, ray, ignore, desc, water)
+            if UIState.Get(KEY_ENABLED, false) then
+                local target = GetValidLockedPartForShooting()
+                if target then
+                    local newDirection = (target.Position - ray.Origin).Unit * ray.Direction.Magnitude
+                    local newRay = Ray.new(ray.Origin, newDirection)
+                    return oldFindPartIgnore(self, newRay, ignore, desc, water)
+                end
+            end
+            return oldFindPartIgnore(self, ray, ignore, desc, water)
+        end)
+
+        -- 3. Jogos Clássicos (Variante Base)
+        oldFindPart = hookfunction(Workspace.FindPartOnRay, function(self, ray, ignore, water)
+            if UIState.Get(KEY_ENABLED, false) then
+                local target = GetValidLockedPartForShooting()
+                if target then
+                    local newDirection = (target.Position - ray.Origin).Unit * ray.Direction.Magnitude
+                    local newRay = Ray.new(ray.Origin, newDirection)
+                    return oldFindPart(self, newRay, ignore, water)
+                end
+            end
+            return oldFindPart(self, ray, ignore, water)
+        end)
+
+        -- 4. Redirecionamento Bruto de Rede (Remote Events)
+        local fakeEvent = Instance.new("RemoteEvent")
+        oldFireServer = hookfunction(fakeEvent.FireServer, function(self, ...)
+            local args = {...}
+            if UIState.Get(KEY_ENABLED, false) then
+                local target = GetValidLockedPartForShooting()
+                if target then
                     for i, value in pairs(args) do
                         if typeof(value) == "Vector3" then
                             args[i] = target.Position
@@ -174,27 +203,15 @@ function HookBackend.load()
             return oldFireServer(self, unpack(args))
         end)
 
-        -- Jogos Modernos / Raycast
-        oldRaycast = hookfunction(Workspace.Raycast, function(self, origin, direction, params)
-            if UIState.Get(KEY_ENABLED, false) then
-                local target = GetValidLockedPartForShooting()
-                if target then
-                    local newDirection = (target.Position - origin).Unit * direction.Magnitude
-                    return oldRaycast(self, origin, newDirection, params)
-                end
-            end
-            return oldRaycast(self, origin, direction, params)
-        end)
-
     end)
 
     if not success then
-        Telemetry.Log("ERROR", "SilentAim", "Falha ao interceptar pacotes: " .. tostring(err))
+        Telemetry.Log("ERROR", "SilentAim", "Falha ao interceptar Raycasts: " .. tostring(err))
         return "failed"
     end
 
     isInitialized = true
-    Telemetry.Log("INFO", "SilentAim", "Target Lock Matemático Ativado.")
+    Telemetry.Log("INFO", "SilentAim", "Target Lock Matemático Ativado (Suporte Legacy + Moderno).")
     return "initialized"
 end
 
@@ -213,6 +230,6 @@ end
 
 function HookBackend.health() return isInitialized and "initialized" or "unsupported" end
 function HookBackend.requirements() return {SupportsHookFunc = true} end
-function HookBackend.assumptions() return "Matemática de interceptação com FOV Dinâmico." end
+function HookBackend.assumptions() return "Interceptação de vetores em Raycast, FindPartOnRay e RemoteEvents." end
 
 return HookBackend
