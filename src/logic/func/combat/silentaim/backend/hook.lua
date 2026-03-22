@@ -1,11 +1,10 @@
 --!strict
 --[[
-    SACRAMENT | Canonical Hitbox (Fixed Physics & Decals)
-    1. Sem Auto-Target (Trava apenas com Bind + Cursor).
-    2. Esconde o Rosto (Decals) para não aparecer rostos gigantes.
-    3. Altera a física apenas 1 vez (Evita que o player trave/despedace).
+    SACRAMENT | Anchored Ghost Hitbox (The Absolute Fix)
+    - Cria peça nova (sem rosto/decals).
+    - Anchored = true (zero quebra de física ou joints).
+    - Trava EXCLUSIVA via Keybind.
 ]]
-local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Import = (_G :: any).SacramentImport
 
@@ -19,13 +18,9 @@ local FOVLimit  = Import("logic/func/combat/silentaim/fovlimit")
 local HookBackend = {}
 local isInitialized = false
 
--- Variáveis de Estado
+-- Referências Restritas
 local lockedCharacter: Model? = nil
-
--- Memória para podermos restaurar o inimigo ao normal depois
-local originalSizes: {[BasePart]: Vector3} = {}
-local originalTransparencies: {[BasePart]: number} = {}
-local originalDecals: {[Decal]: number} = {}
+local ghostHitbox: Part? = nil
 
 -- Chaves sincronizadas da UI
 local KEY_ENABLED     = "SilentAimEnabled"
@@ -36,29 +31,16 @@ local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
 
--- Restaura o Character original ao estado perfeitamente normal
-local function ResetHitbox()
-    for part, size in pairs(originalSizes) do
-        if part and part.Parent then
-            part.Size = size
-            if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
-            part.CanCollide = true
-            part.Massless = false
-        end
+-- Destrói completamente o fantasma
+local function CleanGhost()
+    if ghostHitbox then
+        ghostHitbox:Destroy()
+        ghostHitbox = nil
     end
-    for decal, trans in pairs(originalDecals) do
-        if decal and decal.Parent then
-            decal.Transparency = trans
-        end
-    end
-    
-    table.clear(originalSizes)
-    table.clear(originalTransparencies)
-    table.clear(originalDecals)
 end
 
--- Busca o alvo EXATO no momento do clique
-local function GetTargetCharacterAtCursor(): Model?
+-- Busca rigorosa: Apenas procura quem está no cursor AGORA
+local function GetCharacterAtCursor(): Model?
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
     local wallCheck = UIState.Get(KEY_WALL_CHECK, false)
@@ -70,14 +52,16 @@ local function GetTargetCharacterAtCursor(): Model?
     return nil
 end
 
-function HookBackend.canLoad() return true, "Hitbox Expander suportado." end
+function HookBackend.canLoad()
+    return true, "Anchored Ghost Hitbox pronta."
+end
 
 function HookBackend.load()
     if isInitialized then return "initialized" end
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
     -- =======================================================
-    -- SISTEMA DE TRAVA (SÓ FUNCIONA QUANDO APERTA A TECLA)
+    -- SISTEMA DE TRAVA: LEI ABSOLUTA DA KEYBIND
     -- =======================================================
     HookBackend._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe or not UIState.Get(KEY_ENABLED, false) then return end
@@ -85,15 +69,16 @@ function HookBackend.load()
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
-                lockedCharacter = GetTargetCharacterAtCursor()
+                -- Modo Hold: Só procura e trava quando aperta
+                lockedCharacter = GetCharacterAtCursor()
             else
-                -- Modo Toggle
+                -- Modo Toggle: Destrava se tiver alguém, ou trava se tiver vazio
                 if lockedCharacter then
-                    ResetHitbox()
                     lockedCharacter = nil
+                    CleanGhost()
                     MarkStyle.Clear()
                 else
-                    lockedCharacter = GetTargetCharacterAtCursor()
+                    lockedCharacter = GetCharacterAtCursor()
                 end
             end
         end
@@ -103,71 +88,61 @@ function HookBackend.load()
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
-                ResetHitbox()
+                -- Modo Hold: Limpa tudo ao soltar o dedo
                 lockedCharacter = nil
+                CleanGhost()
                 MarkStyle.Clear()
             end
         end
     end)
 
     -- =======================================================
-    -- LOOP DE MANIPULAÇÃO (Apenas aplica no alvo travado)
+    -- LOOP: O MOTOR DO FANTASMA
     -- =======================================================
     Loop.BindToRender("SilentAim_Logic", function()
-        -- Se o usuário desligar na UI ou não tiver ninguém travado
+        -- Se desligou o Silent Aim ou se NÃO TEM NINGUÉM TRAVADO
         if not UIState.Get(KEY_ENABLED, false) or not lockedCharacter then
-            ResetHitbox()
+            CleanGhost()
             MarkStyle.Clear()
-            lockedCharacter = nil
             return
         end
 
         local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
-        
-        -- Valida se o alvo ainda está no jogo e vivo
-        if not lockedCharacter.Parent or not lockedCharacter:FindFirstChildOfClass("Humanoid") or lockedCharacter.Humanoid.Health <= 0 then
-            ResetHitbox()
+        local hum = lockedCharacter:FindFirstChildOfClass("Humanoid")
+        local realPart = lockedCharacter:FindFirstChild(aimPartName) or lockedCharacter:FindFirstChild("HumanoidRootPart")
+
+        -- Se o alvo desconectar, morrer ou a peça sumir, aborta.
+        if not lockedCharacter.Parent or not hum or hum.Health <= 0 or not realPart then
             lockedCharacter = nil
+            CleanGhost()
             MarkStyle.Clear()
             return
         end
 
-        local partToEnlarge = lockedCharacter:FindFirstChild(aimPartName)
-        if partToEnlarge and partToEnlarge:IsA("BasePart") then
+        -- Criação do Cubo Novo (Isolado da física do Inimigo)
+        if not ghostHitbox or ghostHitbox.Parent ~= lockedCharacter or ghostHitbox.Name ~= aimPartName then
+            CleanGhost()
             
-            -- APENAS APLICA SE AINDA NÃO FOI APLICADO (ISSO CORRIGE O TRAVAMENTO)
-            if not originalSizes[partToEnlarge] then
-                originalSizes[partToEnlarge] = partToEnlarge.Size
-                originalTransparencies[partToEnlarge] = partToEnlarge.Transparency
-                
-                -- Aumenta a Hitbox
-                partToEnlarge.Size = Vector3.new(15, 15, 15) 
-                partToEnlarge.Transparency = 1 
-                partToEnlarge.CanCollide = false
-                partToEnlarge.Massless = true -- Impede que a cabeça gigante puxe o corpo do cara pro chão
-
-                -- Remove os rostos e acessórios colados para não flutuarem
-                for _, child in ipairs(partToEnlarge:GetChildren()) do
-                    if child:IsA("Decal") then
-                        originalDecals[child] = child.Transparency
-                        child.Transparency = 1
-                    end
-                end
-            end
-
-            -- Força a colisão para false a cada frame, pois o Roblox tenta reativar
-            partToEnlarge.CanCollide = false 
-
-            -- Aplica a Marcação Visual
-            local markOption = UIState.Get(KEY_MARK_STYLE, "None")
-            MarkStyle.Mark(partToEnlarge, markOption)
-        else
-            MarkStyle.Clear()
+            ghostHitbox = Instance.new("Part")
+            ghostHitbox.Name = realPart.Name -- Pega o nome "Head" ou "Torso"
+            ghostHitbox.Size = Vector3.new(15, 15, 15)
+            ghostHitbox.Transparency = 1 -- Invisível
+            ghostHitbox.CanCollide = false -- Sem colisão com o mapa ou jogadores
+            ghostHitbox.Anchored = true -- MAGIA: O cubo fica congelado no espaço
+            ghostHitbox.Parent = lockedCharacter -- Engana o Da Hood
         end
+
+        -- Atualiza a posição do cubo para acompanhar a cabeça real
+        if ghostHitbox and realPart then
+            ghostHitbox.CFrame = realPart.CFrame
+        end
+
+        -- Mantém o highlight apenas na peça real
+        MarkStyle.Mark(realPart, UIState.Get(KEY_MARK_STYLE, "None"))
     end)
 
     isInitialized = true
-    Telemetry.Log("INFO", "SilentAim", "Hitbox Manual Fix ativado.")
+    Telemetry.Log("INFO", "SilentAim", "Hitbox Fantasma Desvinculada iniciada.")
     return "initialized"
 end
 
@@ -179,7 +154,7 @@ function HookBackend.destroy()
     if HookBackend._inputEnded then HookBackend._inputEnded:Disconnect() end
     if FOVLimit and type(FOVLimit.Destroy) == "function" then FOVLimit.Destroy() end
     
-    ResetHitbox()
+    CleanGhost()
     MarkStyle.Clear()
     lockedCharacter = nil
     isInitialized = false
@@ -187,6 +162,6 @@ end
 
 function HookBackend.health() return isInitialized and "initialized" or "unsupported" end
 function HookBackend.requirements() return {} end
-function HookBackend.assumptions() return "Manipulação segura de Hitbox com correção de Motor6D e Decals." end
+function HookBackend.assumptions() return "Manipulação desacoplada com Hitbox Anchored." end
 
 return HookBackend
