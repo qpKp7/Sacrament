@@ -1,9 +1,8 @@
 --!strict
 --[[
-    SACRAMENT | Metamethod Backend (Universal)
-    O código real do Silent Aim. Só é carregado se o executor suportar.
---]]
-
+    SACRAMENT | Hook Backend (Xeno Compatible)
+    Redireciona os tiros usando hookfunction no Workspace.
+]]
 local Workspace = game:GetService("Workspace")
 local Import = (_G :: any).SacramentImport
 
@@ -14,64 +13,101 @@ local Predict   = Import("logic/func/combat/shared/predict")
 local HitChance = Import("logic/func/combat/silentaim/hitchance")
 local FOVLimit  = Import("logic/func/combat/silentaim/fovlimit")
 local MarkStyle = Import("logic/func/combat/silentaim/markstyle")
+local Telemetry = Import("logic/core/telemetry")
+local Capability= Import("logic/core/capability")
 
 local HookBackend = {}
-local oldNamecall: any = nil
-local currentSilentTarget: BasePart? = nil
+local isInitialized = false
+
+local oldRaycast: any
+local oldFindPartIgnore: any
 
 local function GetValidTarget(): BasePart?
     local fovRadius = tonumber(UIState.Get("SilentAim_FOV", 150)) or 150
     local target = Targeting.GetClosestToCursor(fovRadius, {"Head", "Torso", "HumanoidRootPart"}, false, false, false)
-    local markOption = UIState.Get("SilentAim_MarkStyle", "None")
-    MarkStyle.Mark(target, markOption)
+    MarkStyle.Mark(target, UIState.Get("SilentAim_MarkStyle", "None"))
     return target
 end
 
-function HookBackend.Init()
+-- 1. O Contrato: Ele pode ser carregado?
+function HookBackend.canLoad()
+    local caps = Capability.Get()
+    if caps.SupportsHookFunc then
+        return true, "hookfunction suportado."
+    end
+    return false, "O executor não suporta hookfunction."
+end
+
+-- 2. O Contrato: Inicializa a máquina
+function HookBackend.load()
+    if isInitialized then return "initialized" end
+
+    -- Liga o FOV visual
     if FOVLimit and type(FOVLimit.Init) == "function" then
         FOVLimit.Init()
     end
 
-    -- Hooking Seguro (Sabemos que hookmetamethod existe porque o adaptador já validou)
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
+    local success, err = pcall(function()
+        oldRaycast = hookfunction(Workspace.Raycast, function(self, origin, direction, params)
+            if not UIState.Get("SilentAim_Enabled", false) then return oldRaycast(self, origin, direction, params) end
+            if not HitChance.Roll(tonumber(UIState.Get("SilentAim_HitChance", 100)) or 100) then return oldRaycast(self, origin, direction, params) end
 
-        if not UIState.Get("SilentAim_Enabled", false) then return oldNamecall(self, unpack(args)) end
-        
-        local chance = tonumber(UIState.Get("SilentAim_HitChance", 100)) or 100
-        if not HitChance.Roll(chance) then return oldNamecall(self, unpack(args)) end
-
-        currentSilentTarget = GetValidTarget()
-        if not currentSilentTarget then return oldNamecall(self, unpack(args)) end
-
-        local finalPart = AimPart.GetTarget(currentSilentTarget.Parent :: Model, UIState.Get("SilentAim_AimPart", "Head"))
-        if finalPart then
-            local finalPos = Predict.GetPosition(finalPart, tonumber(UIState.Get("SilentAim_Predict", 0)) or 0, false)
-
-            if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
-                args[1] = Ray.new(args[1].Origin, (finalPos - args[1].Origin).Unit * (args[1].Direction.Magnitude or 1000))
-                return oldNamecall(self, unpack(args))
-            elseif method == "Raycast" then
-                args[2] = (finalPos - args[1]).Unit * (args[2].Magnitude or 1000)
-                return oldNamecall(self, unpack(args))
-            elseif method == "FireServer" and (self.Name == "RemoteEvent" or self.Name == "Shoot") then
-                for i, v in ipairs(args) do
-                    if typeof(v) == "Vector3" then args[i] = finalPos end
+            local target = GetValidTarget()
+            if target then
+                local finalPart = AimPart.GetTarget(target.Parent :: Model, UIState.Get("SilentAim_AimPart", "Head"))
+                if finalPart then
+                    local finalPos = Predict.GetPosition(finalPart, tonumber(UIState.Get("SilentAim_Predict", 0)) or 0, false)
+                    local newDirection = (finalPos - origin).Unit * direction.Magnitude
+                    return oldRaycast(self, origin, newDirection, params)
                 end
-                return oldNamecall(self, unpack(args))
             end
-        end
-        return oldNamecall(self, unpack(args))
-    end))
+            return oldRaycast(self, origin, direction, params)
+        end)
 
-    warn("[SACRAMENT] 🥷 Silent Aim Universal injetado com sucesso!")
+        oldFindPartIgnore = hookfunction(Workspace.FindPartOnRayWithIgnoreList, function(self, ray, ignore, desc, water)
+            if not UIState.Get("SilentAim_Enabled", false) then return oldFindPartIgnore(self, ray, ignore, desc, water) end
+            local target = GetValidTarget()
+            if target then
+                local finalPart = AimPart.GetTarget(target.Parent :: Model, UIState.Get("SilentAim_AimPart", "Head"))
+                if finalPart then
+                    local finalPos = Predict.GetPosition(finalPart, tonumber(UIState.Get("SilentAim_Predict", 0)) or 0, false)
+                    local newDirection = (finalPos - ray.Origin).Unit * ray.Direction.Magnitude
+                    return oldFindPartIgnore(self, Ray.new(ray.Origin, newDirection), ignore, desc, water)
+                end
+            end
+            return oldFindPartIgnore(self, ray, ignore, desc, water)
+        end)
+    end)
+
+    if not success then
+        Telemetry.Log("ERROR", "SilentAim", "Falha ao injetar hookfunction: " .. tostring(err))
+        return "failed"
+    end
+
+    isInitialized = true
+    Telemetry.Log("INFO", "SilentAim", "Interceptação de disparo ativada com sucesso (HookFunction).")
+    return "initialized"
 end
 
-function HookBackend.Destroy()
+-- 3. O Contrato: Limpeza
+function HookBackend.destroy()
+    if not isInitialized then return end
     if FOVLimit and type(FOVLimit.Destroy) == "function" then FOVLimit.Destroy() end
     MarkStyle.Clear()
-    if oldNamecall then oldNamecall = nil end
+    isInitialized = false
+end
+
+-- 4. O Contrato: Status
+function HookBackend.health()
+    return isInitialized and "initialized" or "unsupported"
+end
+
+function HookBackend.requirements()
+    return {SupportsHookFunc = true}
+end
+
+function HookBackend.assumptions()
+    return "O jogo valida disparo via Workspace:Raycast ou FindPartOnRay."
 end
 
 return HookBackend
