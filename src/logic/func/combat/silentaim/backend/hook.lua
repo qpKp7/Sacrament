@@ -1,9 +1,9 @@
 --!strict
 --[[
-    SACRAMENT | Canonical Hitbox Manipulation (Final Pure Fix)
-    1. Manipula a peça REAL do player para garantir o dano (Da Hood).
-    2. Transparency = 1 e CanCollide = false (Invisível, sem colisão física).
-    3. Suporte a Target Lock (Keybind) e Auto-Target (Closest to Cursor).
+    SACRAMENT | Canonical Hitbox (Fixed Physics & Decals)
+    1. Sem Auto-Target (Trava apenas com Bind + Cursor).
+    2. Esconde o Rosto (Decals) para não aparecer rostos gigantes.
+    3. Altera a física apenas 1 vez (Evita que o player trave/despedace).
 ]]
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -20,10 +20,12 @@ local HookBackend = {}
 local isInitialized = false
 
 -- Variáveis de Estado
-local lastCharacterAimingAt: Model? = nil
 local lockedCharacter: Model? = nil
+
+-- Memória para podermos restaurar o inimigo ao normal depois
 local originalSizes: {[BasePart]: Vector3} = {}
 local originalTransparencies: {[BasePart]: number} = {}
+local originalDecals: {[Decal]: number} = {}
 
 -- Chaves sincronizadas da UI
 local KEY_ENABLED     = "SilentAimEnabled"
@@ -35,26 +37,30 @@ local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
 
 -- Restaura o Character original ao estado perfeitamente normal
-local function ResetLastCharacter()
-    if lastCharacterAimingAt then
-        for part, size in pairs(originalSizes) do
-            if part and part.Parent then
-                part.Size = size
-                if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
-                part.CanCollide = true -- Restaura a física
-            end
+local function ResetHitbox()
+    for part, size in pairs(originalSizes) do
+        if part and part.Parent then
+            part.Size = size
+            if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
+            part.CanCollide = true
+            part.Massless = false
         end
-        -- Limpa a memória para evitar memory leaks
-        table.clear(originalSizes)
-        table.clear(originalTransparencies)
-        lastCharacterAimingAt = nil
     end
+    for decal, trans in pairs(originalDecals) do
+        if decal and decal.Parent then
+            decal.Transparency = trans
+        end
+    end
+    
+    table.clear(originalSizes)
+    table.clear(originalTransparencies)
+    table.clear(originalDecals)
 end
 
--- Busca o Character mais próximo do cursor respeitando o FOV e Paredes
-local function GetClosestTargetCharacter(): Model?
+-- Busca o alvo EXATO no momento do clique
+local function GetTargetCharacterAtCursor(): Model?
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
-    local aimPartName = UIState.Get(KEY_AIM_PART, "Head") -- Chave do slider/dropdown
+    local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
     local wallCheck = UIState.Get(KEY_WALL_CHECK, false)
     
     local targetPart = Targeting.GetClosestToCursor(fovRadius, {aimPartName, "HumanoidRootPart"}, wallCheck, false, false)
@@ -64,16 +70,14 @@ local function GetClosestTargetCharacter(): Model?
     return nil
 end
 
-function HookBackend.canLoad()
-    return true, "Canonical Hitbox manipulada com sucesso."
-end
+function HookBackend.canLoad() return true, "Hitbox Expander suportado." end
 
 function HookBackend.load()
     if isInitialized then return "initialized" end
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
     -- =======================================================
-    -- CONTROLE DE TRAVA (TARGET LOCK) VIA BIND
+    -- SISTEMA DE TRAVA (SÓ FUNCIONA QUANDO APERTA A TECLA)
     -- =======================================================
     HookBackend._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe or not UIState.Get(KEY_ENABLED, false) then return end
@@ -81,13 +85,15 @@ function HookBackend.load()
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
-                lockedCharacter = GetClosestTargetCharacter()
+                lockedCharacter = GetTargetCharacterAtCursor()
             else
-                -- Modo Alternar (Toggle)
+                -- Modo Toggle
                 if lockedCharacter then
+                    ResetHitbox()
                     lockedCharacter = nil
+                    MarkStyle.Clear()
                 else
-                    lockedCharacter = GetClosestTargetCharacter()
+                    lockedCharacter = GetTargetCharacterAtCursor()
                 end
             end
         end
@@ -97,81 +103,71 @@ function HookBackend.load()
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
+                ResetHitbox()
                 lockedCharacter = nil
+                MarkStyle.Clear()
             end
         end
     end)
 
     -- =======================================================
-    -- LOOP DE MANIPULAÇÃO (60x por segundo)
+    -- LOOP DE MANIPULAÇÃO (Apenas aplica no alvo travado)
     -- =======================================================
     Loop.BindToRender("SilentAim_Logic", function()
-        if not UIState.Get(KEY_ENABLED, false) then
-            ResetLastCharacter()
+        -- Se o usuário desligar na UI ou não tiver ninguém travado
+        if not UIState.Get(KEY_ENABLED, false) or not lockedCharacter then
+            ResetHitbox()
             MarkStyle.Clear()
             lockedCharacter = nil
             return
         end
 
         local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
-        local finalTarget: Model? = nil
-
-        -- 1. Prioridade: Alvo travado pela BIND
-        if lockedCharacter and lockedCharacter.Parent and lockedCharacter:FindFirstChildOfClass("Humanoid") then
-            if lockedCharacter.Humanoid.Health > 0 then
-                finalTarget = lockedCharacter
-            else
-                lockedCharacter = nil
-            end
+        
+        -- Valida se o alvo ainda está no jogo e vivo
+        if not lockedCharacter.Parent or not lockedCharacter:FindFirstChildOfClass("Humanoid") or lockedCharacter.Humanoid.Health <= 0 then
+            ResetHitbox()
+            lockedCharacter = nil
+            MarkStyle.Clear()
+            return
         end
 
-        -- 2. Secundário: Auto-Target proximo do mouse
-        if not finalTarget then
-            finalTarget = GetClosestTargetCharacter()
-        end
-
-        -- Se trocamos de alvo (ou perdemos o alvo)
-        if finalTarget ~= lastCharacterAimingAt then
-            ResetLastCharacter()
-            lastCharacterAimingAt = finalTarget
-        end
-
-        if finalTarget then
-            local partToEnlarge = finalTarget:FindFirstChild(aimPartName)
-            if partToEnlarge and partToEnlarge:IsA("BasePart") then
+        local partToEnlarge = lockedCharacter:FindFirstChild(aimPartName)
+        if partToEnlarge and partToEnlarge:IsA("BasePart") then
+            
+            -- APENAS APLICA SE AINDA NÃO FOI APLICADO (ISSO CORRIGE O TRAVAMENTO)
+            if not originalSizes[partToEnlarge] then
+                originalSizes[partToEnlarge] = partToEnlarge.Size
+                originalTransparencies[partToEnlarge] = partToEnlarge.Transparency
                 
-                -- Se é a primeira vez que pegamos essa peça, salvamos o estado original
-                if not originalSizes[partToEnlarge] then
-                    originalSizes[partToEnlarge] = partToEnlarge.Size
-                    originalTransparencies[partToEnlarge] = partToEnlarge.Transparency
-                end
-
-                -- =======================================================
-                -- A MAGIA DO CONFORTO (ZERO FÍSICA E ZERO BUG VISUAL)
-                -- =======================================================
-                -- 1. Forçamos o tamanho gigante (para garantir o dano e curvar a bala).
+                -- Aumenta a Hitbox
                 partToEnlarge.Size = Vector3.new(15, 15, 15) 
-                
-                -- 2. Forçamos transparência em 1 (totalmente invisível).
                 partToEnlarge.Transparency = 1 
-                
-                -- 3. A MAIS IMPORTANTE: Desliga a colisão para você passar por dentro dele!
-                partToEnlarge.CanCollide = false 
-                -- =======================================================
+                partToEnlarge.CanCollide = false
+                partToEnlarge.Massless = true -- Impede que a cabeça gigante puxe o corpo do cara pro chão
 
-                -- Aplica o visual da MarkStyle (Bolinha/Highlight) na peça REAL
-                local markOption = UIState.Get(KEY_MARK_STYLE, "None")
-                MarkStyle.Mark(partToEnlarge, markOption)
-            else
-                MarkStyle.Clear()
+                -- Remove os rostos e acessórios colados para não flutuarem
+                for _, child in ipairs(partToEnlarge:GetChildren()) do
+                    if child:IsA("Decal") then
+                        originalDecals[child] = child.Transparency
+                        child.Transparency = 1
+                    end
+                end
             end
+
+            -- Força a colisão para false a cada frame, pois o Roblox tenta reativar
+            partToEnlarge.CanCollide = false 
+
+            -- Aplica a Marcação Visual
+            local markOption = UIState.Get(KEY_MARK_STYLE, "None")
+            MarkStyle.Mark(partToEnlarge, markOption)
         else
             MarkStyle.Clear()
         end
     end)
 
     isInitialized = true
-    Telemetry.Log("INFO", "SilentAim", "Hitbox Pure Fix ativado.")
+    Telemetry.Log("INFO", "SilentAim", "Hitbox Manual Fix ativado.")
     return "initialized"
 end
 
@@ -183,7 +179,7 @@ function HookBackend.destroy()
     if HookBackend._inputEnded then HookBackend._inputEnded:Disconnect() end
     if FOVLimit and type(FOVLimit.Destroy) == "function" then FOVLimit.Destroy() end
     
-    ResetLastCharacter()
+    ResetHitbox()
     MarkStyle.Clear()
     lockedCharacter = nil
     isInitialized = false
@@ -191,6 +187,6 @@ end
 
 function HookBackend.health() return isInitialized and "initialized" or "unsupported" end
 function HookBackend.requirements() return {} end
-function HookBackend.assumptions() return "Manipulação de Propriedades de Instância Nativa." end
+function HookBackend.assumptions() return "Manipulação segura de Hitbox com correção de Motor6D e Decals." end
 
 return HookBackend
