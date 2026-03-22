@@ -1,8 +1,8 @@
 --!strict
 --[[
-    SACRAMENT | Targeting Core
-    Motor matemático responsável por encontrar alvos válidos, checar paredes (Raycast),
-    calcular distância no monitor (FOV) e aplicar as regras do "Blood Pact".
+    SACRAMENT | Shared Targeting
+    Função matemática utilitária para achar o alvo mais próximo do cursor.
+    Pode ser usada simultaneamente pelo Aimlock, Silent Aim e TriggerBot.
 --]]
 
 local Players = game:GetService("Players")
@@ -10,17 +10,22 @@ local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 
 local Import = (_G :: any).SacramentImport
-local UIState = Import("state/uistate")
-
 local LocalPlayer = Players.LocalPlayer
+
+-- Importa os micro-checks que ficarão na pasta shared
+local function SafeImport(path: string)
+    local success, result = pcall(function() return Import(path) end)
+    return success and result or nil
+end
+
+local TeamCheck  = SafeImport("logic/func/combat/shared/teamcheck")
+local WallCheck  = SafeImport("logic/func/combat/shared/wallcheck")
+local KnockCheck = SafeImport("logic/func/combat/shared/knockcheck")
+
 local Targeting = {}
 
--- =========================================================================
--- FUNÇÕES DE VALIDAÇÃO (Filtros Rápidos)
--- =========================================================================
-
--- Checa se o jogador é válido e está vivo
-function Targeting.IsAlive(player: Player): boolean
+-- Checagem básica de integridade (Está vivo e tem as partes do corpo?)
+local function IsAliveAndValid(player: Player): boolean
     if not player or player == LocalPlayer then return false end
     
     local character = player.Character
@@ -35,87 +40,24 @@ function Targeting.IsAlive(player: Player): boolean
     return true
 end
 
--- Checa as regras de Proteção (O "Blood Pact" que criamos no menu Misc)
-function Targeting.PassesBloodPact(player: Player): boolean
-    -- Se o Blood Pact estiver desligado, todo mundo é alvo (retorna true)
-    local masterBP = UIState.Get("Misc_BloodPact_Master", false)
-    if not masterBP then return true end
+--[[
+    GetClosestToCursor
+    @param fovRadius: Tamanho do círculo na tela (em pixels).
+    @param targetParts: Tabela com as partes que podem ser focadas (ex: {"Head", "Torso"}).
+    @param useWallCheck: Booleano para exigir que o alvo esteja visível.
+    @param useKnockCheck: Booleano para ignorar jogadores nocauteados.
+    @param useTeamCheck: Booleano para ignorar amigos/mesmo time (Blood Pact).
+    
+    @return BasePart? (A parte do corpo mais próxima, ou nil se não achar ninguém)
+--]]
+function Targeting.GetClosestToCursor(
+    fovRadius: number, 
+    targetParts: {string}, 
+    useWallCheck: boolean, 
+    useKnockCheck: boolean,
+    useTeamCheck: boolean
+): BasePart?
 
-    -- 1. Friend Check
-    if UIState.Get("Misc_BP_FriendCheck", false) then
-        local success, isFriend = pcall(function()
-            return LocalPlayer:IsFriendsWith(player.UserId)
-        end)
-        if success and isFriend then return false end
-    end
-
-    -- 2. Name / Whitelist Check
-    if UIState.Get("Misc_BP_NameCheck", false) then
-        local nameList = UIState.Get("Misc_BP_NameList", {})
-        if type(nameList) == "table" then
-            for _, whitelistedName in ipairs(nameList) do
-                if string.lower(player.Name) == string.lower(whitelistedName) or 
-                   string.lower(player.DisplayName) == string.lower(whitelistedName) then
-                    return false -- Protegido!
-                end
-            end
-        end
-    end
-
-    -- 3. Group ID Check (Da Hood Crews / Guilds)
-    if UIState.Get("Misc_BP_GroupCheck", false) then
-        local groupList = UIState.Get("Misc_BP_GroupList", {})
-        if type(groupList) == "table" then
-            for _, groupIdStr in ipairs(groupList) do
-                local groupId = tonumber(groupIdStr)
-                if groupId then
-                    local success, isInGroup = pcall(function()
-                        return player:IsInGroup(groupId)
-                    end)
-                    if success and isInGroup then return false end
-                end
-            end
-        end
-    end
-
-    -- 4. Basic Team Check (Roblox Teams)
-    if player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
-        return false
-    end
-
-    return true -- Não caiu em nenhuma proteção, pode atirar!
-end
-
--- Checa se há paredes entre a Câmera e o Alvo usando Raycast
-function Targeting.IsVisible(targetPart: BasePart, origin: Vector3?): boolean
-    local camera = Workspace.CurrentCamera
-    if not camera then return false end
-
-    local rayOrigin = origin or camera.CFrame.Position
-    local rayDirection = targetPart.Position - rayOrigin
-
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    -- Ignora o jogador local e a câmera
-    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, camera}
-    rayParams.IgnoreWater = true
-
-    local result = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
-
-    -- Se não bateu em nada, ou se bateu em alguma parte do próprio alvo, ele está visível
-    if not result or result.Instance:IsDescendantOf(targetPart.Parent) then
-        return true
-    end
-
-    return false
-end
-
--- =========================================================================
--- FUNÇÃO PRINCIPAL: ENCONTRAR O ALVO (O "Aim")
--- =========================================================================
-
--- Retorna a parte do corpo do inimigo que está mais próxima do cursor do mouse
-function Targeting.GetClosestToCursor(fovRadius: number, useWallCheck: boolean, targetParts: {string}): BasePart?
     local camera = Workspace.CurrentCamera
     if not camera then return nil end
 
@@ -124,24 +66,32 @@ function Targeting.GetClosestToCursor(fovRadius: number, useWallCheck: boolean, 
     local closestPart: BasePart? = nil
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if Targeting.IsAlive(player) and Targeting.PassesBloodPact(player) then
+        if IsAliveAndValid(player) then
+            
+            -- Filtro 1: Blood Pact (Amigos/Time)
+            if useTeamCheck and TeamCheck and TeamCheck.IsProtected(player) then
+                continue
+            end
+
+            -- Filtro 2: Knocked (Nocauteado)
+            if useKnockCheck and KnockCheck and KnockCheck.IsKnocked(player) then
+                continue
+            end
+
             local character = player.Character
             
-            -- Testa cada parte do corpo permitida (ex: "Head", "HumanoidRootPart")
+            -- Itera sobre as partes permitidas (Ex: Primeiro checa a Cabeça, depois o Torso)
             for _, partName in ipairs(targetParts) do
                 local part = character:FindFirstChild(partName) :: BasePart
                 if part then
-                    -- Converte a posição 3D do alvo para posição 2D na tela
                     local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
                     
                     if onScreen then
-                        -- Calcula a distância matemática entre o mouse e o alvo na tela
                         local distanceOnScreen = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
 
-                        -- Se estiver dentro do FOV e for o mais próximo até agora...
                         if distanceOnScreen < closestDistance then
-                            -- Checagem pesada por último (Wall Check)
-                            if not useWallCheck or Targeting.IsVisible(part) then
+                            -- Filtro 3: Raycast (Parede) - Fazemos por último para poupar processamento
+                            if not useWallCheck or (WallCheck and WallCheck.IsVisible(part)) then
                                 closestDistance = distanceOnScreen
                                 closestPart = part
                             end
@@ -149,6 +99,7 @@ function Targeting.GetClosestToCursor(fovRadius: number, useWallCheck: boolean, 
                     end
                 end
             end
+            
         end
     end
 
