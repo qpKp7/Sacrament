@@ -15,6 +15,7 @@ local FOVLimit  = Import("logic/func/combat/silentaim/fovlimit")
 local MarkStyle = Import("logic/func/combat/silentaim/markstyle")
 local Telemetry = Import("logic/core/telemetry")
 local Capability= Import("logic/core/capability")
+local Loop      = Import("logic/core/loop") -- [NOVO] Precisamos do Loop para os visuais
 
 local HookBackend = {}
 local isInitialized = false
@@ -22,37 +23,54 @@ local isInitialized = false
 local oldRaycast: any
 local oldFindPartIgnore: any
 
-local function GetValidTarget(): BasePart?
+-- Função limpa para buscar o alvo sem poluir com desenhos
+local function GetTargetForShoot(): BasePart?
     local fovRadius = tonumber(UIState.Get("SilentAim_FOV", 150)) or 150
-    local target = Targeting.GetClosestToCursor(fovRadius, {"Head", "Torso", "HumanoidRootPart"}, false, false, false)
-    MarkStyle.Mark(target, UIState.Get("SilentAim_MarkStyle", "None"))
-    return target
+    return Targeting.GetClosestToCursor(fovRadius, {"Head", "Torso", "HumanoidRootPart"}, false, false, false)
 end
 
--- 1. O Contrato: Ele pode ser carregado?
 function HookBackend.canLoad()
     local caps = Capability.Get()
-    if caps.SupportsHookFunc then
-        return true, "hookfunction suportado."
-    end
+    if caps.SupportsHookFunc then return true, "hookfunction suportado." end
     return false, "O executor não suporta hookfunction."
 end
 
--- 2. O Contrato: Inicializa a máquina
 function HookBackend.load()
     if isInitialized then return "initialized" end
 
-    -- Liga o FOV visual
-    if FOVLimit and type(FOVLimit.Init) == "function" then
-        FOVLimit.Init()
-    end
+    -- Inicializa a lógica do FOV Limit
+    if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
+    -- =========================================================
+    -- [NOVO] LOOP VISUAL: Roda 60x por segundo para desenhar a UI
+    -- =========================================================
+    Loop.BindToRender("SilentAim_Visuals", function()
+        if not UIState.Get("SilentAim_Enabled", false) then
+            MarkStyle.Clear()
+            return
+        end
+        
+        -- Desenha a bolinha/highlight no alvo mais próximo constantemente
+        local target = GetTargetForShoot()
+        if target then
+            local markOption = UIState.Get("SilentAim_MarkStyle", "None")
+            MarkStyle.Mark(target, markOption)
+        else
+            MarkStyle.Clear()
+        end
+    end)
+
+    -- =========================================================
+    -- HOOKS DE INTERCEPTAÇÃO (O TIRO REAL)
+    -- =========================================================
     local success, err = pcall(function()
+        
+        -- Hook 1: Raycast Moderno
         oldRaycast = hookfunction(Workspace.Raycast, function(self, origin, direction, params)
             if not UIState.Get("SilentAim_Enabled", false) then return oldRaycast(self, origin, direction, params) end
             if not HitChance.Roll(tonumber(UIState.Get("SilentAim_HitChance", 100)) or 100) then return oldRaycast(self, origin, direction, params) end
 
-            local target = GetValidTarget()
+            local target = GetTargetForShoot()
             if target then
                 local finalPart = AimPart.GetTarget(target.Parent :: Model, UIState.Get("SilentAim_AimPart", "Head"))
                 if finalPart then
@@ -64,9 +82,12 @@ function HookBackend.load()
             return oldRaycast(self, origin, direction, params)
         end)
 
+        -- Hook 2: Raycast Antigo (Da Hood, etc)
         oldFindPartIgnore = hookfunction(Workspace.FindPartOnRayWithIgnoreList, function(self, ray, ignore, desc, water)
             if not UIState.Get("SilentAim_Enabled", false) then return oldFindPartIgnore(self, ray, ignore, desc, water) end
-            local target = GetValidTarget()
+            if not HitChance.Roll(tonumber(UIState.Get("SilentAim_HitChance", 100)) or 100) then return oldFindPartIgnore(self, ray, ignore, desc, water) end
+
+            local target = GetTargetForShoot()
             if target then
                 local finalPart = AimPart.GetTarget(target.Parent :: Model, UIState.Get("SilentAim_AimPart", "Head"))
                 if finalPart then
@@ -77,6 +98,7 @@ function HookBackend.load()
             end
             return oldFindPartIgnore(self, ray, ignore, desc, water)
         end)
+
     end)
 
     if not success then
@@ -89,25 +111,16 @@ function HookBackend.load()
     return "initialized"
 end
 
--- 3. O Contrato: Limpeza
 function HookBackend.destroy()
     if not isInitialized then return end
+    Loop.UnbindFromRender("SilentAim_Visuals")
     if FOVLimit and type(FOVLimit.Destroy) == "function" then FOVLimit.Destroy() end
     MarkStyle.Clear()
     isInitialized = false
 end
 
--- 4. O Contrato: Status
-function HookBackend.health()
-    return isInitialized and "initialized" or "unsupported"
-end
-
-function HookBackend.requirements()
-    return {SupportsHookFunc = true}
-end
-
-function HookBackend.assumptions()
-    return "O jogo valida disparo via Workspace:Raycast ou FindPartOnRay."
-end
+function HookBackend.health() return isInitialized and "initialized" or "unsupported" end
+function HookBackend.requirements() return {SupportsHookFunc = true} end
+function HookBackend.assumptions() return "O jogo valida disparo via Workspace:Raycast ou FindPartOnRay." end
 
 return HookBackend
