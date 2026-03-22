@@ -1,9 +1,9 @@
 --!strict
 --[[
-    SACRAMENT | Manual Fake Hitbox Backend (Elite Version)
-    1. Cria uma Hitbox Fantasma ancorada (Não despedaça o player).
-    2. Mantém a peça original intocada (Não remove a cabeça do alvo).
-    3. Foco EXCLUSIVO via Keybind (Não marca quem passa pelo mouse).
+    SACRAMENT | Canonical Hitbox Manipulation (Final Pure Fix)
+    1. Manipula a peça REAL do player para garantir o dano (Da Hood).
+    2. Transparency = 1 e CanCollide = false (Invisível, sem colisão física).
+    3. Suporte a Target Lock (Keybind) e Auto-Target (Closest to Cursor).
 ]]
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -19,11 +19,13 @@ local FOVLimit  = Import("logic/func/combat/silentaim/fovlimit")
 local HookBackend = {}
 local isInitialized = false
 
--- Referências de Controle Estrito
+-- Variáveis de Estado
+local lastCharacterAimingAt: Model? = nil
 local lockedCharacter: Model? = nil
-local fakeHitbox: Part? = nil
+local originalSizes: {[BasePart]: Vector3} = {}
+local originalTransparencies: {[BasePart]: number} = {}
 
--- Chaves da UI sincronizadas
+-- Chaves sincronizadas da UI
 local KEY_ENABLED     = "SilentAimEnabled"
 local KEY_FOV_RADIUS  = "SilentAim_FovLimit"
 local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
@@ -32,21 +34,29 @@ local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
 
--- Destrói a Hitbox Fantasma do mapa
-local function CleanFakeHitbox()
-    if fakeHitbox then
-        fakeHitbox:Destroy()
-        fakeHitbox = nil
+-- Restaura o Character original ao estado perfeitamente normal
+local function ResetLastCharacter()
+    if lastCharacterAimingAt then
+        for part, size in pairs(originalSizes) do
+            if part and part.Parent then
+                part.Size = size
+                if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
+                part.CanCollide = true -- Restaura a física
+            end
+        end
+        -- Limpa a memória para evitar memory leaks
+        table.clear(originalSizes)
+        table.clear(originalTransparencies)
+        lastCharacterAimingAt = nil
     end
 end
 
--- Busca o Character mais próximo do cursor, respeitando a Parede
-local function GetClosestCharacter(): Model?
+-- Busca o Character mais próximo do cursor respeitando o FOV e Paredes
+local function GetClosestTargetCharacter(): Model?
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
-    local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
+    local aimPartName = UIState.Get(KEY_AIM_PART, "Head") -- Chave do slider/dropdown
     local wallCheck = UIState.Get(KEY_WALL_CHECK, false)
     
-    -- Busca a peça e já avalia o WallCheck por dentro da função canônica
     local targetPart = Targeting.GetClosestToCursor(fovRadius, {aimPartName, "HumanoidRootPart"}, wallCheck, false, false)
     if targetPart and targetPart.Parent then
         return targetPart.Parent :: Model
@@ -55,7 +65,7 @@ local function GetClosestCharacter(): Model?
 end
 
 function HookBackend.canLoad()
-    return true, "Manual Fake Hitbox carregada com sucesso."
+    return true, "Canonical Hitbox manipulada com sucesso."
 end
 
 function HookBackend.load()
@@ -63,26 +73,21 @@ function HookBackend.load()
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
     -- =======================================================
-    -- CONTROLE DE TRAVA (Apenas funciona com a BIND)
+    -- CONTROLE DE TRAVA (TARGET LOCK) VIA BIND
     -- =======================================================
     HookBackend._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe or not UIState.Get(KEY_ENABLED, false) then return end
         
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
-            local isHold = UIState.Get(KEY_HOLD, false)
-            
-            if isHold then
-                -- Modo Segurar: Trava no cara ao apertar
-                lockedCharacter = GetClosestCharacter()
+            if UIState.Get(KEY_HOLD, false) then
+                lockedCharacter = GetClosestTargetCharacter()
             else
-                -- Modo Alternar (Toggle): Trava ou destrava
+                -- Modo Alternar (Toggle)
                 if lockedCharacter then
                     lockedCharacter = nil
-                    CleanFakeHitbox()
-                    MarkStyle.Clear()
                 else
-                    lockedCharacter = GetClosestCharacter()
+                    lockedCharacter = GetClosestTargetCharacter()
                 end
             end
         end
@@ -92,70 +97,81 @@ function HookBackend.load()
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
-                -- Modo Segurar: Solta o alvo ao soltar a tecla
                 lockedCharacter = nil
-                CleanFakeHitbox()
-                MarkStyle.Clear()
             end
         end
     end)
 
     -- =======================================================
-    -- RENDERIZAÇÃO DA HITBOX FANTASMA (60x por segundo)
+    -- LOOP DE MANIPULAÇÃO (60x por segundo)
     -- =======================================================
     Loop.BindToRender("SilentAim_Logic", function()
-        -- Se o usuário desligar na UI, força a limpeza total
         if not UIState.Get(KEY_ENABLED, false) then
+            ResetLastCharacter()
+            MarkStyle.Clear()
             lockedCharacter = nil
-            CleanFakeHitbox()
-            MarkStyle.Clear()
             return
         end
 
-        -- Se não tiver ninguém travado pela Keybind, não faz absolutamente nada
-        if not lockedCharacter then
-            CleanFakeHitbox()
-            MarkStyle.Clear()
-            return
-        end
-
-        local hum = lockedCharacter:FindFirstChildOfClass("Humanoid")
         local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
-        local realPart = lockedCharacter:FindFirstChild(aimPartName) or lockedCharacter:FindFirstChild("HumanoidRootPart")
+        local finalTarget: Model? = nil
 
-        -- Se o alvo travado morrer, sair do jogo ou for deletado, solta a trava
-        if not lockedCharacter.Parent or not hum or hum.Health <= 0 or not realPart then
-            lockedCharacter = nil
-            CleanFakeHitbox()
+        -- 1. Prioridade: Alvo travado pela BIND
+        if lockedCharacter and lockedCharacter.Parent and lockedCharacter:FindFirstChildOfClass("Humanoid") then
+            if lockedCharacter.Humanoid.Health > 0 then
+                finalTarget = lockedCharacter
+            else
+                lockedCharacter = nil
+            end
+        end
+
+        -- 2. Secundário: Auto-Target proximo do mouse
+        if not finalTarget then
+            finalTarget = GetClosestTargetCharacter()
+        end
+
+        -- Se trocamos de alvo (ou perdemos o alvo)
+        if finalTarget ~= lastCharacterAimingAt then
+            ResetLastCharacter()
+            lastCharacterAimingAt = finalTarget
+        end
+
+        if finalTarget then
+            local partToEnlarge = finalTarget:FindFirstChild(aimPartName)
+            if partToEnlarge and partToEnlarge:IsA("BasePart") then
+                
+                -- Se é a primeira vez que pegamos essa peça, salvamos o estado original
+                if not originalSizes[partToEnlarge] then
+                    originalSizes[partToEnlarge] = partToEnlarge.Size
+                    originalTransparencies[partToEnlarge] = partToEnlarge.Transparency
+                end
+
+                -- =======================================================
+                -- A MAGIA DO CONFORTO (ZERO FÍSICA E ZERO BUG VISUAL)
+                -- =======================================================
+                -- 1. Forçamos o tamanho gigante (para garantir o dano e curvar a bala).
+                partToEnlarge.Size = Vector3.new(15, 15, 15) 
+                
+                -- 2. Forçamos transparência em 1 (totalmente invisível).
+                partToEnlarge.Transparency = 1 
+                
+                -- 3. A MAIS IMPORTANTE: Desliga a colisão para você passar por dentro dele!
+                partToEnlarge.CanCollide = false 
+                -- =======================================================
+
+                -- Aplica o visual da MarkStyle (Bolinha/Highlight) na peça REAL
+                local markOption = UIState.Get(KEY_MARK_STYLE, "None")
+                MarkStyle.Mark(partToEnlarge, markOption)
+            else
+                MarkStyle.Clear()
+            end
+        else
             MarkStyle.Clear()
-            return
         end
-
-        -- Cria ou atualiza o Fantasma se for um alvo/AimPart nova
-        if not fakeHitbox or fakeHitbox.Parent ~= lockedCharacter or fakeHitbox.Name ~= aimPartName then
-            CleanFakeHitbox()
-            
-            fakeHitbox = Instance.new("Part")
-            fakeHitbox.Name = realPart.Name -- Engana o script da arma
-            fakeHitbox.Size = Vector3.new(15, 15, 15) -- Hitbox invisível gigante
-            fakeHitbox.Transparency = 1 -- 100% Invisível
-            fakeHitbox.CanCollide = false
-            fakeHitbox.Anchored = true -- EVITA DESPEDAÇAR O PLAYER
-            fakeHitbox.Massless = true
-            fakeHitbox.Parent = lockedCharacter
-        end
-
-        -- Move o fantasma para a posição exata da peça real a cada frame
-        if fakeHitbox and realPart then
-            fakeHitbox.CFrame = realPart.CFrame
-        end
-
-        -- Marca visualmente apenas a peça original
-        MarkStyle.Mark(realPart, UIState.Get(KEY_MARK_STYLE, "None"))
     end)
 
     isInitialized = true
-    Telemetry.Log("INFO", "SilentAim", "Hitbox Fantasma com Trava Manual ativada.")
+    Telemetry.Log("INFO", "SilentAim", "Hitbox Pure Fix ativado.")
     return "initialized"
 end
 
@@ -167,7 +183,7 @@ function HookBackend.destroy()
     if HookBackend._inputEnded then HookBackend._inputEnded:Disconnect() end
     if FOVLimit and type(FOVLimit.Destroy) == "function" then FOVLimit.Destroy() end
     
-    CleanFakeHitbox()
+    ResetLastCharacter()
     MarkStyle.Clear()
     lockedCharacter = nil
     isInitialized = false
@@ -175,6 +191,6 @@ end
 
 function HookBackend.health() return isInitialized and "initialized" or "unsupported" end
 function HookBackend.requirements() return {} end
-function HookBackend.assumptions() return "Criação de Peças Ancoradas." end
+function HookBackend.assumptions() return "Manipulação de Propriedades de Instância Nativa." end
 
 return HookBackend
