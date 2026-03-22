@@ -1,49 +1,48 @@
 --!strict
---[[
-    SACRAMENT | Silent Aim Main (Orchestrator)
-    Detecta as capacidades do executor e carrega o backend correto,
-    evitando crashes ("attempt to call a nil value") no carregamento do projeto.
---]]
-
 local Import = (_G :: any).SacramentImport
-local Capability = Import("logic/func/combat/silentaim/capability")
+local Registry = Import("logic/core/backend_registry")
+local Telemetry = Import("logic/core/telemetry")
+
+-- Registrando o backend nulo (futuramente você registra o hook.lua aqui também)
+Registry.Register("SilentAim_Unsupported", Import("logic/func/combat/silentaim/backend/unsupported"))
 
 local SilentAim = {}
 local isInitialized = false
-local activeBackend: any = nil
+local activeBackendName = nil
 
 function SilentAim.Init()
     if isInitialized then return end
 
-    -- 1. Verifica as capacidades físicas do executor ANTES de qualquer coisa
-    local env = Capability.Get()
+    -- Por enquanto, forçamos o Unsupported para garantir que o boot está limpo.
+    -- Quando criarmos o contrato do Hook, faremos a checagem via Registry.CanLoad()
+    activeBackendName = "SilentAim_Unsupported"
+    
+    local backend = Registry.Get(activeBackendName)
+    if not backend then
+        Telemetry.Log("ERROR", "SilentAim", "Backend nulo ausente do Registry.")
+        return
+    end
 
-    -- 2. Roteamento Inteligente (A mágica da arquitetura)
-    if env.SupportsHookMetaMethod then
-        -- O executor aguenta! Carrega o script pesado.
-        activeBackend = Import("logic/func/combat/silentaim/backend/hook")
+    local status = backend.load()
+
+    if status == "initialized" or status == "unsupported" or status == "degraded" then
+        isInitialized = true
+        Telemetry.Log("LITURGY", "SilentAim", "Estado final da inicialização: " .. status)
     else
-        -- O executor não aguenta (Ex: Xeno). Carrega o fallback de segurança.
-        activeBackend = Import("logic/func/combat/silentaim/backend/disabled")
+        Telemetry.Log("ERROR", "SilentAim", "Falha crítica no backend - módulo isolado.")
     end
-
-    -- 3. Inicializa o backend escolhido com segurança
-    if activeBackend and type(activeBackend.Init) == "function" then
-        activeBackend.Init()
-    end
-
-    isInitialized = true
 end
 
 function SilentAim.Destroy()
     if not isInitialized then return end
-
-    if activeBackend and type(activeBackend.Destroy) == "function" then
-        activeBackend.Destroy()
+    
+    if activeBackendName then
+        local backend = Registry.Get(activeBackendName)
+        if backend then backend.destroy() end
     end
     
-    activeBackend = nil
     isInitialized = false
+    Telemetry.Log("LITURGY", "SilentAim", "Backend destruído com segurança.")
 end
 
 return SilentAim
