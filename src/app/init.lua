@@ -1,14 +1,15 @@
 --!strict
 local Import = (_G :: any).SacramentImport
 
-local SecurityManager = Import("logic/security/manager") -- Importando o Escudo
+local SecurityManager = Import("logic/security/manager") 
 local InputHandler = Import("input/inputhandler")
 local UIManager = Import("gui/uimanager")
 local Settings = Import("logic/settings")
 
--- [NOVO] Importando o Maestro e o Aimlock
+-- Importando os Motores de Combate
 local LoopManager = Import("logic/core/loop")
 local Aimlock = Import("logic/func/combat/aimlock/main")
+local SilentAim = Import("logic/func/combat/silentaim/main") -- [NOVO] O Silent Aim chegou!
 
 export type Adapter = {
     mountGui: (gui: ScreenGui) -> (),
@@ -19,26 +20,34 @@ export type Adapter = {
 local App = {}
 
 function App.Start(adapter: Adapter)
-    -- 1. LIGA O ESCUDO PRIMEIRO (Garante que a UI já nasça protegida e os Hooks fiquem prontos)
+    -- 1. Liga a Segurança
     if SecurityManager and type(SecurityManager.Init) == "function" then
         SecurityManager.Init()
     end
 
-    -- 2. Inicializa os inputs e a interface visual
+    -- 2. Inicializa UI e Inputs
     InputHandler.Init(adapter)
     UIManager.Init(adapter, Settings)
 
-    -- 3. LIGA O MOTOR DO JOGO E O AIMLOCK (A mágica acontece aqui!)
+    -- 3. Liga o Motor e as Funções
     if LoopManager and type(LoopManager.Init) == "function" then
         LoopManager.Init()
     end
     if Aimlock and type(Aimlock.Init) == "function" then
         Aimlock.Init()
     end
+    
+    -- [NOVO] LIGA O SILENT AIM
+    if SilentAim and type(SilentAim.Init) == "function" then
+        SilentAim.Init()
+    end
 end
 
 function App.Stop()
-    -- 1. Desliga primeiro os Módulos de Combate e o Loop
+    -- Desliga as funções primeiro
+    if SilentAim and type(SilentAim.Destroy) == "function" then
+        SilentAim.Destroy()
+    end
     if Aimlock and type(Aimlock.Destroy) == "function" then
         Aimlock.Destroy()
     end
@@ -46,11 +55,9 @@ function App.Stop()
         LoopManager.Destroy()
     end
 
-    -- 2. Desliga a interface e os inputs
     InputHandler.Destroy()
     UIManager.Destroy()
     
-    -- 3. DESLIGA O ESCUDO E LIMPA OS HOOKS
     if SecurityManager and type(SecurityManager.Destroy) == "function" then
         SecurityManager.Destroy()
     end
