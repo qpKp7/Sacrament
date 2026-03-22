@@ -1,14 +1,12 @@
 --!strict
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 local Import = (_G :: any).SacramentImport
 
 local UIState    = Import("state/uistate")
 local Targeting  = Import("logic/core/targeting")
 local AimPart    = Import("logic/func/combat/shared/aimpart")
 local Predict    = Import("logic/func/combat/shared/predict")
-local KnockCheck = Import("logic/func/combat/shared/knockcheck")
 
 local HitChance  = Import("logic/func/combat/silentaim/hitchance")
 local FOVLimit   = Import("logic/func/combat/silentaim/fovlimit")
@@ -41,14 +39,9 @@ function SilentAim.Init()
         FOVLimit.Init()
     end
 
-    -- ESCUDO CONTRA EXECUTORES BÁSICOS:
-    -- Verifica se a função existe antes de tentar usar
-    if type(hookmetamethod) ~= "function" then
-        warn("[SACRAMENT] ❌ Silent Aim desativado: O seu executor NÃO suporta 'hookmetamethod'!")
-        return -- Aborta o Silent Aim, mas mantém o resto do script funcionando
-    end
+    warn("[SACRAMENT] ⏳ Forçando a inicialização do Silent Aim Universal...")
 
-    -- Se passar da barreira, faz o Hook
+    -- FORÇANDO O HOOK METAMETHOD (Ignorando os avisos do executor)
     local success, err = pcall(function()
         oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
             local method = getnamecallmethod()
@@ -98,9 +91,9 @@ function SilentAim.Init()
     end)
 
     if success then
-        warn("[SACRAMENT] 🥷 Silent Aim (Universal) carregado e Hook inserido.")
+        warn("[SACRAMENT] 🥷 Silent Aim carregado com sucesso! As balas devem dobrar agora.")
     else
-        warn("[SACRAMENT] ❌ Erro ao injetar o Silent Aim: " .. tostring(err))
+        warn("[SACRAMENT] ❌ ERRO DO EXECUTOR: Ele tentou usar o hookmetamethod e crashou. Motivo técnico: " .. tostring(err))
     end
 end
 
