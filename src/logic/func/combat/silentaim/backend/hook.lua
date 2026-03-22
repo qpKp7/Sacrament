@@ -1,7 +1,8 @@
 --!strict
 --[[
-    SACRAMENT | Hitbox Expander Backend
-    Com WallCheck, AimPart específico e Sistema de Target Lock (Keybind)
+    SACRAMENT | Ghost Hitbox Backend (Elite Version)
+    Cria uma hitbox invisível separada para não deformar o personagem original.
+    Inclui sistema de trava (Target Lock) e WallCheck corrigido.
 ]]
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -18,16 +19,9 @@ local FOVLimit  = Import("logic/func/combat/silentaim/fovlimit")
 local HookBackend = {}
 local isInitialized = false
 
--- Memória da Hitbox
-local lastTarget: BasePart? = nil
-local originalSizes: {[BasePart]: Vector3} = {}
-local originalTransparencies: {[BasePart]: number} = {}
-
--- Memória do Target Lock
-local lockedTarget: BasePart? = nil
-local isHolding = false
-local inputBeganConn: RBXScriptConnection? = nil
-local inputEndedConn: RBXScriptConnection? = nil
+-- Referências de Controle
+local lockedCharacter: Model? = nil
+local currentGhost: Part? = nil
 
 -- Sincronizando Chaves da UI
 local KEY_ENABLED     = "SilentAimEnabled"
@@ -38,148 +32,160 @@ local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
 
-local function ResetLastTarget()
-    if lastTarget then
-        if originalSizes[lastTarget] then lastTarget.Size = originalSizes[lastTarget] end
-        if originalTransparencies[lastTarget] then lastTarget.Transparency = originalTransparencies[lastTarget] end
-        lastTarget.CanCollide = true
-        
-        originalSizes[lastTarget] = nil
-        originalTransparencies[lastTarget] = nil
-        lastTarget = nil
+-- Limpa a Ghost Hitbox do mapa
+local function CleanGhost()
+    if currentGhost then
+        currentGhost:Destroy()
+        currentGhost = nil
     end
 end
 
--- Busca o alvo respeitando WallCheck e a parte do corpo (Head/Torso)
-local function GetClosestTarget(): BasePart?
+-- Cria a Hitbox Invisível "colada" no inimigo
+local function CreateGhostHitbox(character: Model, partName: string)
+    CleanGhost()
+    
+    local realPart = character:FindFirstChild(partName) or character:FindFirstChild("HumanoidRootPart")
+    if not realPart or not realPart:IsA("BasePart") then return end
+
+    -- Cria o "fantasma" que vai receber as balas
+    local ghost = Instance.new("Part")
+    ghost.Name = realPart.Name -- O jogo vai achar que acertou a "Head" ou "Torso" real
+    ghost.Size = Vector3.new(15, 15, 15) -- Hitbox Gigante
+    ghost.Transparency = 1 -- 100% Invisível
+    ghost.CanCollide = false
+    ghost.Massless = true
+    ghost.Anchored = false
+    
+    -- Posiciona e solda no inimigo (sem deformar o original)
+    ghost.CFrame = realPart.CFrame
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = ghost
+    weld.Part1 = realPart
+    weld.Parent = ghost
+    
+    -- Coloca dentro do Character inimigo para o script da arma registrar o dano
+    ghost.Parent = character
+    currentGhost = ghost
+end
+
+-- Pega o Character mais próximo do cursor respeitando o WallCheck
+local function GetClosestCharacter(): Model?
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
     local wallCheck = UIState.Get(KEY_WALL_CHECK, false)
     
-    local target = Targeting.GetClosestToCursor(fovRadius, {aimPartName, "HumanoidRootPart"}, wallCheck, false, false)
-    
-    if target and target.Parent then
-        -- Garante que vamos expandir a parte exata que você escolheu na UI
-        return target.Parent:FindFirstChild(aimPartName) or target.Parent:FindFirstChild("HumanoidRootPart")
+    local targetPart = Targeting.GetClosestToCursor(fovRadius, {aimPartName, "HumanoidRootPart"}, wallCheck, false, false)
+    if targetPart then
+        return targetPart.Parent :: Model
     end
     return nil
 end
 
 function HookBackend.canLoad()
-    return true, "Hitbox Expander é compatível com todos os executores."
+    return true, "Ghost Hitbox suportada."
 end
 
 function HookBackend.load()
     if isInitialized then return "initialized" end
-
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
     -- =======================================================
-    -- SISTEMA DE TARGET LOCK (A Trava da Keybind)
+    -- SISTEMA DE TARGET LOCK (Trava de Mira)
     -- =======================================================
-    inputBeganConn = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
-        if not UIState.Get(KEY_ENABLED, false) then return end
-
+    HookBackend._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe or not UIState.Get(KEY_ENABLED, false) then return end
+        
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
-            if UIState.Get(KEY_HOLD, false) then
-                isHolding = true
-                lockedTarget = GetClosestTarget()
+            local isHold = UIState.Get(KEY_HOLD, false)
+            
+            if isHold then
+                lockedCharacter = GetClosestCharacter()
             else
-                -- Modo Toggle: Clica para travar, clica para soltar
-                if lockedTarget then
-                    lockedTarget = nil
+                if lockedCharacter then
+                    lockedCharacter = nil
+                    CleanGhost()
                 else
-                    lockedTarget = GetClosestTarget()
+                    lockedCharacter = GetClosestCharacter()
                 end
             end
         end
     end)
 
-    inputEndedConn = UserInputService.InputEnded:Connect(function(input, gpe)
+    HookBackend._inputEnded = UserInputService.InputEnded:Connect(function(input, gpe)
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
-                isHolding = false
-                lockedTarget = nil
+                lockedCharacter = nil
+                CleanGhost()
             end
         end
     end)
 
     -- =======================================================
-    -- LOOP PRINCIPAL DE COMBATE (60x por segundo)
+    -- LOOP PRINCIPAL (60x por segundo)
     -- =======================================================
-    Loop.BindToRender("SilentAim_Hitbox", function()
+    Loop.BindToRender("SilentAim_Logic", function()
         if not UIState.Get(KEY_ENABLED, false) then
-            ResetLastTarget()
+            CleanGhost()
             MarkStyle.Clear()
-            lockedTarget = nil
+            lockedCharacter = nil
             return
         end
 
-        local currentTarget: BasePart? = nil
+        local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
+        local targetChar = lockedCharacter
 
-        -- Se você tiver alguém "Trancado" na mira, foca nele
-        if lockedTarget and lockedTarget.Parent then
-            local hum = lockedTarget.Parent:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                currentTarget = lockedTarget
-            else
-                lockedTarget = nil -- Solta o alvo se ele morrer
+        -- Valida se o alvo travado ainda está vivo
+        if targetChar then
+            local hum = targetChar:FindFirstChildOfClass("Humanoid")
+            if not targetChar.Parent or not hum or hum.Health <= 0 then
+                lockedCharacter = nil
+                targetChar = nil
             end
         end
 
-        -- Se não tem ninguém trancado, pega o mais próximo
-        if not currentTarget then
-            currentTarget = GetClosestTarget()
+        -- Se não tiver alvo travado, pega o mais próximo
+        if not targetChar then
+            targetChar = GetClosestCharacter()
         end
 
-        -- Se mudou de alvo, restaura o corpo do alvo anterior ao normal
-        if currentTarget ~= lastTarget then
-            ResetLastTarget()
-            lastTarget = currentTarget
-        end
-
-        -- Aplica a Expansão no alvo atual
-        if currentTarget then
-            if not originalSizes[currentTarget] then
-                originalSizes[currentTarget] = currentTarget.Size
-                originalTransparencies[currentTarget] = currentTarget.Transparency
+        if targetChar then
+            -- Se for um inimigo novo ou a AimPart mudou, recria a hitbox fantasma
+            if not currentGhost or currentGhost.Parent ~= targetChar or currentGhost.Name ~= aimPartName then
+                CreateGhostHitbox(targetChar, aimPartName)
             end
-
-            -- HITBOX GIGANTE E 100% INVISÍVEL
-            currentTarget.Size = Vector3.new(15, 15, 15)
-            currentTarget.Transparency = 1 
-            currentTarget.CanCollide = false
-
-            -- Atualiza o visual
-            local markOption = UIState.Get(KEY_MARK_STYLE, "None")
-            MarkStyle.Mark(currentTarget, markOption)
+            
+            -- Atualiza o MarkStyle (Highlight) na peça real
+            local partToMark = targetChar:FindFirstChild(aimPartName) or targetChar:FindFirstChild("HumanoidRootPart")
+            if partToMark then
+                MarkStyle.Mark(partToMark, UIState.Get(KEY_MARK_STYLE, "None"))
+            end
         else
+            CleanGhost()
             MarkStyle.Clear()
         end
     end)
 
     isInitialized = true
-    Telemetry.Log("INFO", "SilentAim", "Hitbox Expander com Target Lock ativado.")
+    Telemetry.Log("INFO", "SilentAim", "Ghost Hitbox com Target Lock ativado.")
     return "initialized"
 end
 
 function HookBackend.destroy()
     if not isInitialized then return end
-    Loop.UnbindFromRender("SilentAim_Hitbox")
-    if inputBeganConn then inputBeganConn:Disconnect() end
-    if inputEndedConn then inputEndedConn:Disconnect() end
+    Loop.UnbindFromRender("SilentAim_Logic")
+    if HookBackend._inputBegan then HookBackend._inputBegan:Disconnect() end
+    if HookBackend._inputEnded then HookBackend._inputEnded:Disconnect() end
     if FOVLimit and type(FOVLimit.Destroy) == "function" then FOVLimit.Destroy() end
-    ResetLastTarget()
+    CleanGhost()
     MarkStyle.Clear()
-    lockedTarget = nil
+    lockedCharacter = nil
     isInitialized = false
 end
 
 function HookBackend.health() return isInitialized and "initialized" or "unsupported" end
 function HookBackend.requirements() return {} end
-function HookBackend.assumptions() return "O jogo aceita modificação de propriedades de BasePart." end
+function HookBackend.assumptions() return "O jogo registra Hit em peças falsas anexadas ao Character." end
 
 return HookBackend
