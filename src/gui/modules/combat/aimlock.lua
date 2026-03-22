@@ -1,110 +1,283 @@
 --!strict
-local Workspace = game:GetService("Workspace")
 local Import = (_G :: any).SacramentImport
+local Maid = Import("utils/maid")
 
-local UIState   = Import("state/uistate")
-local Loop      = Import("logic/core/loop")
-local Targeting = Import("logic/core/targeting")
+local function SafeImport(path: string): any?
+    local success, result = pcall(function() return Import(path) end)
+    if not success then warn("[Sacrament] Falha ao importar: " .. path) return nil end
+    return result
+end
 
-local KeyHold   = Import("logic/func/combat/shared/keyhold")
-local AimPart   = Import("logic/func/combat/shared/aimpart")
-local Predict   = Import("logic/func/combat/shared/predict")
-local Smooth    = Import("logic/func/combat/aimlock/smooth")
+local UIState = SafeImport("state/uistate")
 
-local Aimlock = {}
-local isInitialized = false
+local ToggleButton = SafeImport("gui/modules/components/togglebutton")
+local Arrow = SafeImport("gui/modules/components/arrow")
+local GlowBar = SafeImport("gui/modules/components/glowbar")
+local Sidebar = SafeImport("gui/modules/components/sidebar")
 
-local wasKeyPressed = false
-local isToggledOn = false
-local lockedTarget: BasePart? = nil
+local KeybindSection = SafeImport("gui/modules/combat/sections/shared/keybind")
+local AimPartSection = SafeImport("gui/modules/combat/sections/shared/aimpart")
+local PredictSection = SafeImport("gui/modules/combat/sections/shared/predict")
+local SmoothSection = SafeImport("gui/modules/combat/sections/aimlock/smooth")
+local KeyHoldSection = SafeImport("gui/modules/combat/sections/shared/keyhold")
+local WallCheckSection = SafeImport("gui/modules/combat/sections/shared/wallcheck")
+local KnockCheckSection = SafeImport("gui/modules/combat/sections/shared/knockcheck")
 
--- Variável para não floodar o F9
-local lastDebugTime = 0
+export type AimlockUI = { Instance: Frame, Destroy: (self: AimlockUI) -> () }
+local AimlockFactory = {}
 
-function Aimlock.Init()
-    if isInitialized then return end
-    isInitialized = true
+local COLOR_WHITE = Color3.fromHex("B4B4B4")
+local FONT_MAIN = Enum.Font.GothamBold
 
-    warn("[SACRAMENT] 🎯 Aimlock (Modo Diagnóstico) Iniciado!")
+function AimlockFactory.new(): AimlockUI
+    local maid = Maid.new()
 
-    Loop.BindToRender("Aimlock_Main", function(deltaTime: number)
-        local camera = Workspace.CurrentCamera
-        if not camera then return end
+    local container = Instance.new("Frame")
+    container.Name = "AimlockContainer"
+    container.Size = UDim2.new(1, 0, 0, 0)
+    container.BackgroundTransparency = 1 
+    container.AutomaticSize = Enum.AutomaticSize.Y
 
-        local isEnabled    = UIState.Get("AimlockEnabled", false)
-        local bindKey      = UIState.Get("Aimlock_Keybind", "Q")
-        local isKeyHold    = UIState.Get("Aimlock_KeyHold", true)
-        
-        local useWallCheck = UIState.Get("Aimlock_WallCheck", false)
-        local useKnockCheck= UIState.Get("Aimlock_KnockCheck", false) -- Desliguei no teste
-        local aimPartOpt   = UIState.Get("Aimlock_AimPart", "Torso")  -- Forcei Torso no teste
-        
-        local smoothness   = tonumber(UIState.Get("Aimlock_Smooth", 0.5)) or 0.5
-        local fovRadius    = 5000 
-        local useTeamCheck = false 
+    local containerLayout = Instance.new("UIListLayout")
+    containerLayout.FillDirection = Enum.FillDirection.Vertical
+    containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    containerLayout.Parent = container
 
-        local isCurrentlyPressed = KeyHold.IsHeld(bindKey)
-        
-        -- === SISTEMA DE RAIO-X ===
-        -- Se você estiver segurando a tecla, ele printa o relatório a cada 1 segundo
-        if isCurrentlyPressed and (tick() - lastDebugTime > 1) then
-            lastDebugTime = tick()
-            print("--- RAIO X DO AIMLOCK ---")
-            print("1. Tecla lida pelo UIState: ", tostring(bindKey))
-            print("2. Botao Principal Ligado?: ", tostring(isEnabled))
-            print("3. Modo KeyHold Ligado?: ", tostring(isKeyHold))
-            print("4. WallCheck Ligado?: ", tostring(useWallCheck))
-            print("-------------------------")
-        end
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(0, 280, 0, 50)
+    header.BackgroundTransparency = 1
+    header.LayoutOrder = 1
+    header.ClipsDescendants = true
+    header.Parent = container
 
-        if not isEnabled then
-            lockedTarget = nil
-            isToggledOn = false
-            return
-        end
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.Size = UDim2.fromOffset(0, 50)
+    title.AutomaticSize = Enum.AutomaticSize.X
+    title.Position = UDim2.fromOffset(20, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "Aimlock"
+    title.TextColor3 = COLOR_WHITE
+    title.Font = FONT_MAIN
+    title.TextSize = 22
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = header
 
-        local isActive = false
-        if isKeyHold then
-            isActive = isCurrentlyPressed
-            if not isActive then lockedTarget = nil end
-        else
-            if isCurrentlyPressed and not wasKeyPressed then
-                isToggledOn = not isToggledOn
-                if not isToggledOn then lockedTarget = nil end
+    local controls = Instance.new("Frame")
+    controls.Name = "Controls"
+    controls.Size = UDim2.fromOffset(90, 50)
+    controls.AnchorPoint = Vector2.new(1, 0)
+    controls.Position = UDim2.new(1, -10, 0, 0)
+    controls.BackgroundTransparency = 1
+    controls.Parent = header
+
+    local isEnabled = UIState and UIState.Get("AimlockEnabled", false) or false
+
+    local toggleBtn
+    if ToggleButton and type(ToggleButton.new) == "function" then
+        toggleBtn = ToggleButton.new()
+        toggleBtn.Instance.AnchorPoint = Vector2.new(0, 0.5)
+        toggleBtn.Instance.Position = UDim2.new(0, 0, 0.5, 0)
+        if toggleBtn.SetState then pcall(function() toggleBtn:SetState(isEnabled, true) end) end
+        toggleBtn.Instance.Parent = controls
+        maid:GiveTask(toggleBtn)
+    end
+
+    local arrow
+    if Arrow and type(Arrow.new) == "function" then
+        arrow = Arrow.new()
+        arrow.Instance.AnchorPoint = Vector2.new(1, 0.5)
+        arrow.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+        arrow.Instance.Parent = controls
+        maid:GiveTask(arrow)
+    end
+
+    local glowWrapper = Instance.new("Frame")
+    glowWrapper.Name = "GlowWrapper"
+    glowWrapper.AnchorPoint = Vector2.new(0, 0.5)
+    glowWrapper.BackgroundTransparency = 1
+    glowWrapper.Parent = header
+
+    local glowBar
+    if GlowBar and type(GlowBar.new) == "function" then
+        glowBar = GlowBar.new()
+        glowBar.Instance.AnchorPoint = Vector2.new(0.5, 0.5)
+        glowBar.Instance.Position = UDim2.fromScale(0.5, 0.5)
+        glowBar.Instance.Size = UDim2.fromScale(1, 1)
+        if glowBar.SetState then glowBar:SetState(isEnabled) end
+        glowBar.Instance.Parent = glowWrapper
+        maid:GiveTask(glowBar)
+    end
+
+    local function updateGlowBar()
+        if header.AbsoluteSize.X == 0 then return end
+        local titleRight = title.AbsolutePosition.X + title.AbsoluteSize.X
+        local controlsLeft = controls.AbsolutePosition.X
+        local startX = (titleRight - header.AbsolutePosition.X) + 5
+        local width = math.max(0, (controlsLeft - header.AbsolutePosition.X) - 5 - startX)
+        glowWrapper.Position = UDim2.new(0, startX, 0.5, 0)
+        glowWrapper.Size = UDim2.fromOffset(width, 32)
+    end
+    maid:GiveTask(title:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    maid:GiveTask(header:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateGlowBar))
+    task.defer(updateGlowBar)
+
+    local subFrame = Instance.new("Frame")
+    subFrame.Name = "SubFrame"
+    subFrame.Size = UDim2.new(1, 0, 0, 320)
+    subFrame.BackgroundTransparency = 1
+    subFrame.BorderSizePixel = 0
+    subFrame.Visible = false 
+    subFrame.LayoutOrder = 2
+    subFrame.Parent = container
+
+    if Sidebar and type(Sidebar.createVertical) == "function" then
+        local vLine = Sidebar.createVertical()
+        vLine.Instance.Size = UDim2.new(0, 2, 1, 0)
+        vLine.Instance.Parent = subFrame
+        maid:GiveTask(vLine)
+    end
+
+    local rightContent = Instance.new("Frame")
+    rightContent.Name = "RightContent"
+    rightContent.Size = UDim2.new(1, -2, 1, 0)
+    rightContent.Position = UDim2.fromOffset(2, 0)
+    rightContent.BackgroundTransparency = 1
+    rightContent.Parent = subFrame
+
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    rightLayout.Parent = rightContent
+
+    local function loadSec(moduleType: any, order: number, parentInstance: Instance)
+        if typeof(moduleType) == "table" and moduleType.new then
+            local success, instance = pcall(function() return moduleType.new(order) end)
+            if success and instance then
+                instance.Instance.Parent = parentInstance
+                maid:GiveTask(instance)
+                return instance 
             end
-            isActive = isToggledOn
         end
-        wasKeyPressed = isCurrentlyPressed
+        return nil
+    end
 
-        if not isActive then return end
+    local secKeybind = loadSec(KeybindSection, 1, rightContent)
 
-        if not lockedTarget or isKeyHold then
-            lockedTarget = Targeting.GetClosestToCursor(
-                fovRadius, 
-                {"Torso", "HumanoidRootPart"}, 
-                useWallCheck, 
-                useKnockCheck, 
-                useTeamCheck
-            )
-        end
+    if Sidebar and type(Sidebar.createHorizontal) == "function" then
+        local hLine = Sidebar.createHorizontal(2)
+        hLine.Instance.Parent = rightContent
+        maid:GiveTask(hLine)
+    end
 
-        if not lockedTarget then return end
+    local inputsScroll = Instance.new("ScrollingFrame")
+    inputsScroll.Name = "InputsScroll"
+    inputsScroll.Size = UDim2.new(1, 0, 1, -57)
+    inputsScroll.BackgroundTransparency = 1
+    inputsScroll.BorderSizePixel = 0
+    inputsScroll.ScrollBarThickness = 0
+    inputsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    inputsScroll.LayoutOrder = 3
+    inputsScroll.Parent = rightContent
+
+    local inputsLayout = Instance.new("UIListLayout")
+    inputsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    inputsLayout.Padding = UDim.new(0, 15)
+    inputsLayout.Parent = inputsScroll
+
+    local inputsPadding = Instance.new("UIPadding")
+    inputsPadding.PaddingTop = UDim.new(0, 15)
+    inputsPadding.PaddingBottom = UDim.new(0, 20)
+    inputsPadding.Parent = inputsScroll
+
+    local secKeyHold   = loadSec(KeyHoldSection,   1, inputsScroll)
+    local secPredict   = loadSec(PredictSection,   2, inputsScroll)
+    local secSmooth    = loadSec(SmoothSection,    3, inputsScroll)
+    local secAimPart   = loadSec(AimPartSection,   4, inputsScroll)
+    local secWallCheck = loadSec(WallCheckSection, 5, inputsScroll)
+    local secKnockCheck= loadSec(KnockCheckSection,6, inputsScroll)
+
+    if toggleBtn and UIState then
+        maid:GiveTask(toggleBtn.Toggled:Connect(function(state: boolean)
+            if glowBar then glowBar:SetState(state) end
+            UIState.Set("AimlockEnabled", state)
+        end))
+    end
+
+    local Orchestrator = {}
+    
+    function Orchestrator.Bind(section: any, stateKey: string, componentType: string)
+        if not section or not UIState then return end
         
-        local character = lockedTarget.Parent :: Model
-        local partToAim = AimPart.GetTarget(character, aimPartOpt)
-        if not partToAim then return end
+        local savedValue = UIState.Get(stateKey)
+        
+        if componentType == "TextBox" or componentType == "ValueBox" then
+            local component = section.ValueBox or section.TextBox
+            if component then
+                if savedValue ~= nil and component.SetValue then
+                    pcall(function() component:SetValue(savedValue, true) end) 
+                end
+                if component.OnValueChanged then
+                    maid:GiveTask(component.OnValueChanged:Connect(function(finalValue)
+                        UIState.Set(stateKey, finalValue)
+                    end))
+                end
+            end
+            
+        elseif componentType == "Toggle" then
+            local component = section.Toggle or section.ToggleButton
+            if component then
+                if savedValue ~= nil and component.SetState then
+                    pcall(function() component:SetState(savedValue, true) end) 
+                end
+                if component.Toggled then
+                    maid:GiveTask(component.Toggled:Connect(function(val: boolean)
+                        UIState.Set(stateKey, val)
+                    end))
+                end
+            end
+            
+        elseif componentType == "Dropdown" then
+            local component = section.Dropdown
+            if component then
+                if savedValue ~= nil and component.SetSelected then
+                    pcall(function() component:SetSelected(savedValue, true) end) 
+                end
+                if component.OnSelectionChanged then
+                    maid:GiveTask(component.OnSelectionChanged:Connect(function(val: string)
+                        UIState.Set(stateKey, val)
+                    end))
+                end
+            end
 
-        local newCFrame = Smooth.Calculate(camera.CFrame, partToAim.Position, smoothness, deltaTime)
-        camera.CFrame = newCFrame
-    end)
+        elseif componentType == "Keybind" then
+            local component = section.Keybox or section.KeyBind or section
+            if component then
+                if savedValue and type(savedValue) == "string" and component.SetKey then
+                    pcall(function() component:SetKey(Enum.KeyCode[savedValue], true) end)
+                end
+                if component.KeyChanged then
+                    maid:GiveTask(component.KeyChanged:Connect(function(k: Enum.KeyCode?)
+                        UIState.Set(stateKey, k and k.Name or nil)
+                    end))
+                end
+            end
+        end
+    end
+
+    Orchestrator.Bind(secKeybind,   "Aimlock_Keybind",   "Keybind")
+    Orchestrator.Bind(secKeyHold,   "Aimlock_KeyHold",   "Toggle")
+    Orchestrator.Bind(secPredict,   "Aimlock_Predict",   "TextBox")
+    Orchestrator.Bind(secSmooth,    "Aimlock_Smooth",    "TextBox")
+    Orchestrator.Bind(secAimPart,   "Aimlock_AimPart",   "Dropdown")
+    Orchestrator.Bind(secWallCheck, "Aimlock_WallCheck", "Toggle")
+    Orchestrator.Bind(secKnockCheck,"Aimlock_KnockCheck","Toggle")
+
+    maid:GiveTask(container)
+    local self = {}
+    self.Instance = container
+    function self:Destroy() maid:Destroy() end
+    return self :: AimlockUI
 end
 
-function Aimlock.Destroy()
-    if not isInitialized then return end
-    Loop.UnbindFromRender("Aimlock_Main")
-    isInitialized = false
-    lockedTarget = nil
-    isToggledOn = false
-end
-
-return Aimlock
+return AimlockFactory
