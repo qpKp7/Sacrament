@@ -24,7 +24,7 @@ function Aimlock.Init()
     if isInitialized then return end
     isInitialized = true
 
-    warn("[SACRAMENT] 🎯 Aimlock (Modo Diagnóstico) Iniciado!")
+    warn("[SACRAMENT] 🎯 Aimlock (Modo Diagnostico) Iniciado!")
 
     Loop.BindToRender("Aimlock_Main", function(deltaTime: number)
         local camera = Workspace.CurrentCamera
@@ -44,6 +44,7 @@ function Aimlock.Init()
 
         local isCurrentlyPressed = KeyHold.IsHeld(bindKey)
         
+        -- Aqui mora o Raio-X!
         if isCurrentlyPressed and (tick() - lastDebugTime > 1) then
             lastDebugTime = tick()
             print("--- RAIO X DO AIMLOCK ---")
