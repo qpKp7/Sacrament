@@ -3,8 +3,9 @@ local Import = (_G :: any).SacramentImport
 local Registry = Import("logic/core/backend_registry")
 local Telemetry = Import("logic/core/telemetry")
 
--- Registrando o backend nulo (futuramente você registra o hook.lua aqui também)
+-- Registrando os backends disponíveis
 Registry.Register("SilentAim_Unsupported", Import("logic/func/combat/silentaim/backend/unsupported"))
+Registry.Register("SilentAim_Hook", Import("logic/func/combat/silentaim/backend/hook"))
 
 local SilentAim = {}
 local isInitialized = false
@@ -13,9 +14,16 @@ local activeBackendName = nil
 function SilentAim.Init()
     if isInitialized then return end
 
-    -- Por enquanto, forçamos o Unsupported para garantir que o boot está limpo.
-    -- Quando criarmos o contrato do Hook, faremos a checagem via Registry.CanLoad()
-    activeBackendName = "SilentAim_Unsupported"
+    -- Roteamento Inteligente
+    local canLoadHook, hookReason = Registry.CanLoad("SilentAim_Hook")
+    
+    if canLoadHook then
+        activeBackendName = "SilentAim_Hook"
+        Telemetry.Log("INFO", "SilentAim", "Capacidade detectada. Carregando backend de interceptação.")
+    else
+        activeBackendName = "SilentAim_Unsupported"
+        Telemetry.Log("WARN", "SilentAim", "Hook negado (" .. hookReason .. "). Carregando fallback.")
+    end
     
     local backend = Registry.Get(activeBackendName)
     if not backend then
