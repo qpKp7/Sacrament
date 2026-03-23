@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Flick Adapter Backend (The Micro-Pulse Flick)
-    Suporte nativo a armas semi-automáticas e automáticas (Hold M1).
+    SACRAMENT | Flick Adapter Backend (Free-Mouse & Prediction)
+    Calcula a deflexão vetorial para precisão absoluta com mouse solto (Sem Shift-Lock).
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -24,7 +24,6 @@ local flickConnectionBegan: RBXScriptConnection? = nil
 local flickConnectionEnded: RBXScriptConnection? = nil
 local isShooting = false
 
--- Chaves de Prediction da sua UI
 local KEY_PREDICT_VAL = "SilentAim_Prediction"
 local KEY_AUTO_PREDICT = "SilentAim_AutoPredict"
 
@@ -37,11 +36,9 @@ function FlickAdapter.load()
     flickConnectionBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         
-        -- Detecta o início do disparo (Clique ou Segurar)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isShooting = true
             
-            -- Cria o Micro-Pulse Loop assíncrono para armas automáticas
             task.spawn(function()
                 while isShooting do
                     if Controller and type(Controller.GetLockedTargetPart) == "function" then
@@ -58,19 +55,28 @@ function FlickAdapter.load()
                                     finalAimPosition = Predict.GetPosition(targetPart, pValue, isAuto)
                                 end
 
-                                -- O MICRO-FLICK
+                                -- MATEMÁTICA DE MOUSE SOLTO (FREE MOUSE)
                                 local originalCFrame = camera.CFrame
-                                camera.CFrame = CFrame.new(camera.CFrame.Position, finalAimPosition)
+                                local mousePos = UserInputService:GetMouseLocation()
+                                local mouseRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
                                 
-                                -- Yield 1: Mantém o Flick apenas pelo milissegundo em que o tiro sai
+                                -- Calcula a distância angular entre o centro da tela e onde o seu mouse está
+                                local centerToMouseRotation = originalCFrame:ToObjectSpace(CFrame.lookAt(originalCFrame.Position, originalCFrame.Position + mouseRay.Direction))
+                                
+                                -- Aponta a câmera para o alvo predito e "subtrai" o offset do cursor
+                                local baseTargetCFrame = CFrame.lookAt(originalCFrame.Position, finalAimPosition)
+                                
+                                -- O MICRO-FLICK COM COMPENSAÇÃO DE CURSOR
+                                camera.CFrame = baseTargetCFrame * centerToMouseRotation:Inverse()
+                                
+                                -- Dispara a bala
                                 RunService.RenderStepped:Wait() 
                                 
-                                -- Restauração
+                                -- Devolve a câmera
                                 camera.CFrame = originalCFrame
                             end
                         end
                     end
-                    -- Yield 2: Devolve a câmera ao estado puro para o motor descansar antes do próximo tiro
                     RunService.Heartbeat:Wait()
                 end
             end)
@@ -79,12 +85,12 @@ function FlickAdapter.load()
 
     flickConnectionEnded = UserInputService.InputEnded:Connect(function(input, gpe)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isShooting = false -- Quebra o loop quando soltar o dedo
+            isShooting = false
         end
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Flash-Flick Micro-Pulse (Suporte Auto-Fire) ativo.")
+    Telemetry.Log("LITURGY", "SilentAim", "Engine de Free-Mouse e Prediction acoplada.")
     return "initialized"
 end
 
