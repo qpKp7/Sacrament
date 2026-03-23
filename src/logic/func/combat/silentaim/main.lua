@@ -1,7 +1,7 @@
 --!strict
 --[[
     SACRAMENT | Silent Aim Master Controller (Híbrido Legit/Global)
-    Gerencia Visuais, Inputs e Validação de FOV Dinâmica (Liga/Desliga).
+    Correção de Tipagem de UI e Validação Estrita de FOV.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -32,12 +32,22 @@ local lockedCharacter: Model? = nil
 local KEY_ENABLED     = "SilentAimEnabled"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
-local KEY_USE_FOV     = "SilentAim_UseFov"   -- Toggle: Ligar/Desligar restrição de FOV
+local KEY_USE_FOV     = "SilentAim_UseFov"
 local KEY_FOV_RADIUS  = "SilentAim_FovLimit"
 local KEY_AIM_PART    = "SilentAim_AimPart"
 local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_KNOCK_CHECK = "SilentAim_KnockCheck"
 local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
+
+-- ==========================================
+-- ANALISADOR ESTRITO (Corrige o FOV Invisível)
+-- ==========================================
+local function GetToggleState(key: string, default: boolean): boolean
+    local val = UIState.Get(key, default)
+    if val == "false" or val == 0 then return false end
+    if val == "true" or val == 1 then return true end
+    return val == true
+end
 
 -- ==========================================
 -- RITO DE ARMAMENTO (PRE-REGISTRATION)
@@ -57,15 +67,14 @@ PreRegisterBackends()
 -- LÓGICA DE TARGETING (AQUISIÇÃO INICIAL)
 -- ==========================================
 local function AcquireTarget(): Model?
-    -- Se o FOV estiver desligado, o raio de busca é INFINITO (math.huge)
-    local useFov = UIState.Get(KEY_USE_FOV, true)
+    local useFov = GetToggleState(KEY_USE_FOV, true)
     local fovRadius = useFov and (tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150) or math.huge
     
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
     if aimPartName == "Random" or aimPartName == "Closest" then aimPartName = "HumanoidRootPart" end
     
-    local wallCheck = UIState.Get(KEY_WALL_CHECK, false)
-    local knockCheck = UIState.Get(KEY_KNOCK_CHECK, false)
+    local wallCheck = GetToggleState(KEY_WALL_CHECK, false)
+    local knockCheck = GetToggleState(KEY_KNOCK_CHECK, false)
     
     local targetPart = Targeting.GetClosestToCursor(fovRadius, {aimPartName, "HumanoidRootPart"}, wallCheck, knockCheck, false)
     if targetPart and targetPart.Parent then return targetPart.Parent :: Model end
@@ -81,11 +90,11 @@ function SilentAim.Init()
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
     SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe or not UIState.Get(KEY_ENABLED, false) then return end
+        if gpe or not GetToggleState(KEY_ENABLED, false) then return end
         
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
-            if UIState.Get(KEY_HOLD, false) then
+            if GetToggleState(KEY_HOLD, false) then
                 lockedCharacter = AcquireTarget()
             else
                 if lockedCharacter then 
@@ -100,29 +109,28 @@ function SilentAim.Init()
     SilentAim._inputEnded = UserInputService.InputEnded:Connect(function(input, gpe)
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
-            if UIState.Get(KEY_HOLD, false) then
+            if GetToggleState(KEY_HOLD, false) then
                 lockedCharacter = nil; MarkStyle.Clear()
             end
         end
     end)
 
-    -- Loop de Validação Contínua (60 FPS)
     Loop.BindToRender("SilentAim_Controller", function()
-        if not UIState.Get(KEY_ENABLED, false) then 
+        if not GetToggleState(KEY_ENABLED, false) then 
             lockedCharacter = nil; MarkStyle.Clear(); return 
         end
 
         if lockedCharacter then
             local hum = lockedCharacter:FindFirstChildOfClass("Humanoid")
-            local isKnocked = UIState.Get(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
+            local isKnocked = GetToggleState(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
             local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart") :: BasePart
             
             if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked or not targetRoot then
                 lockedCharacter = nil; MarkStyle.Clear(); return
             end
 
-            -- VALIDAÇÃO DINÂMICA (FOV ON vs FOV OFF)
-            local useFov = UIState.Get(KEY_USE_FOV, true)
+            -- VALIDAÇÃO DINÂMICA COM STRICT BOOLEAN
+            local useFov = GetToggleState(KEY_USE_FOV, true)
             if useFov then
                 local camera = Workspace.CurrentCamera
                 if camera then
@@ -130,7 +138,6 @@ function SilentAim.Init()
                     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
                     local mousePos = UserInputService:GetMouseLocation()
                     
-                    -- Quebra a trava APENAS se o sistema de FOV estiver ativado e o alvo sair da área
                     if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
                         lockedCharacter = nil
                         MarkStyle.Clear()
@@ -167,19 +174,15 @@ end
 
 function SilentAim.Destroy()
     if not isInitialized then return end
-
     if FOVLimit then FOVLimit.Destroy() end
     MarkStyle.Clear()
     Loop.UnbindFromRender("SilentAim_Controller")
-    
     if SilentAim._inputBegan then SilentAim._inputBegan:Disconnect() end
     if SilentAim._inputEnded then SilentAim._inputEnded:Disconnect() end
-
     if activeBackendName then
         local backend = Registry.Get(activeBackendName)
         if backend then backend.destroy() end
     end
-
     lockedCharacter = nil
     activeBackendName = nil
     isInitialized = false
@@ -191,7 +194,7 @@ end
 local bodyPartsList = {"Head", "UpperTorso", "LowerTorso", "RightUpperArm", "LeftUpperArm", "RightUpperLeg", "LeftUpperLeg"}
 
 function SilentAim.GetLockedTargetPart(): BasePart?
-    if not lockedCharacter or not UIState.Get(KEY_ENABLED, false) then return nil end
+    if not lockedCharacter or not GetToggleState(KEY_ENABLED, false) then return nil end
     
     local aimPartSetting = UIState.Get(KEY_AIM_PART, "Head")
     
@@ -210,7 +213,6 @@ function SilentAim.GetLockedTargetPart(): BasePart?
         local mousePos = UserInputService:GetMouseLocation()
         local closestPart = nil
         local shortestDist = math.huge
-        
         for _, partName in ipairs(bodyPartsList) do
             local p = lockedCharacter:FindFirstChild(partName)
             if p and p:IsA("BasePart") then
