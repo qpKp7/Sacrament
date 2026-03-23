@@ -1,7 +1,6 @@
 --!strict
 --[[
     SACRAMENT | Silent Aim Master Controller (Perfect Legit & Hard Lock)
-    Mantém o alvo travado infinitamente, mas só curva os tiros se ele estiver dentro do FOV.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -38,9 +37,6 @@ local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_KNOCK_CHECK = "SilentAim_KnockCheck"
 local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
 
--- ==========================================
--- ANALISADOR ESTRITO
--- ==========================================
 local function GetToggleState(key: string, default: boolean): boolean
     local val = UIState.Get(key, default)
     if val == "false" or val == 0 then return false end
@@ -54,22 +50,18 @@ local function IsBindMatch(input: InputObject): boolean
     return input.KeyCode.Name == bind or input.UserInputType.Name == bind
 end
 
--- ==========================================
--- RITO DE ARMAMENTO
--- ==========================================
 local function PreRegisterBackends()
     pcall(function()
         if type(Registry.Register) == "function" then
-            -- Note que agora usamos o universal_hook como arma principal
+            -- Mapeia todas as opções disponíveis
             Registry.Register("universal_hook", Import("logic/func/combat/silentaim/backend/universal_hook"))
+            Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
+            Registry.Register("physical_raycast", Import("logic/func/combat/silentaim/backend/physical_raycast"))
         end
     end)
 end
 PreRegisterBackends()
 
--- ==========================================
--- AQUISIÇÃO E CICLO DE VIDA (HARD LOCK)
--- ==========================================
 local function AcquireTarget(): Model?
     local useFov = GetToggleState(KEY_USE_FOV, true)
     local fovRadius = useFov and (tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150) or math.huge
@@ -109,7 +101,7 @@ function SilentAim.Init()
             local isKnocked = GetToggleState(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
             local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart") :: BasePart
             
-            -- HARD LOCK: Só solta se o inimigo morrer ou cair
+            -- HARD LOCK
             if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked or not targetRoot then
                 lockedCharacter = nil; MarkStyle.Clear(); return
             end
@@ -124,15 +116,20 @@ function SilentAim.Init()
         end
     end)
 
-    -- Carrega a nova joia da coroa: O Hook Universal
-    local backend = Registry.Get("universal_hook")
-    if backend and backend.canLoad() and backend.load() == "initialized" then
-        activeBackendName = "universal_hook"
-    else
-        Telemetry.Log("ERROR", "SilentAim", "O executor não suporta metatables modernas.")
+    -- A CADEIA DE SOBREVIVÊNCIA
+    local BACKEND_CHAIN = { "universal_hook", "flick_adapter", "physical_raycast" }
+    for _, backendName in ipairs(BACKEND_CHAIN) do
+        local backend = Registry.Get(backendName)
+        if backend and backend.canLoad() then
+            if backend.load() == "initialized" then
+                activeBackendName = backendName
+                break
+            end
+        end
     end
 
     isInitialized = true
+    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Iniciado. Backend ativo: " .. (activeBackendName or "Nenhum"))
     return "initialized"
 end
 
@@ -150,9 +147,6 @@ function SilentAim.Destroy()
     lockedCharacter = nil; activeBackendName = nil; isInitialized = false
 end
 
--- ==========================================
--- A LÓGICA DE GATILHO (BALAS SÓ DOBRAM DENTRO DO FOV)
--- ==========================================
 local bodyPartsList = {"Head", "UpperTorso", "LowerTorso", "RightUpperArm", "LeftUpperArm", "RightUpperLeg", "LeftUpperLeg"}
 
 function SilentAim.GetLockedTargetPart(): BasePart?
@@ -160,7 +154,7 @@ function SilentAim.GetLockedTargetPart(): BasePart?
     local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return nil end
 
-    -- VALIDAÇÃO DA LENTE: Se o alvo estiver fora do FOV, os tiros vão retos (Retorna nil para o backend)
+    -- GATILHO LEGIT: A bala só dobra se a sua mira estiver perto dele.
     if GetToggleState(KEY_USE_FOV, true) then
         local camera = Workspace.CurrentCamera
         if camera then
@@ -168,14 +162,13 @@ function SilentAim.GetLockedTargetPart(): BasePart?
             local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
             local mousePos = UserInputService:GetMouseLocation()
             
+            -- Se ele saiu da área do FOV, retornamos "nil". O hook vai ignorar o target e a bala sai reta.
             if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
-                -- O alvo está travado (highlight ligado), mas você não está a apontar a arma para perto dele.
                 return nil 
             end
         end
     end
 
-    -- Se ele estiver dentro do FOV, escolhemos com precisão matemática a parte do corpo
     local aimPartSetting = UIState.Get(KEY_AIM_PART, "Head")
     if aimPartSetting == "Random" then
         local validParts = {}
