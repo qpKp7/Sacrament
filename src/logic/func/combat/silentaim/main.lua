@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (Hard Lock Edition)
-    O alvo mantém-se travado indefinidamente até morrer ou ser destravado manualmente.
+    SACRAMENT | Silent Aim Master Controller (ABSOLUTE HARD LOCK)
+    Uma vez travado, o alvo jamais é perdido até morrer ou ser destravado manualmente.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -28,6 +28,7 @@ local isInitialized = false
 local activeBackendName: string? = nil
 local lockedCharacter: Model? = nil
 
+-- Chaves de Estado da UI
 local KEY_ENABLED     = "SilentAimEnabled"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
@@ -38,7 +39,9 @@ local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_KNOCK_CHECK = "SilentAim_KnockCheck"
 local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
 
--- Analisador Estrito
+-- ==========================================
+-- ANALISADOR ESTRITO E LEITOR DE BINDS UNIVERSAL
+-- ==========================================
 local function GetToggleState(key: string, default: boolean): boolean
     local val = UIState.Get(key, default)
     if val == "false" or val == 0 then return false end
@@ -46,6 +49,16 @@ local function GetToggleState(key: string, default: boolean): boolean
     return val == true
 end
 
+-- Permite usar tanto teclas (Q, E, F) quanto botões do rato (MouseButton2, etc.)
+local function IsBindMatch(input: InputObject): boolean
+    local bind = UIState.Get(KEY_BIND, "None")
+    if bind == "None" or bind == "" then return false end
+    return input.KeyCode.Name == bind or input.UserInputType.Name == bind
+end
+
+-- ==========================================
+-- RITO DE ARMAMENTO (PRE-REGISTRATION)
+-- ==========================================
 local function PreRegisterBackends()
     pcall(function()
         if type(Registry.Register) == "function" then
@@ -57,7 +70,9 @@ local function PreRegisterBackends()
 end
 PreRegisterBackends()
 
--- AQUISIÇÃO (Usa o FOV apenas para achar o alvo)
+-- ==========================================
+-- LÓGICA DE AQUISIÇÃO (Usa o FOV apenas nesta fração de segundo)
+-- ==========================================
 local function AcquireTarget(): Model?
     local useFov = GetToggleState(KEY_USE_FOV, true)
     local fovRadius = useFov and (tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150) or math.huge
@@ -73,20 +88,27 @@ local function AcquireTarget(): Model?
     return nil
 end
 
+-- ==========================================
+-- CICLO DE VIDA PRINCIPAL
+-- ==========================================
 function SilentAim.Init()
     if isInitialized then return "initialized" end
 
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
+    -- EVENTO DE APERTO DE TECLA (LOCK)
     SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe or not GetToggleState(KEY_ENABLED, false) then return end
-        local bind = UIState.Get(KEY_BIND, "None")
-        if bind and bind ~= "None" and input.KeyCode.Name == bind then
+        
+        if IsBindMatch(input) then
             if GetToggleState(KEY_HOLD, false) then
+                -- Modo Hold: Trava ao apertar
                 lockedCharacter = AcquireTarget()
             else
+                -- Modo Toggle: Inverte o estado
                 if lockedCharacter then 
-                    lockedCharacter = nil; MarkStyle.Clear()
+                    lockedCharacter = nil
+                    MarkStyle.Clear()
                 else 
                     lockedCharacter = AcquireTarget()
                 end
@@ -94,16 +116,17 @@ function SilentAim.Init()
         end
     end)
 
+    -- EVENTO DE SOLTURA DE TECLA (UNLOCK APENAS SE FOR MODO HOLD)
     SilentAim._inputEnded = UserInputService.InputEnded:Connect(function(input, gpe)
-        local bind = UIState.Get(KEY_BIND, "None")
-        if bind and bind ~= "None" and input.KeyCode.Name == bind then
+        if IsBindMatch(input) then
             if GetToggleState(KEY_HOLD, false) then
-                lockedCharacter = nil; MarkStyle.Clear()
+                lockedCharacter = nil
+                MarkStyle.Clear()
             end
         end
     end)
 
-    -- CICLO DE MANUTENÇÃO (HARD LOCK)
+    -- CICLO DE MANUTENÇÃO (BLINDAGEM DE HARD LOCK)
     Loop.BindToRender("SilentAim_Controller", function()
         if not GetToggleState(KEY_ENABLED, false) then 
             lockedCharacter = nil; MarkStyle.Clear(); return 
@@ -114,11 +137,15 @@ function SilentAim.Init()
             local isKnocked = GetToggleState(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
             local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart") :: BasePart
             
-            -- Só solta a trava se o inimigo morrer, for nocauteado ou o modelo sumir.
+            -- Lógica pura: Só solta se o alvo não existir mais, morrer ou for nocauteado.
+            -- NENHUMA VALIDAÇÃO DE TELA OU FOV É FEITA AQUI.
             if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked or not targetRoot then
-                lockedCharacter = nil; MarkStyle.Clear(); return
+                lockedCharacter = nil
+                MarkStyle.Clear()
+                return
             end
 
+            -- Mantém a cor de seleção cravada nele
             local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
             if aimPartName == "Random" or aimPartName == "Closest" then aimPartName = "HumanoidRootPart" end
             local markPart = lockedCharacter:FindFirstChild(aimPartName) or targetRoot
@@ -134,13 +161,14 @@ function SilentAim.Init()
         local backend = Registry.Get(backendName)
         if backend and backend.canLoad() then
             if backend.load() == "initialized" then
-                activeBackendName = backendName; break
+                activeBackendName = backendName
+                break
             end
         end
     end
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Hard Lock Ativado. FOV atua apenas na aquisição.")
+    Telemetry.Log("LITURGY", "SilentAim", "Controlador HARD LOCK Iniciado. Alvo não será solto ao sair do ecrã.")
     return "initialized"
 end
 
@@ -155,13 +183,19 @@ function SilentAim.Destroy()
         local backend = Registry.Get(activeBackendName)
         if backend then backend.destroy() end
     end
-    lockedCharacter = nil; activeBackendName = nil; isInitialized = false
+    lockedCharacter = nil
+    activeBackendName = nil
+    isInitialized = false
 end
 
+-- ==========================================
+-- EXPORTAÇÃO DE ALVO PARA O MOTOR DE TIRO (FLICK)
+-- ==========================================
 local bodyPartsList = {"Head", "UpperTorso", "LowerTorso", "RightUpperArm", "LeftUpperArm", "RightUpperLeg", "LeftUpperLeg"}
 
 function SilentAim.GetLockedTargetPart(): BasePart?
     if not lockedCharacter or not GetToggleState(KEY_ENABLED, false) then return nil end
+    
     local aimPartSetting = UIState.Get(KEY_AIM_PART, "Head")
     
     if aimPartSetting == "Random" then
@@ -183,12 +217,17 @@ function SilentAim.GetLockedTargetPart(): BasePart?
             local p = lockedCharacter:FindFirstChild(partName)
             if p and p:IsA("BasePart") then
                 local screenPos, onScreen = camera:WorldToViewportPoint(p.Position)
+                -- Se o alvo estiver na tela, ajusta o tiro para a parte mais perto do rato
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                    if dist < shortestDist then shortestDist = dist; closestPart = p end
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        closestPart = p
+                    end
                 end
             end
         end
+        -- Se estiver fora da tela ou nada bater, foca estritamente no centro de massa para o flick não falhar
         return closestPart or lockedCharacter:FindFirstChild("HumanoidRootPart")
     end
 
