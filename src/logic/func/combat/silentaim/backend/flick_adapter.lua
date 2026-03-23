@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Flick Adapter Backend (Free-Mouse & Prediction)
-    Calcula a deflexão vetorial para precisão absoluta com mouse solto (Sem Shift-Lock).
+    SACRAMENT | Flick Adapter Backend (Free-Mouse & Pulse-Sync)
+    Devolve o controle da câmera ao utilizador ao sincronizar o flick com o fire-rate da arma.
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -27,6 +27,14 @@ local isShooting = false
 local KEY_PREDICT_VAL = "SilentAim_Prediction"
 local KEY_AUTO_PREDICT = "SilentAim_AutoPredict"
 
+-- ==========================================
+-- CALIBRAÇÃO DE CADÊNCIA (FIRE-RATE)
+-- ==========================================
+-- Este valor dita quanto tempo a câmera "descansa" entre um flick e outro.
+-- 0.08s = ~12 flicks por segundo (Ideal para SMGs/ARs). 
+-- Se a câmera ainda estiver pesada, aumente para 0.1. Se estiver a errar balas, diminua para 0.05.
+local FLICK_PULSE_RATE = 0.08 
+
 function FlickAdapter.canLoad() return true, "CFrame Override suportado." end
 
 function FlickAdapter.load()
@@ -47,7 +55,7 @@ function FlickAdapter.load()
                         if targetPart and targetPart:IsA("BasePart") then
                             local camera = Workspace.CurrentCamera
                             if camera then
-                                -- PREDIÇÃO BALÍSTICA
+                                -- 1. PREDIÇÃO
                                 local finalAimPosition = targetPart.Position
                                 if Predict and type(Predict.GetPosition) == "function" then
                                     local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0.135)) or 0.135
@@ -55,29 +63,28 @@ function FlickAdapter.load()
                                     finalAimPosition = Predict.GetPosition(targetPart, pValue, isAuto)
                                 end
 
-                                -- MATEMÁTICA DE MOUSE SOLTO (FREE MOUSE)
+                                -- 2. MATEMÁTICA DE MOUSE SOLTO
                                 local originalCFrame = camera.CFrame
                                 local mousePos = UserInputService:GetMouseLocation()
                                 local mouseRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
-                                
-                                -- Calcula a distância angular entre o centro da tela e onde o seu mouse está
                                 local centerToMouseRotation = originalCFrame:ToObjectSpace(CFrame.lookAt(originalCFrame.Position, originalCFrame.Position + mouseRay.Direction))
-                                
-                                -- Aponta a câmera para o alvo predito e "subtrai" o offset do cursor
                                 local baseTargetCFrame = CFrame.lookAt(originalCFrame.Position, finalAimPosition)
                                 
-                                -- O MICRO-FLICK COM COMPENSAÇÃO DE CURSOR
+                                -- 3. O MICRO-FLICK
                                 camera.CFrame = baseTargetCFrame * centerToMouseRotation:Inverse()
                                 
-                                -- Dispara a bala
+                                -- Espera exatamente 1 frame da engine para o jogo computar o tiro
                                 RunService.RenderStepped:Wait() 
                                 
-                                -- Devolve a câmera
+                                -- 4. RESTAURAÇÃO
                                 camera.CFrame = originalCFrame
                             end
                         end
                     end
-                    RunService.Heartbeat:Wait()
+                    
+                    -- 5. O RESPIRO DA CÂMERA (A Mágica)
+                    -- Permite que você mexa o mouse normalmente entre os tiros.
+                    task.wait(FLICK_PULSE_RATE)
                 end
             end)
         end
@@ -90,7 +97,7 @@ function FlickAdapter.load()
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Engine de Free-Mouse e Prediction acoplada.")
+    Telemetry.Log("LITURGY", "SilentAim", "Pulse-Flick ativo. Câmera destravada com compensação de cadência.")
     return "initialized"
 end
 
