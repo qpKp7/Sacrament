@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (Híbrido Legit/Global)
-    Correção de Tipagem de UI e Validação Estrita de FOV.
+    SACRAMENT | Silent Aim Master Controller (Hard Lock Edition)
+    O alvo mantém-se travado indefinidamente até morrer ou ser destravado manualmente.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -28,7 +28,6 @@ local isInitialized = false
 local activeBackendName: string? = nil
 local lockedCharacter: Model? = nil
 
--- Chaves de Estado da UI
 local KEY_ENABLED     = "SilentAimEnabled"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
@@ -39,9 +38,7 @@ local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_KNOCK_CHECK = "SilentAim_KnockCheck"
 local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
 
--- ==========================================
--- ANALISADOR ESTRITO (Corrige o FOV Invisível)
--- ==========================================
+-- Analisador Estrito
 local function GetToggleState(key: string, default: boolean): boolean
     local val = UIState.Get(key, default)
     if val == "false" or val == 0 then return false end
@@ -49,9 +46,6 @@ local function GetToggleState(key: string, default: boolean): boolean
     return val == true
 end
 
--- ==========================================
--- RITO DE ARMAMENTO (PRE-REGISTRATION)
--- ==========================================
 local function PreRegisterBackends()
     pcall(function()
         if type(Registry.Register) == "function" then
@@ -63,9 +57,7 @@ local function PreRegisterBackends()
 end
 PreRegisterBackends()
 
--- ==========================================
--- LÓGICA DE TARGETING (AQUISIÇÃO INICIAL)
--- ==========================================
+-- AQUISIÇÃO (Usa o FOV apenas para achar o alvo)
 local function AcquireTarget(): Model?
     local useFov = GetToggleState(KEY_USE_FOV, true)
     local fovRadius = useFov and (tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150) or math.huge
@@ -81,9 +73,6 @@ local function AcquireTarget(): Model?
     return nil
 end
 
--- ==========================================
--- CICLO DE VIDA PRINCIPAL
--- ==========================================
 function SilentAim.Init()
     if isInitialized then return "initialized" end
 
@@ -91,7 +80,6 @@ function SilentAim.Init()
 
     SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe or not GetToggleState(KEY_ENABLED, false) then return end
-        
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if GetToggleState(KEY_HOLD, false) then
@@ -115,6 +103,7 @@ function SilentAim.Init()
         end
     end)
 
+    -- CICLO DE MANUTENÇÃO (HARD LOCK)
     Loop.BindToRender("SilentAim_Controller", function()
         if not GetToggleState(KEY_ENABLED, false) then 
             lockedCharacter = nil; MarkStyle.Clear(); return 
@@ -125,25 +114,9 @@ function SilentAim.Init()
             local isKnocked = GetToggleState(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
             local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart") :: BasePart
             
+            -- Só solta a trava se o inimigo morrer, for nocauteado ou o modelo sumir.
             if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked or not targetRoot then
                 lockedCharacter = nil; MarkStyle.Clear(); return
-            end
-
-            -- VALIDAÇÃO DINÂMICA COM STRICT BOOLEAN
-            local useFov = GetToggleState(KEY_USE_FOV, true)
-            if useFov then
-                local camera = Workspace.CurrentCamera
-                if camera then
-                    local screenPos, onScreen = camera:WorldToViewportPoint(targetRoot.Position)
-                    local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
-                    local mousePos = UserInputService:GetMouseLocation()
-                    
-                    if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
-                        lockedCharacter = nil
-                        MarkStyle.Clear()
-                        return
-                    end
-                end
             end
 
             local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
@@ -161,14 +134,13 @@ function SilentAim.Init()
         local backend = Registry.Get(backendName)
         if backend and backend.canLoad() then
             if backend.load() == "initialized" then
-                activeBackendName = backendName
-                break
+                activeBackendName = backendName; break
             end
         end
     end
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Controlador Híbrido Iniciado. Backend: " .. (activeBackendName or "Nenhum"))
+    Telemetry.Log("LITURGY", "SilentAim", "Hard Lock Ativado. FOV atua apenas na aquisição.")
     return "initialized"
 end
 
@@ -183,19 +155,13 @@ function SilentAim.Destroy()
         local backend = Registry.Get(activeBackendName)
         if backend then backend.destroy() end
     end
-    lockedCharacter = nil
-    activeBackendName = nil
-    isInitialized = false
+    lockedCharacter = nil; activeBackendName = nil; isInitialized = false
 end
 
--- ==========================================
--- EXPORTAÇÃO DE ALVO PARA O MOTOR DE TIRO
--- ==========================================
 local bodyPartsList = {"Head", "UpperTorso", "LowerTorso", "RightUpperArm", "LeftUpperArm", "RightUpperLeg", "LeftUpperLeg"}
 
 function SilentAim.GetLockedTargetPart(): BasePart?
     if not lockedCharacter or not GetToggleState(KEY_ENABLED, false) then return nil end
-    
     local aimPartSetting = UIState.Get(KEY_AIM_PART, "Head")
     
     if aimPartSetting == "Random" then
@@ -219,10 +185,7 @@ function SilentAim.GetLockedTargetPart(): BasePart?
                 local screenPos, onScreen = camera:WorldToViewportPoint(p.Position)
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                    if dist < shortestDist then
-                        shortestDist = dist
-                        closestPart = p
-                    end
+                    if dist < shortestDist then shortestDist = dist; closestPart = p end
                 end
             end
         end
