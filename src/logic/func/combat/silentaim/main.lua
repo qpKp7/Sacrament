@@ -1,36 +1,20 @@
-src/logic/func/combat/silentaim/main.lua
-
-
-
 --!strict
 
 local Import = (_G :: any).SacramentImport
-
 local Registry = Import("logic/core/backend_registry")
-
 local Telemetry = Import("logic/core/telemetry")
 
-
-
 local SilentAim = {}
-
 local isInitialized = false
-
 local activeBackendName = nil
-
-
 
 function SilentAim.Init()
 
     if isInitialized then return "initialized" end
 
-
-
     -- Por determinação do Tribunal, usaremos o mouse_spoof como principal para FPS Legacy
 
     activeBackendName = "mouse_spoof"
-
-    
 
     local backend = Registry.Get(activeBackendName)
 
@@ -42,8 +26,6 @@ function SilentAim.Init()
 
     end
 
-
-
     local can, reason = backend.canLoad()
 
     if not can then
@@ -53,8 +35,6 @@ function SilentAim.Init()
         return "unsupported"
 
     end
-
-
 
     local status = backend.load()
 
@@ -70,13 +50,9 @@ function SilentAim.Init()
 
     end
 
-
-
     return status
 
 end
-
-
 
 function SilentAim.Destroy()
 
@@ -93,7 +69,5 @@ function SilentAim.Destroy()
     isInitialized = false
 
 end
-
-
 
 return SilentAim
