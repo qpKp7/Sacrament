@@ -1,6 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (Perfect Legit & Hard Lock)
+    SACRAMENT | Silent Aim Master Controller (Hard Lock & Legit FOV)
+    Mantém o alvo travado, mas retorna 'nil' se ele sair do FOV (fazendo o tiro sair reto).
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -53,10 +54,8 @@ end
 local function PreRegisterBackends()
     pcall(function()
         if type(Registry.Register) == "function" then
-            -- Mapeia todas as opções disponíveis
             Registry.Register("universal_hook", Import("logic/func/combat/silentaim/backend/universal_hook"))
             Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
-            Registry.Register("physical_raycast", Import("logic/func/combat/silentaim/backend/physical_raycast"))
         end
     end)
 end
@@ -116,8 +115,8 @@ function SilentAim.Init()
         end
     end)
 
-    -- A CADEIA DE SOBREVIVÊNCIA
-    local BACKEND_CHAIN = { "universal_hook", "flick_adapter", "physical_raycast" }
+    -- A CADEIA DE SOBREVIVÊNCIA (Tenta o Universal, se falhar, usa o Flick)
+    local BACKEND_CHAIN = { "universal_hook", "flick_adapter" }
     for _, backendName in ipairs(BACKEND_CHAIN) do
         local backend = Registry.Get(backendName)
         if backend and backend.canLoad() then
@@ -154,7 +153,7 @@ function SilentAim.GetLockedTargetPart(): BasePart?
     local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return nil end
 
-    -- GATILHO LEGIT: A bala só dobra se a sua mira estiver perto dele.
+    -- GATILHO LEGIT: Se estiver fora do FOV (e o FOV estiver ligado), retorna 'nil' para não curvar a bala.
     if GetToggleState(KEY_USE_FOV, true) then
         local camera = Workspace.CurrentCamera
         if camera then
@@ -162,7 +161,6 @@ function SilentAim.GetLockedTargetPart(): BasePart?
             local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
             local mousePos = UserInputService:GetMouseLocation()
             
-            -- Se ele saiu da área do FOV, retornamos "nil". O hook vai ignorar o target e a bala sai reta.
             if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
                 return nil 
             end
