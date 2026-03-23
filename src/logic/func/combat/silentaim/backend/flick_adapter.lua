@@ -1,28 +1,26 @@
 --!strict
 --[[
-    SACRAMENT | Flick Adapter Backend (The Hyper-Flick)
-    Garante o redirecionamento mecânico mais rápido possível pelo motor (1 Frame).
-    Suporta armas automáticas (Hold M1).
+    SACRAMENT | Flick Adapter Backend (The Flash-Flick)
+    Redirecionamento mecânico na velocidade da luz (1 frame exato).
+    Sem loops. Sem grudar a tela. O tiro sai, a câmera volta.
 ]]
 
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local Import = (_G :: any).SacramentImport
 local Telemetry = Import("logic/core/telemetry")
 
 local FlickAdapter = {}
 FlickAdapter._state = "unsupported"
-
-local isShooting = false
-local flickConnectionBegan: RBXScriptConnection? = nil
-local flickConnectionEnded: RBXScriptConnection? = nil
+local flickConnection: RBXScriptConnection? = nil
 
 -- ==========================================
 -- CONTRATO DO BACKEND
 -- ==========================================
 function FlickAdapter.canLoad()
-    return true, "Manipulação de CFrame é universal."
+    return true, "Manipulação de CFrame é universal e não detectável por anti-hooks."
 end
 
 function FlickAdapter.load()
@@ -30,64 +28,50 @@ function FlickAdapter.load()
 
     local Controller = Import("logic/func/combat/silentaim/main")
 
-    -- Detecta quando começa a atirar
-    flickConnectionBegan = UserInputService.InputBegan:Connect(function(input, gpe)
+    -- Dispara EXATAMENTE na fração de segundo em que você clica
+    flickConnection = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isShooting = true
-            
-            -- Cria uma thread assíncrona para não travar o jogo
-            task.spawn(function()
-                while isShooting do
-                    if Controller and type(Controller.GetLockedTargetPart) == "function" then
-                        local targetPart = Controller.GetLockedTargetPart()
-                        
-                        if targetPart and targetPart:IsA("BasePart") then
-                            local camera = Workspace.CurrentCamera
-                            if camera then
-                                -- 1. Salva a posição exata da câmera
-                                local originalCFrame = camera.CFrame
-                                
-                                -- 2. O HYPER-FLICK: Vira para a cabeça do alvo
-                                camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
-                                
-                                -- 3. Yield de 1 Tick (O limite absoluto de velocidade do Luau)
-                                task.wait() 
-                                
-                                -- 4. Restaura a câmera. O olho humano percebe apenas uma vibração.
-                                camera.CFrame = originalCFrame
-                            end
-                        end
-                    end
-                    -- Pequeno respiro mecânico para a tela voltar ao normal entre os tiros
-                    task.wait() 
-                end
-            end)
-        end
-    end)
+            if Controller and type(Controller.GetLockedTargetPart) == "function" then
+                local targetPart = Controller.GetLockedTargetPart()
+                
+                -- Se temos o alvo travado no FOV
+                if targetPart and targetPart:IsA("BasePart") then
+                    local camera = Workspace.CurrentCamera
+                    if not camera then return end
 
-    -- Detecta quando para de atirar
-    flickConnectionEnded = UserInputService.InputEnded:Connect(function(input, gpe)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isShooting = false
+                    -- 1. Snapshot: Salva para onde você estava olhando
+                    local originalCFrame = camera.CFrame
+                    
+                    -- 2. Flash-Flick: Aponta o centro da câmera para o AimPart (Ex: Cabeça)
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+                    
+                    -- 3. Yield de Renderização (Velocidade da Luz)
+                    -- O motor do jogo processa o tiro neste exato milissegundo.
+                    RunService.RenderStepped:Wait()
+                    
+                    -- 4. Restauração Imediata: Devolve o controle para você
+                    camera.CFrame = originalCFrame
+                end
+            end
         end
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Backend flick_adapter → initialized | Hyper-Flick (Auto-Fire) ativo.")
+    Telemetry.Log("LITURGY", "SilentAim", "Backend flick_adapter → initialized | Flash-Flick (No-Lock) ativo.")
     return "initialized"
 end
 
 function FlickAdapter.destroy()
     if FlickAdapter._state ~= "initialized" then return end
     
-    isShooting = false
-    if flickConnectionBegan then flickConnectionBegan:Disconnect(); flickConnectionBegan = nil end
-    if flickConnectionEnded then flickConnectionEnded:Disconnect(); flickConnectionEnded = nil end
+    if flickConnection then 
+        flickConnection:Disconnect() 
+        flickConnection = nil 
+    end
     
     FlickAdapter._state = "destroyed"
-    Telemetry.Log("LITURGY", "SilentAim", "Backend flick_adapter → destroyed | Eventos purgados.")
 end
 
 return FlickAdapter
