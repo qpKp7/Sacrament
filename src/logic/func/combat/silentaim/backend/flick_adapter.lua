@@ -1,8 +1,6 @@
 --!strict
 --[[
-    SACRAMENT | Flick Adapter Backend (The Flash-Flick)
-    Redirecionamento mecânico na velocidade da luz (1 frame exato).
-    Sem loops. Sem grudar a tela. O tiro sai, a câmera volta.
+    SACRAMENT | Flick Adapter Backend (The Flash-Flick + AutoPredict)
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -11,24 +9,28 @@ local RunService = game:GetService("RunService")
 
 local Import = (_G :: any).SacramentImport
 local Telemetry = Import("logic/core/telemetry")
+local UIState = Import("state/uistate")
+
+local function SafeImport(path: string)
+    local success, result = pcall(function() return Import(path) end)
+    return success and result or nil
+end
+local Predict = SafeImport("logic/func/combat/shared/predict")
 
 local FlickAdapter = {}
 FlickAdapter._state = "unsupported"
 local flickConnection: RBXScriptConnection? = nil
 
--- ==========================================
--- CONTRATO DO BACKEND
--- ==========================================
-function FlickAdapter.canLoad()
-    return true, "Manipulação de CFrame é universal e não detectável por anti-hooks."
-end
+-- Chaves de Prediction da sua UI
+local KEY_PREDICT_VAL = "SilentAim_Prediction"
+local KEY_AUTO_PREDICT = "SilentAim_AutoPredict"
+
+function FlickAdapter.canLoad() return true, "CFrame Override suportado." end
 
 function FlickAdapter.load()
     if FlickAdapter._state == "initialized" then return "initialized" end
-
     local Controller = Import("logic/func/combat/silentaim/main")
 
-    -- Dispara EXATAMENTE na fração de segundo em que você clica
     flickConnection = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         
@@ -36,22 +38,25 @@ function FlickAdapter.load()
             if Controller and type(Controller.GetLockedTargetPart) == "function" then
                 local targetPart = Controller.GetLockedTargetPart()
                 
-                -- Se temos o alvo travado no FOV
                 if targetPart and targetPart:IsA("BasePart") then
                     local camera = Workspace.CurrentCamera
                     if not camera then return end
 
-                    -- 1. Snapshot: Salva para onde você estava olhando
+                    -- LÓGICA DE PREDIÇÃO COM BASE NA UI
+                    local finalAimPosition = targetPart.Position
+                    if Predict and type(Predict.GetPosition) == "function" then
+                        local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0.135)) or 0.135
+                        local isAuto = UIState.Get(KEY_AUTO_PREDICT, false)
+                        finalAimPosition = Predict.GetPosition(targetPart, pValue, isAuto)
+                    end
+
+                    -- THE FLASH-FLICK
                     local originalCFrame = camera.CFrame
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, finalAimPosition)
                     
-                    -- 2. Flash-Flick: Aponta o centro da câmera para o AimPart (Ex: Cabeça)
-                    camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+                    -- Limite de velocidade do motor
+                    RunService.RenderStepped:Wait() 
                     
-                    -- 3. Yield de Renderização (Velocidade da Luz)
-                    -- O motor do jogo processa o tiro neste exato milissegundo.
-                    RunService.RenderStepped:Wait()
-                    
-                    -- 4. Restauração Imediata: Devolve o controle para você
                     camera.CFrame = originalCFrame
                 end
             end
@@ -59,18 +64,13 @@ function FlickAdapter.load()
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Backend flick_adapter → initialized | Flash-Flick (No-Lock) ativo.")
+    Telemetry.Log("LITURGY", "SilentAim", "Flash-Flick com AutoPredict sincronizado à UI.")
     return "initialized"
 end
 
 function FlickAdapter.destroy()
     if FlickAdapter._state ~= "initialized" then return end
-    
-    if flickConnection then 
-        flickConnection:Disconnect() 
-        flickConnection = nil 
-    end
-    
+    if flickConnection then flickConnection:Disconnect(); flickConnection = nil end
     FlickAdapter._state = "destroyed"
 end
 
