@@ -1,7 +1,7 @@
 --!strict
 --[[
     SACRAMENT | Silent Aim Master Controller
-    Gerencia Visuais, Inputs e delega o tiro ao Hyper-Flick ou ao Raycast.
+    Gerencia Visuais, Inputs e delega o tiro ao Flash-Flick.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -52,7 +52,7 @@ end
 PreRegisterBackends()
 
 -- ==========================================
--- LÓGICA DE TARGETING (AQUISIÇÃO)
+-- LÓGICA DE TARGETING
 -- ==========================================
 local function AcquireTarget(): Model?
     local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
@@ -71,12 +71,8 @@ end
 function SilentAim.Init()
     if isInitialized then return "initialized" end
 
-    -- 1. Inicia o FOV Visual
-    if FOVLimit and type(FOVLimit.Init) == "function" then 
-        FOVLimit.Init() 
-    end
+    if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
-    -- 2. Sistema de Inputs (Keybinds)
     SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe or not UIState.Get(KEY_ENABLED, false) then return end
         
@@ -86,8 +82,7 @@ function SilentAim.Init()
                 lockedCharacter = AcquireTarget()
             else
                 if lockedCharacter then 
-                    lockedCharacter = nil
-                    MarkStyle.Clear()
+                    lockedCharacter = nil; MarkStyle.Clear()
                 else 
                     lockedCharacter = AcquireTarget()
                 end
@@ -99,18 +94,14 @@ function SilentAim.Init()
         local bind = UIState.Get(KEY_BIND, "None")
         if bind and bind ~= "None" and input.KeyCode.Name == bind then
             if UIState.Get(KEY_HOLD, false) then
-                lockedCharacter = nil
-                MarkStyle.Clear()
+                lockedCharacter = nil; MarkStyle.Clear()
             end
         end
     end)
 
-    -- 3. Loop de Validação Contínua (60 FPS)
     Loop.BindToRender("SilentAim_Controller", function()
         if not UIState.Get(KEY_ENABLED, false) then 
-            lockedCharacter = nil
-            MarkStyle.Clear()
-            return 
+            lockedCharacter = nil; MarkStyle.Clear(); return 
         end
 
         if lockedCharacter then
@@ -118,9 +109,7 @@ function SilentAim.Init()
             local isKnocked = UIState.Get(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
             
             if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked then
-                lockedCharacter = nil
-                MarkStyle.Clear()
-                return
+                lockedCharacter = nil; MarkStyle.Clear(); return
             end
 
             local targetPart = lockedCharacter:FindFirstChild(UIState.Get(KEY_AIM_PART, "Head")) or lockedCharacter:FindFirstChild("HumanoidRootPart")
@@ -130,7 +119,7 @@ function SilentAim.Init()
         end
     end)
 
-    -- 4. Inicia o Motor de Interceptação (Flick Adapter como Primeira Escolha)
+    -- Motor 100% focado no Flick
     local BACKEND_CHAIN = { "flick_adapter", "mouse_spoof", "physical_raycast" }
     for _, backendName in ipairs(BACKEND_CHAIN) do
         local backend = Registry.Get(backendName)
@@ -143,7 +132,7 @@ function SilentAim.Init()
     end
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Controlador Iniciado. FOV e Binds ativos. Backend: " .. (activeBackendName or "Nenhum"))
+    Telemetry.Log("LITURGY", "SilentAim", "Controlador Iniciado. Backend: " .. (activeBackendName or "Nenhum"))
     return "initialized"
 end
 
@@ -167,9 +156,6 @@ function SilentAim.Destroy()
     isInitialized = false
 end
 
--- ==========================================
--- EXPORTAÇÃO PARA OS BACKENDS (A Mágica)
--- ==========================================
 function SilentAim.GetLockedTargetPart(): BasePart?
     if not lockedCharacter or not UIState.Get(KEY_ENABLED, false) then return nil end
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
