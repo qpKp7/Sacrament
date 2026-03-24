@@ -1,14 +1,13 @@
 --!strict
 --[[
-    SACRAMENT | TriggerBot Master Controller (Pixel-Perfect & Notifications)
-    Lê o alvo exato sob a mira. Sistema de Bind independente com feedback visual.
+    SACRAMENT | TriggerBot Master Controller
+    Lê o alvo exato sob a mira. Sistema de Bind blindado (Suporta MouseButton2 nativamente).
 ]]
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
-local RunService = game:GetService("RunService")
 
 local Import = (_G :: any).SacramentImport
 local Telemetry = Import("logic/core/telemetry")
@@ -32,7 +31,7 @@ local KEY_HIT_CHANCE  = "TriggerBot_HitChance"
 local KEY_KNOCK_CHECK = "TriggerBot_KnockCheck"
 
 -- Variáveis de Controle
-local isTriggerBotActive = false -- Estado real que a Bind altera
+local isTriggerBotActive = false 
 local hoverStartTime = 0
 local lastClickTime = 0
 local isHovering = false
@@ -45,15 +44,15 @@ local function GetToggleState(key: string, default: boolean): boolean
 end
 
 -- ==========================================
--- NOTIFICAÇÃO VISUAL
+-- NOTIFICAÇÃO VISUAL (Pop-up do Roblox)
 -- ==========================================
 local function SendNotification(message: string)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "SACRAMENT",
             Text = message,
-            Duration = 2, -- Fica na tela por 2 segundos
-            Icon = "rbxassetid://6023426923" -- Ícone estético (Opcional)
+            Duration = 2, 
+            Icon = "rbxassetid://6023426923" 
         })
     end)
 end
@@ -65,7 +64,7 @@ local function GetTargetInCrosshair(): Model?
     local localPlayer = Players.LocalPlayer
     if not localPlayer then return nil end
 
-    -- Mouse.Target é 100% preciso com a mira do jogo, ignorando a barra invisível de 36 pixels.
+    -- Mouse.Target é 100% preciso, ignorando a barra invisível da UI.
     local mouse = localPlayer:GetMouse()
     local targetPart = mouse.Target
 
@@ -110,18 +109,19 @@ end
 function TriggerBot.Init()
     if isInitialized then return "initialized" end
 
-    -- 1. SISTEMA DE KEYBIND E NOTIFICAÇÃO
+    -- 1. SISTEMA DE KEYBIND BLINDADO (Aceita MouseButton2 perfeitamente)
     TriggerBot._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
-        -- Permite cliques de rato como bind, ignora chat
+        -- Ignora apenas se for o chat (Teclado) com GPE. Permite cliques do Rato sempre.
         if gpe and not string.find(input.UserInputType.Name, "MouseButton") then return end
         
         local bind = tostring(UIState.Get(KEY_BIND, "None"))
         if bind == "None" or bind == "" then return end
 
+        -- Verifica se a tecla/botão apertado é igual ao da UI
         if input.KeyCode.Name == bind or input.UserInputType.Name == bind then
             isTriggerBotActive = not isTriggerBotActive
             
-            -- Sincroniza com a UI e dispara a notificação
+            -- Sincroniza com a UI e mostra a notificação visual
             UIState.Set(KEY_ENABLED, isTriggerBotActive)
             if isTriggerBotActive then
                 SendNotification("Triggerbot ON")
@@ -131,7 +131,6 @@ function TriggerBot.Init()
         end
     end)
 
-    -- Sincroniza o estado inicial caso a UI já o tenha ligado antes de carregar
     isTriggerBotActive = GetToggleState(KEY_ENABLED, false)
 
     -- 2. LOOP DE DETECÇÃO E DISPARO
@@ -154,7 +153,7 @@ function TriggerBot.Init()
             local timeHovering = tick() - hoverStartTime
 
             if timeHovering >= delayTime then
-                -- Limite de cadência (Evita crashar o executor com 100 cliques por segundo)
+                -- Limite de cadência (Evita crashar o executor com cliques infinitos)
                 if tick() - lastClickTime >= 0.05 then
                     lastClickTime = tick()
                     
@@ -173,7 +172,7 @@ function TriggerBot.Init()
     end)
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "TriggerBot", "Módulo Iniciado. Deteção Pixel-Perfect ativa.")
+    Telemetry.Log("LITURGY", "TriggerBot", "Módulo Iniciado com sucesso.")
     return "initialized"
 end
 
