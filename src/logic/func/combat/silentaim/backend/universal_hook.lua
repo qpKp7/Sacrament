@@ -1,8 +1,8 @@
 --!strict
 --[[
-    SACRAMENT | Universal Hook Backend (Force-Hook Edition)
-    Ignora bloqueios de __namecall e sequestra as funções diretamente via hookfunction.
-    Compatível com Prison Life, Da Hood, Arsenal e frameworks modernos.
+    SACRAMENT | Universal Hook Backend (Pure Hookfunction Edition)
+    Construído estritamente para executores que possuem hookfunction, mas não hookmetamethod.
+    Sem câmera piscando. As balas dobram por baixo dos panos.
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -19,33 +19,15 @@ local Predict = SafeImport("logic/func/combat/shared/predict")
 local UniversalHook = {}
 UniversalHook._state = "unsupported"
 
+-- Guarda as funções originais do motor do Roblox
 local oldRaycast: any
-local oldFindPartIgnore: any
-local oldFindPart: any
-local oldFireServer: any
-
--- ==========================================
--- A VARREDURA PROFUNDA (Deep-Scan)
--- ==========================================
-local function SpoofTableDeep(tbl: any, targetPos: Vector3, targetPart: BasePart)
-    for k, v in pairs(tbl) do
-        if type(v) == "Vector3" then
-            tbl[k] = targetPos
-        elseif type(v) == "CFrame" then
-            tbl[k] = CFrame.new(targetPos)
-        elseif typeof(v) == "Instance" and v:IsA("BasePart") and v:IsDescendantOf(Workspace) then
-            tbl[k] = targetPart
-        elseif typeof(v) == "Ray" then
-            local newDir = (targetPos - v.Origin).Unit * v.Direction.Magnitude
-            tbl[k] = Ray.new(v.Origin, newDir)
-        elseif type(v) == "table" then
-            SpoofTableDeep(v, targetPos, targetPart)
-        end
-    end
-end
+local oldFindPartOnRayWithIgnoreList: any
+local oldFindPartOnRayWithWhitelist: any
+local oldFindPartOnRay: any
 
 function UniversalHook.canLoad()
-    return (type(hookfunction) == "function"), "Requer hookfunction nativo."
+    -- Lendo a realidade do seu executor: Requer apenas hookfunction e newcclosure
+    return (type(hookfunction) == "function" and type(newcclosure) == "function"), "Requer hookfunction e newcclosure ativos."
 end
 
 function UniversalHook.load()
@@ -56,89 +38,95 @@ function UniversalHook.load()
 
     local function GetPredictedPosition(targetPart: BasePart): Vector3
         if Predict and type(Predict.GetPosition) == "function" then
-            local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0.135)) or 0.135
-            local isAuto = UIState.Get("SilentAim_AutoPredict", false) == true or UIState.Get("SilentAim_AutoPredict", false) == "true"
-            return Predict.GetPosition(targetPart, pValue, isAuto)
+            local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0)) or 0
+            return Predict.GetPosition(targetPart, pValue)
         end
         return targetPart.Position
     end
 
     local success, err = pcall(function()
         
-        -- 1. SEQUESTRO DE REDE (FIRESERVER)
-        local dummyEvent = Instance.new("RemoteEvent")
-        oldFireServer = hookfunction(dummyEvent.FireServer, newcclosure(function(self, ...)
-            local args = {...}
-            if Controller and type(Controller.GetLockedTargetPart) == "function" then
-                local targetPart = Controller.GetLockedTargetPart()
-                if targetPart and targetPart:IsA("BasePart") then
-                    local finalPos = GetPredictedPosition(targetPart)
-                    local safeArgs = table.clone(args)
-                    SpoofTableDeep(safeArgs, finalPos, targetPart)
-                    return oldFireServer(self, unpack(safeArgs))
-                end
-            end
-            return oldFireServer(self, ...)
-        end))
-
-        -- 2. SEQUESTRO DE FÍSICA MODERNA
+        -- ==========================================
+        -- 1. SEQUESTRO DA FÍSICA MODERNA (RAYCAST)
+        -- ==========================================
         oldRaycast = hookfunction(Workspace.Raycast, newcclosure(function(self, origin, direction, params)
-            if Controller and type(Controller.GetLockedTargetPart) == "function" then
+            -- Se não for o próprio script a atirar e tivermos um alvo...
+            if not checkcaller() and Controller and type(Controller.GetLockedTargetPart) == "function" then
                 local targetPart = Controller.GetLockedTargetPart()
                 if targetPart and targetPart:IsA("BasePart") then
+                    
                     local finalPos = GetPredictedPosition(targetPart)
+                    -- Redireciona o vetor da bala (A MÁGICA)
                     local newDir = (finalPos - origin).Unit * direction.Magnitude
+                    
                     return oldRaycast(self, origin, newDir, params)
                 end
             end
             return oldRaycast(self, origin, direction, params)
         end))
 
-        -- 3. SEQUESTRO DE FÍSICA LEGADA
-        oldFindPartIgnore = hookfunction(Workspace.FindPartOnRayWithIgnoreList, newcclosure(function(self, ray, ignore, desc, water)
-            if Controller and type(Controller.GetLockedTargetPart) == "function" then
+        -- ==========================================
+        -- 2. SEQUESTRO DA FÍSICA LEGADA (FindPartOnRay)
+        -- ==========================================
+        oldFindPartOnRayWithIgnoreList = hookfunction(Workspace.FindPartOnRayWithIgnoreList, newcclosure(function(self, ray, ignore, desc, water)
+            if not checkcaller() and Controller and type(Controller.GetLockedTargetPart) == "function" then
                 local targetPart = Controller.GetLockedTargetPart()
                 if targetPart and targetPart:IsA("BasePart") then
                     local finalPos = GetPredictedPosition(targetPart)
                     local newDir = (finalPos - ray.Origin).Unit * ray.Direction.Magnitude
-                    return oldFindPartIgnore(self, Ray.new(ray.Origin, newDir), ignore, desc, water)
+                    return oldFindPartOnRayWithIgnoreList(self, Ray.new(ray.Origin, newDir), ignore, desc, water)
                 end
             end
-            return oldFindPartIgnore(self, ray, ignore, desc, water)
+            return oldFindPartOnRayWithIgnoreList(self, ray, ignore, desc, water)
         end))
 
-        oldFindPart = hookfunction(Workspace.FindPartOnRay, newcclosure(function(self, ray, ignore, water)
-            if Controller and type(Controller.GetLockedTargetPart) == "function" then
+        oldFindPartOnRayWithWhitelist = hookfunction(Workspace.FindPartOnRayWithWhitelist, newcclosure(function(self, ray, whitelist, ignoreWater)
+            if not checkcaller() and Controller and type(Controller.GetLockedTargetPart) == "function" then
                 local targetPart = Controller.GetLockedTargetPart()
                 if targetPart and targetPart:IsA("BasePart") then
                     local finalPos = GetPredictedPosition(targetPart)
                     local newDir = (finalPos - ray.Origin).Unit * ray.Direction.Magnitude
-                    return oldFindPart(self, Ray.new(ray.Origin, newDir), ignore, water)
+                    return oldFindPartOnRayWithWhitelist(self, Ray.new(ray.Origin, newDir), whitelist, ignoreWater)
                 end
             end
-            return oldFindPart(self, ray, ignore, water)
+            return oldFindPartOnRayWithWhitelist(self, ray, whitelist, ignoreWater)
+        end))
+
+        oldFindPartOnRay = hookfunction(Workspace.FindPartOnRay, newcclosure(function(self, ray, ignore, water)
+            if not checkcaller() and Controller and type(Controller.GetLockedTargetPart) == "function" then
+                local targetPart = Controller.GetLockedTargetPart()
+                if targetPart and targetPart:IsA("BasePart") then
+                    local finalPos = GetPredictedPosition(targetPart)
+                    local newDir = (finalPos - ray.Origin).Unit * ray.Direction.Magnitude
+                    return oldFindPartOnRay(self, Ray.new(ray.Origin, newDir), ignore, water)
+                end
+            end
+            return oldFindPartOnRay(self, ray, ignore, water)
         end))
 
     end)
 
     if not success then
-        Telemetry.Log("ERROR", "UniversalHook", "Falha ao aplicar hooks: " .. tostring(err))
+        Telemetry.Log("ERROR", "UniversalHook", "Falha na Força Bruta: " .. tostring(err))
         return "failed"
     end
 
     UniversalHook._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Universal Hook injetado via Força Bruta (hookfunction).")
+    Telemetry.Log("LITURGY", "SilentAim", "Hookfunction Puros Ativados! A câmera ficará imóvel.")
     return "initialized"
 end
 
 function UniversalHook.destroy()
     if UniversalHook._state ~= "initialized" then return end
+    
+    -- Restaura a física ao normal
     if type(hookfunction) == "function" then
-        if oldFireServer then hookfunction(Instance.new("RemoteEvent").FireServer, oldFireServer) end
         if oldRaycast then hookfunction(Workspace.Raycast, oldRaycast) end
-        if oldFindPartIgnore then hookfunction(Workspace.FindPartOnRayWithIgnoreList, oldFindPartIgnore) end
-        if oldFindPart then hookfunction(Workspace.FindPartOnRay, oldFindPart) end
+        if oldFindPartOnRayWithIgnoreList then hookfunction(Workspace.FindPartOnRayWithIgnoreList, oldFindPartOnRayWithIgnoreList) end
+        if oldFindPartOnRayWithWhitelist then hookfunction(Workspace.FindPartOnRayWithWhitelist, oldFindPartOnRayWithWhitelist) end
+        if oldFindPartOnRay then hookfunction(Workspace.FindPartOnRay, oldFindPartOnRay) end
     end
+    
     UniversalHook._state = "destroyed"
 end
 
