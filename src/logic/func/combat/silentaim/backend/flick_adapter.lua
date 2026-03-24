@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Flick Adapter (Anti-Freecam / Camlock Contínuo)
-    A câmara acompanha o alvo fluidamente. 100% de acerto sem bugar o motor de física.
+    SACRAMENT | Async Micro-Flick Adapter
+    Garante 100% de letalidade em rajadas automáticas sem causar o bug de Freecam.
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -21,71 +21,79 @@ local Predict = SafeImport("logic/func/combat/shared/predict")
 local FlickAdapter = {}
 FlickAdapter._state = "unsupported"
 
-local inputBeganConn: RBXScriptConnection? = nil
-local inputEndedConn: RBXScriptConnection? = nil
+local flickConnectionBegan: RBXScriptConnection? = nil
+local flickConnectionEnded: RBXScriptConnection? = nil
 local isShooting = false
 
 local KEY_PREDICT_VAL = "SilentAim_Prediction"
 
-function FlickAdapter.canLoad() return true, "BindToRenderStep suportado." end
+function FlickAdapter.canLoad() return true, "Async Flick Override suportado." end
 
 function FlickAdapter.load()
     if FlickAdapter._state == "initialized" then return "initialized" end
     local Controller = Import("logic/func/combat/silentaim/main")
 
-    inputBeganConn = UserInputService.InputBegan:Connect(function(input, gpe)
+    flickConnectionBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if gpe then return end
         
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isShooting = true
             
-            -- O SEGREDO ANTI-FREECAM: Não usamos loop "while". Usamos evento de renderização.
-            pcall(function() RunService:UnbindFromRenderStep("Sacrament_ShootingTracker") end)
-            
-            RunService:BindToRenderStep("Sacrament_ShootingTracker", Enum.RenderPriority.Camera.Value + 1, function()
-                if not isShooting then return end
-                
-                if Controller and type(Controller.GetLockedTargetPart) == "function" then
-                    local targetPart = Controller.GetLockedTargetPart()
-                    
-                    if targetPart and targetPart:IsA("BasePart") then
-                        local camera = Workspace.CurrentCamera
-                        if camera then
-                            -- PREDIÇÃO DE PRECISÃO (Lembrando que 0 = Sem falhas de movimento)
-                            local finalAimPosition = targetPart.Position
-                            if Predict and type(Predict.GetPosition) == "function" then
-                                local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0)) or 0
-                                finalAimPosition = Predict.GetPosition(targetPart, pValue)
-                            end
+            task.spawn(function()
+                while isShooting do
+                    if Controller and type(Controller.GetLockedTargetPart) == "function" then
+                        local targetPart = Controller.GetLockedTargetPart()
+                        
+                        if targetPart and targetPart:IsA("BasePart") then
+                            local camera = Workspace.CurrentCamera
+                            if camera then
+                                -- 1. Guarda o estado natural da câmara para não bugar o movimento do boneco
+                                local originalCFrame = camera.CFrame
+                                local currentPosition = originalCFrame.Position
+                                
+                                -- 2. Calcula a matemática do alvo
+                                local finalAimPosition = targetPart.Position
+                                if Predict and type(Predict.GetPosition) == "function" then
+                                    local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0)) or 0
+                                    finalAimPosition = Predict.GetPosition(targetPart, pValue)
+                                end
 
-                            -- ALINHAMENTO ABSOLUTO: A câmara olha diretamente para o alvo, garantindo o hit da arma.
-                            camera.CFrame = CFrame.lookAt(camera.CFrame.Position, finalAimPosition)
+                                -- 3. O MICRO-FLICK: Vira apenas o ângulo, mantendo a posição física intacta
+                                camera.CFrame = CFrame.new(currentPosition, finalAimPosition)
+                                
+                                -- 4. Congela por exato 1 frame para o servidor do jogo registar a bala no AimPart
+                                RunService.RenderStepped:Wait() 
+                                
+                                -- 5. Devolve a câmara ao utilizador instantaneamente
+                                camera.CFrame = originalCFrame
+                            end
                         end
                     end
+                    
+                    -- A SALVAÇÃO DO FREECAM: 
+                    -- Esta micro-pausa permite que o motor do Roblox calcule os passos e a física do boneco.
+                    task.wait(0.015)
                 end
             end)
         end
     end)
 
-    inputEndedConn = UserInputService.InputEnded:Connect(function(input, gpe)
+    flickConnectionEnded = UserInputService.InputEnded:Connect(function(input, gpe)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             isShooting = false
-            -- Solta a câmara imediatamente ao parar de atirar
-            pcall(function() RunService:UnbindFromRenderStep("Sacrament_ShootingTracker") end)
         end
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Motor Anti-Freecam Ativado. Precisão contínua em rajadas.")
+    Telemetry.Log("LITURGY", "SilentAim", "Async Micro-Flick Injetado. Letalidade Auto-Fire sem Freecam.")
     return "initialized"
 end
 
 function FlickAdapter.destroy()
     if FlickAdapter._state ~= "initialized" then return end
     isShooting = false
-    if inputBeganConn then inputBeganConn:Disconnect(); inputBeganConn = nil end
-    if inputEndedConn then inputEndedConn:Disconnect(); inputEndedConn = nil end
-    pcall(function() RunService:UnbindFromRenderStep("Sacrament_ShootingTracker") end)
+    if flickConnectionBegan then flickConnectionBegan:Disconnect(); flickConnectionBegan = nil end
+    if flickConnectionEnded then flickConnectionEnded:Disconnect(); flickConnectionEnded = nil end
     FlickAdapter._state = "destroyed"
 end
 
