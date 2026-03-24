@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (Core Lethality)
-    Foco absoluto em Targeting, Hit Chance e Hard Lock inquebrável.
+    SACRAMENT | Silent Aim Master Controller (Anti-GPE Bind Fix)
+    Orquestra o FOV, Hit Chance, Hard Lock e corrige Binds de Mouse/Teclado.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -25,18 +25,19 @@ local KnockCheck = SafeImport("logic/func/combat/shared/knockcheck")
 
 local SilentAim = {}
 local isInitialized = false
+local activeBackendName: string? = nil
 local lockedCharacter: Model? = nil
 
--- Chaves de Estado da UI
 local KEY_ENABLED     = "SilentAimEnabled"
 local KEY_BIND        = "SilentAim_Keybind"
 local KEY_HOLD        = "SilentAim_KeyHold"
+local KEY_USE_FOV     = "SilentAim_UseFov"
 local KEY_FOV_RADIUS  = "SilentAim_FovLimit"
 local KEY_AIM_PART    = "SilentAim_AimPart"
 local KEY_WALL_CHECK  = "SilentAim_WallCheck"
 local KEY_KNOCK_CHECK = "SilentAim_KnockCheck"
 local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
-local KEY_HIT_CHANCE  = "SilentAim_HitChance" -- Slider de 0 a 100
+local KEY_HIT_CHANCE  = "SilentAim_HitChance"
 
 local function GetToggleState(key: string, default: boolean): boolean
     local val = UIState.Get(key, default)
@@ -45,17 +46,29 @@ local function GetToggleState(key: string, default: boolean): boolean
     return val == true
 end
 
+-- LEITOR DE BIND BLINDADO
 local function IsBindMatch(input: InputObject): boolean
-    local bind = UIState.Get(KEY_BIND, "None")
+    local bind = tostring(UIState.Get(KEY_BIND, "None"))
     if bind == "None" or bind == "" then return false end
-    return input.KeyCode.Name == bind or input.UserInputType.Name == bind
+    
+    if input.KeyCode.Name == bind then return true end
+    if input.UserInputType.Name == bind then return true end
+    return false
 end
 
--- ==========================================
--- AQUISIÇÃO DE ALVO
--- ==========================================
+local function PreRegisterBackends()
+    pcall(function()
+        if type(Registry.Register) == "function" then
+            Registry.Register("universal_hook", Import("logic/func/combat/silentaim/backend/universal_hook"))
+            Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
+        end
+    end)
+end
+PreRegisterBackends()
+
 local function AcquireTarget(): Model?
-    local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
+    local useFov = GetToggleState(KEY_USE_FOV, true)
+    local fovRadius = useFov and (tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150) or math.huge
     local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
     if aimPartName == "Random" or aimPartName == "Closest" then aimPartName = "HumanoidRootPart" end
     
@@ -64,28 +77,25 @@ local function AcquireTarget(): Model?
     return nil
 end
 
--- ==========================================
--- INICIALIZAÇÃO E CICLO DE VIDA
--- ==========================================
 function SilentAim.Init()
     if isInitialized then return "initialized" end
-
     if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
 
-    -- Registo exclusivo do Flick (Única via possível no seu Executor)
-    pcall(function()
-        if type(Registry.Register) == "function" then
-            Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
-        end
-    end)
-
     SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe or not GetToggleState(KEY_ENABLED, false) then return end
+        if not GetToggleState(KEY_ENABLED, false) then return end
+        
         if IsBindMatch(input) then
+            -- O SEGREDO ANTI-GPE: Se for clique de rato, ignora o bloqueio do jogo!
+            if gpe and not string.find(input.UserInputType.Name, "MouseButton") then return end
+
             if GetToggleState(KEY_HOLD, false) then
                 lockedCharacter = AcquireTarget()
             else
-                if lockedCharacter then lockedCharacter = nil; MarkStyle.Clear() else lockedCharacter = AcquireTarget() end
+                if lockedCharacter then 
+                    lockedCharacter = nil; MarkStyle.Clear() 
+                else 
+                    lockedCharacter = AcquireTarget() 
+                end
             end
         end
     end)
@@ -103,7 +113,6 @@ function SilentAim.Init()
             local isKnocked = GetToggleState(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
             local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart") :: BasePart
             
-            -- HARD LOCK: Só solta se o inimigo morrer ou cair
             if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked or not targetRoot then
                 lockedCharacter = nil; MarkStyle.Clear(); return
             end
@@ -118,11 +127,19 @@ function SilentAim.Init()
         end
     end)
 
-    local backend = Registry.Get("flick_adapter")
-    if backend and backend.canLoad() then backend.load() end
+    local BACKEND_CHAIN = { "universal_hook", "flick_adapter" }
+    for _, backendName in ipairs(BACKEND_CHAIN) do
+        local backend = Registry.Get(backendName)
+        if backend and backend.canLoad() then
+            if backend.load() == "initialized" then
+                activeBackendName = backendName
+                break
+            end
+        end
+    end
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Base Iniciado. Hit Chance e Absolute Aim ativados.")
+    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Iniciado (Anti-GPE Ativo). Backend: " .. (activeBackendName or "Nenhum"))
     return "initialized"
 end
 
@@ -132,13 +149,13 @@ function SilentAim.Destroy()
     MarkStyle.Clear(); Loop.UnbindFromRender("SilentAim_Controller")
     if SilentAim._inputBegan then SilentAim._inputBegan:Disconnect() end
     if SilentAim._inputEnded then SilentAim._inputEnded:Disconnect() end
-    local backend = Registry.Get("flick_adapter"); if backend then backend.destroy() end
-    lockedCharacter = nil; isInitialized = false
+    if activeBackendName then
+        local backend = Registry.Get(activeBackendName)
+        if backend then backend.destroy() end
+    end
+    lockedCharacter = nil; activeBackendName = nil; isInitialized = false
 end
 
--- ==========================================
--- EXPORTAÇÃO (COM CÁLCULO DE HIT CHANCE)
--- ==========================================
 local bodyPartsList = {"Head", "UpperTorso", "LowerTorso", "RightUpperArm", "LeftUpperArm", "RightUpperLeg", "LeftUpperLeg"}
 
 function SilentAim.GetLockedTargetPart(): BasePart?
@@ -146,12 +163,21 @@ function SilentAim.GetLockedTargetPart(): BasePart?
     local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return nil end
 
-    -- MATEMÁTICA DE HIT CHANCE (0 a 100%)
-    local hitChance = tonumber(UIState.Get(KEY_HIT_CHANCE, 100)) or 100
-    if math.random(1, 100) > hitChance then
-        -- Se falhou na probabilidade, retorna nil (A bala sairá reto, errando o alvo)
-        return nil
+    if GetToggleState(KEY_USE_FOV, true) then
+        local camera = Workspace.CurrentCamera
+        if camera then
+            local screenPos, onScreen = camera:WorldToViewportPoint(targetRoot.Position)
+            local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
+            local mousePos = UserInputService:GetMouseLocation()
+            
+            if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
+                return nil 
+            end
+        end
     end
+
+    local hitChance = tonumber(UIState.Get(KEY_HIT_CHANCE, 100)) or 100
+    if math.random(1, 100) > hitChance then return nil end
 
     local aimPartSetting = UIState.Get(KEY_AIM_PART, "Head")
     if aimPartSetting == "Random" then
