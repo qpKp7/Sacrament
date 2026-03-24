@@ -9,7 +9,8 @@ local Settings = Import("logic/settings")
 -- Importando os Motores de Combate
 local LoopManager = Import("logic/core/loop")
 local Aimlock = Import("logic/func/combat/aimlock/main")
-local SilentAim = Import("logic/func/combat/silentaim/main") -- [NOVO] O Orquestrador do Silent Aim
+local SilentAim = Import("logic/func/combat/silentaim/main") -- O Orquestrador do Silent Aim
+local TriggerBot = Import("logic/func/combat/triggerbot/main") -- [NOVO] O Gatilho Automático
 
 export type Adapter = {
     mountGui: (gui: ScreenGui) -> (),
@@ -37,14 +38,22 @@ function App.Start(adapter: Adapter)
         Aimlock.Init()
     end
     
-    -- [NOVO] Inicia o Silent Aim. Ele vai ler o Executor e decidir sozinho se carrega o Hook ou o Fallback!
+    -- Inicia o Silent Aim
     if SilentAim and type(SilentAim.Init) == "function" then
         SilentAim.Init()
+    end
+
+    -- [NOVO] Inicia o TriggerBot
+    if TriggerBot and type(TriggerBot.Init) == "function" then
+        TriggerBot.Init()
     end
 end
 
 function App.Stop()
     -- 1. Desliga primeiro os Módulos de Combate e o Loop (Sempre de trás pra frente)
+    if TriggerBot and type(TriggerBot.Destroy) == "function" then
+        TriggerBot.Destroy()
+    end
     if SilentAim and type(SilentAim.Destroy) == "function" then
         SilentAim.Destroy()
     end
