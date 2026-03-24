@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Flick Adapter Backend (Free-Mouse & Pulse-Sync)
-    A única solução para executores em Modo Degradado (Sem Hooks).
+    SACRAMENT | Flick Adapter Backend (Core Lethality)
+    Precisão Absoluta com compensação de Free-Mouse e Prediction.
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -26,11 +26,9 @@ local isShooting = false
 
 local KEY_PREDICT_VAL = "SilentAim_Prediction"
 local KEY_AUTO_PREDICT = "SilentAim_AutoPredict"
+local FLICK_PULSE_RATE = 0.05 -- Respiração rápida para sincronizar com metralhadoras
 
--- Define a cadência (tempo que a câmara volta ao seu controlo entre os tiros)
-local FLICK_PULSE_RATE = 0.08 
-
-function FlickAdapter.canLoad() return true, "CFrame Override suportado." end
+function FlickAdapter.canLoad() return true, "CFrame Override absoluto." end
 
 function FlickAdapter.load()
     if FlickAdapter._state == "initialized" then return "initialized" end
@@ -45,13 +43,13 @@ function FlickAdapter.load()
             task.spawn(function()
                 while isShooting do
                     if Controller and type(Controller.GetLockedTargetPart) == "function" then
-                        -- Aqui é a chave: Se estiver fora do FOV, Controller retorna 'nil' e o tiro sai normal.
                         local targetPart = Controller.GetLockedTargetPart()
                         
+                        -- O targetPart só será entregue se o Hit Chance permitir.
                         if targetPart and targetPart:IsA("BasePart") then
                             local camera = Workspace.CurrentCamera
                             if camera then
-                                -- PREDIÇÃO
+                                -- 1. PREDIÇÃO DE MOVIMENTO
                                 local finalAimPosition = targetPart.Position
                                 if Predict and type(Predict.GetPosition) == "function" then
                                     local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0.135)) or 0.135
@@ -59,26 +57,27 @@ function FlickAdapter.load()
                                     finalAimPosition = Predict.GetPosition(targetPart, pValue, isAuto)
                                 end
 
-                                -- MATEMÁTICA DE MOUSE SOLTO
+                                -- 2. INVERSÃO DE MATRIZ (PRECISÃO COM MOUSE SOLTO)
                                 local originalCFrame = camera.CFrame
                                 local mousePos = UserInputService:GetMouseLocation()
                                 local mouseRay = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
+                                
                                 local centerToMouseRotation = originalCFrame:ToObjectSpace(CFrame.lookAt(originalCFrame.Position, originalCFrame.Position + mouseRay.Direction))
                                 local baseTargetCFrame = CFrame.lookAt(originalCFrame.Position, finalAimPosition)
                                 
-                                -- O MICRO-FLICK
+                                -- 3. O TIRO INVISÍVEL
                                 camera.CFrame = baseTargetCFrame * centerToMouseRotation:Inverse()
                                 
-                                -- Yield de 1 Frame
+                                -- Aguarda a engine computar a bala
                                 RunService.RenderStepped:Wait() 
                                 
-                                -- RESTAURAÇÃO
+                                -- Restaura a câmara instantaneamente
                                 camera.CFrame = originalCFrame
                             end
                         end
                     end
                     
-                    -- Pausa para dar controlo de rato ao jogador entre os tiros
+                    -- Pausa estrutural para devolver controlo da câmara e não crashar o Roblox
                     task.wait(FLICK_PULSE_RATE)
                 end
             end)
@@ -92,7 +91,7 @@ function FlickAdapter.load()
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Flick-Adapter acoplado com sucesso. Restrição FOV Dinâmica ativa.")
+    Telemetry.Log("LITURGY", "SilentAim", "Motor de Precisão Absoluta iniciado (CFrame Flick).")
     return "initialized"
 end
 
