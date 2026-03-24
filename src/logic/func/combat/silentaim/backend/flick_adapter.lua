@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Async Micro-Flick Adapter
-    Garante 100% de letalidade em rajadas automáticas sem causar o bug de Freecam.
+    SACRAMENT | Raw Input Tracker (Anti-Freecam & Auto-Fire 100%)
+    Usa simulação nativa de rato para evitar detecção e conflitos de câmara.
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -27,7 +27,7 @@ local isShooting = false
 
 local KEY_PREDICT_VAL = "SilentAim_Prediction"
 
-function FlickAdapter.canLoad() return true, "Async Flick Override suportado." end
+function FlickAdapter.canLoad() return true, "Raw Input Tracker suportado." end
 
 function FlickAdapter.load()
     if FlickAdapter._state == "initialized" then return "initialized" end
@@ -47,32 +47,32 @@ function FlickAdapter.load()
                         if targetPart and targetPart:IsA("BasePart") then
                             local camera = Workspace.CurrentCamera
                             if camera then
-                                -- 1. Guarda o estado natural da câmara para não bugar o movimento do boneco
-                                local originalCFrame = camera.CFrame
-                                local currentPosition = originalCFrame.Position
-                                
-                                -- 2. Calcula a matemática do alvo
                                 local finalAimPosition = targetPart.Position
                                 if Predict and type(Predict.GetPosition) == "function" then
                                     local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0)) or 0
                                     finalAimPosition = Predict.GetPosition(targetPart, pValue)
                                 end
 
-                                -- 3. O MICRO-FLICK: Vira apenas o ângulo, mantendo a posição física intacta
-                                camera.CFrame = CFrame.new(currentPosition, finalAimPosition)
-                                
-                                -- 4. Congela por exato 1 frame para o servidor do jogo registar a bala no AimPart
-                                RunService.RenderStepped:Wait() 
-                                
-                                -- 5. Devolve a câmara ao utilizador instantaneamente
-                                camera.CFrame = originalCFrame
+                                -- A MÁGICA ANTI-FREECAM: Simula o arrastar do rato real.
+                                if type(mousemoverel) == "function" then
+                                    local screenPos, onScreen = camera:WorldToViewportPoint(finalAimPosition)
+                                    if onScreen then
+                                        local mouseLocation = UserInputService:GetMouseLocation()
+                                        local moveX = (screenPos.X - mouseLocation.X)
+                                        local moveY = (screenPos.Y - mouseLocation.Y)
+                                        
+                                        -- Arrasta o rato suavemente para o alvo
+                                        mousemoverel(moveX, moveY)
+                                    end
+                                else
+                                    -- Fallback seguro para CFrame caso o executor não tenha mousemoverel
+                                    camera.CFrame = CFrame.new(camera.CFrame.Position, finalAimPosition)
+                                end
                             end
                         end
                     end
-                    
-                    -- A SALVAÇÃO DO FREECAM: 
-                    -- Esta micro-pausa permite que o motor do Roblox calcule os passos e a física do boneco.
-                    task.wait(0.015)
+                    -- Sincroniza perfeitamente com a física do jogo (fim do bug do Freecam)
+                    RunService.Heartbeat:Wait()
                 end
             end)
         end
@@ -85,7 +85,7 @@ function FlickAdapter.load()
     end)
 
     FlickAdapter._state = "initialized"
-    Telemetry.Log("LITURGY", "SilentAim", "Async Micro-Flick Injetado. Letalidade Auto-Fire sem Freecam.")
+    Telemetry.Log("LITURGY", "SilentAim", "Raw Input Tracker ativado. 100% de Letalidade.")
     return "initialized"
 end
 
