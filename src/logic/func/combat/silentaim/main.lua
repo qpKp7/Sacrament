@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (Pure Flick Edition)
-    Injeção instantânea. Focado 100% na estabilidade mecânica.
+    SACRAMENT | Silent Aim Master Controller (Unrestricted Lethality)
+    O alvo travado recebe 100% dos tiros, independentemente de onde a mira estiver.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -57,7 +57,6 @@ end
 local function PreRegisterBackends()
     pcall(function()
         if type(Registry.Register) == "function" then
-            -- Removemos o hook problemático. Só existe o Flick agora.
             Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
         end
     end)
@@ -124,7 +123,7 @@ function SilentAim.Init()
     end
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Iniciado. Backend Forçado: flick_adapter")
+    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Destravado Iniciado. Letalidade sem limite de FOV.")
     return "initialized"
 end
 
@@ -148,15 +147,7 @@ function SilentAim.GetLockedTargetPart(): BasePart?
     local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return nil end
 
-    if GetToggleState(KEY_USE_FOV, true) then
-        local camera = Workspace.CurrentCamera
-        if camera then
-            local screenPos, onScreen = camera:WorldToViewportPoint(targetRoot.Position)
-            local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
-            local mousePos = UserInputService:GetMouseLocation()
-            if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then return nil end
-        end
-    end
+    -- A REMOÇÃO DA CORRENTE: Não importa onde a mira está, o alvo recebe a bala.
 
     local hitChance = tonumber(UIState.Get(KEY_HIT_CHANCE, 100)) or 100
     if math.random(1, 100) > hitChance then return nil end
