@@ -1,7 +1,7 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (Anti-GPE Bind Fix)
-    Orquestra o FOV, Hit Chance, Hard Lock e corrige Binds de Mouse/Teclado.
+    SACRAMENT | Silent Aim Master Controller (Pure Flick Edition)
+    Injeção instantânea. Focado 100% na estabilidade mecânica.
 ]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -46,11 +46,9 @@ local function GetToggleState(key: string, default: boolean): boolean
     return val == true
 end
 
--- LEITOR DE BIND BLINDADO
 local function IsBindMatch(input: InputObject): boolean
     local bind = tostring(UIState.Get(KEY_BIND, "None"))
     if bind == "None" or bind == "" then return false end
-    
     if input.KeyCode.Name == bind then return true end
     if input.UserInputType.Name == bind then return true end
     return false
@@ -59,7 +57,7 @@ end
 local function PreRegisterBackends()
     pcall(function()
         if type(Registry.Register) == "function" then
-            Registry.Register("universal_hook", Import("logic/func/combat/silentaim/backend/universal_hook"))
+            -- Removemos o hook problemático. Só existe o Flick agora.
             Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
         end
     end)
@@ -83,19 +81,12 @@ function SilentAim.Init()
 
     SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
         if not GetToggleState(KEY_ENABLED, false) then return end
-        
         if IsBindMatch(input) then
-            -- O SEGREDO ANTI-GPE: Se for clique de rato, ignora o bloqueio do jogo!
             if gpe and not string.find(input.UserInputType.Name, "MouseButton") then return end
-
             if GetToggleState(KEY_HOLD, false) then
                 lockedCharacter = AcquireTarget()
             else
-                if lockedCharacter then 
-                    lockedCharacter = nil; MarkStyle.Clear() 
-                else 
-                    lockedCharacter = AcquireTarget() 
-                end
+                if lockedCharacter then lockedCharacter = nil; MarkStyle.Clear() else lockedCharacter = AcquireTarget() end
             end
         end
     end)
@@ -127,19 +118,13 @@ function SilentAim.Init()
         end
     end)
 
-    local BACKEND_CHAIN = { "universal_hook", "flick_adapter" }
-    for _, backendName in ipairs(BACKEND_CHAIN) do
-        local backend = Registry.Get(backendName)
-        if backend and backend.canLoad() then
-            if backend.load() == "initialized" then
-                activeBackendName = backendName
-                break
-            end
-        end
+    local backend = Registry.Get("flick_adapter")
+    if backend and backend.canLoad() and backend.load() == "initialized" then
+        activeBackendName = "flick_adapter"
     end
 
     isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Iniciado (Anti-GPE Ativo). Backend: " .. (activeBackendName or "Nenhum"))
+    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Iniciado. Backend Forçado: flick_adapter")
     return "initialized"
 end
 
@@ -169,10 +154,7 @@ function SilentAim.GetLockedTargetPart(): BasePart?
             local screenPos, onScreen = camera:WorldToViewportPoint(targetRoot.Position)
             local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
             local mousePos = UserInputService:GetMouseLocation()
-            
-            if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
-                return nil 
-            end
+            if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then return nil end
         end
     end
 
