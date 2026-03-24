@@ -1,206 +1,95 @@
 --!strict
 --[[
-    SACRAMENT | Silent Aim Master Controller (The Final Judge)
-    Orquestra o FOV, Hit Chance, Hard Lock e escolhe dinamicamente entre Universal Hook e Flick Adapter.
+    SACRAMENT | Phantom Flick Adapter
+    Motor de alta velocidade para executores restritos. Suporta armas automáticas.
 ]]
 
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local Import = (_G :: any).SacramentImport
-local Registry  = Import("logic/core/backend_registry")
 local Telemetry = Import("logic/core/telemetry")
-local UIState   = Import("state/uistate")
-local Loop      = Import("logic/core/loop")
-local Targeting = Import("logic/core/targeting")
-local MarkStyle = Import("logic/func/combat/silentaim/markstyle")
-local FOVLimit  = Import("logic/func/combat/silentaim/fovlimit")
+local UIState = Import("state/uistate")
 
 local function SafeImport(path: string)
     local success, result = pcall(function() return Import(path) end)
     return success and result or nil
 end
-local KnockCheck = SafeImport("logic/func/combat/shared/knockcheck")
+local Predict = SafeImport("logic/func/combat/shared/predict")
 
-local SilentAim = {}
-local isInitialized = false
-local activeBackendName: string? = nil
-local lockedCharacter: Model? = nil
+local FlickAdapter = {}
+FlickAdapter._state = "unsupported"
 
--- Chaves de UI
-local KEY_ENABLED     = "SilentAimEnabled"
-local KEY_BIND        = "SilentAim_Keybind"
-local KEY_HOLD        = "SilentAim_KeyHold"
-local KEY_USE_FOV     = "SilentAim_UseFov"
-local KEY_FOV_RADIUS  = "SilentAim_FovLimit"
-local KEY_AIM_PART    = "SilentAim_AimPart"
-local KEY_WALL_CHECK  = "SilentAim_WallCheck"
-local KEY_KNOCK_CHECK = "SilentAim_KnockCheck"
-local KEY_MARK_STYLE  = "SilentAim_MarkStyle"
-local KEY_HIT_CHANCE  = "SilentAim_HitChance"
+local flickConnectionBegan: RBXScriptConnection? = nil
+local flickConnectionEnded: RBXScriptConnection? = nil
+local isShooting = false
 
-local function GetToggleState(key: string, default: boolean): boolean
-    local val = UIState.Get(key, default)
-    if val == "false" or val == 0 then return false end
-    if val == "true" or val == 1 then return true end
-    return val == true
-end
+local KEY_PREDICT_VAL = "SilentAim_Prediction"
 
-local function IsBindMatch(input: InputObject): boolean
-    local bind = UIState.Get(KEY_BIND, "None")
-    if bind == "None" or bind == "" then return false end
-    return input.KeyCode.Name == bind or input.UserInputType.Name == bind
-end
+function FlickAdapter.canLoad() return true, "CFrame Override absoluto suportado." end
 
--- Registra a Mão Direita (Hook) e a Mão Esquerda (Flick)
-local function PreRegisterBackends()
-    pcall(function()
-        if type(Registry.Register) == "function" then
-            Registry.Register("universal_hook", Import("logic/func/combat/silentaim/backend/universal_hook"))
-            Registry.Register("flick_adapter", Import("logic/func/combat/silentaim/backend/flick_adapter"))
-        end
-    end)
-end
-PreRegisterBackends()
+function FlickAdapter.load()
+    if FlickAdapter._state == "initialized" then return "initialized" end
+    local Controller = Import("logic/func/combat/silentaim/main")
 
-local function AcquireTarget(): Model?
-    local useFov = GetToggleState(KEY_USE_FOV, true)
-    local fovRadius = useFov and (tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150) or math.huge
-    local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
-    if aimPartName == "Random" or aimPartName == "Closest" then aimPartName = "HumanoidRootPart" end
-    
-    local targetPart = Targeting.GetClosestToCursor(fovRadius, {aimPartName, "HumanoidRootPart"}, GetToggleState(KEY_WALL_CHECK, false), GetToggleState(KEY_KNOCK_CHECK, false), false)
-    if targetPart and targetPart.Parent then return targetPart.Parent :: Model end
-    return nil
-end
-
-function SilentAim.Init()
-    if isInitialized then return "initialized" end
-    if FOVLimit and type(FOVLimit.Init) == "function" then FOVLimit.Init() end
-
-    SilentAim._inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe or not GetToggleState(KEY_ENABLED, false) then return end
-        if IsBindMatch(input) then
-            if GetToggleState(KEY_HOLD, false) then
-                lockedCharacter = AcquireTarget()
-            else
-                if lockedCharacter then lockedCharacter = nil; MarkStyle.Clear() else lockedCharacter = AcquireTarget() end
-            end
-        end
-    end)
-
-    SilentAim._inputEnded = UserInputService.InputEnded:Connect(function(input, gpe)
-        if IsBindMatch(input) and GetToggleState(KEY_HOLD, false) then
-            lockedCharacter = nil; MarkStyle.Clear()
-        end
-    end)
-
-    Loop.BindToRender("SilentAim_Controller", function()
-        if not GetToggleState(KEY_ENABLED, false) then lockedCharacter = nil; MarkStyle.Clear(); return end
-        if lockedCharacter then
-            local hum = lockedCharacter:FindFirstChildOfClass("Humanoid")
-            local isKnocked = GetToggleState(KEY_KNOCK_CHECK, false) and KnockCheck and KnockCheck.IsKnocked(Players:GetPlayerFromCharacter(lockedCharacter))
-            local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart") :: BasePart
+    flickConnectionBegan = UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isShooting = true
             
-            -- HARD LOCK: Não solta o alvo a não ser que ele morra
-            if not lockedCharacter.Parent or not hum or hum.Health <= 0 or isKnocked or not targetRoot then
-                lockedCharacter = nil; MarkStyle.Clear(); return
-            end
-            
-            local aimPartName = UIState.Get(KEY_AIM_PART, "Head")
-            if aimPartName == "Random" or aimPartName == "Closest" then aimPartName = "HumanoidRootPart" end
-            local markPart = lockedCharacter:FindFirstChild(aimPartName) or targetRoot
-            
-            if markPart then MarkStyle.Mark(markPart, UIState.Get(KEY_MARK_STYLE, "Highlight")) end
-        else
-            MarkStyle.Clear()
+            task.spawn(function()
+                while isShooting do
+                    if Controller and type(Controller.GetLockedTargetPart) == "function" then
+                        local targetPart = Controller.GetLockedTargetPart()
+                        
+                        if targetPart and targetPart:IsA("BasePart") then
+                            local camera = Workspace.CurrentCamera
+                            if camera then
+                                local originalCFrame = camera.CFrame
+                                
+                                local finalAimPosition = targetPart.Position
+                                if Predict and type(Predict.GetPosition) == "function" then
+                                    local pValue = tonumber(UIState.Get(KEY_PREDICT_VAL, 0)) or 0
+                                    finalAimPosition = Predict.GetPosition(targetPart, pValue)
+                                end
+
+                                -- O FLICK: Vira a câmera matematicamente
+                                camera.CFrame = CFrame.lookAt(camera.CFrame.Position, finalAimPosition)
+                                
+                                -- Espera o frame exato do jogo registrar a bala
+                                RunService.RenderStepped:Wait() 
+                                
+                                -- Restaura a câmera imediatamente
+                                camera.CFrame = originalCFrame
+                            end
+                        end
+                    end
+                    -- Yield mínimo para evitar crash, permitindo rajadas automáticas
+                    RunService.Heartbeat:Wait()
+                end
+            end)
         end
     end)
 
-    -- A DECISÃO ARQUITETURAL: Tenta o Hook primeiro, o Flick em seguida.
-    local BACKEND_CHAIN = { "universal_hook", "flick_adapter" }
-    for _, backendName in ipairs(BACKEND_CHAIN) do
-        local backend = Registry.Get(backendName)
-        if backend and backend.canLoad() then
-            if backend.load() == "initialized" then
-                activeBackendName = backendName
-                break
-            end
+    flickConnectionEnded = UserInputService.InputEnded:Connect(function(input, gpe)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isShooting = false
         end
-    end
+    end)
 
-    isInitialized = true
-    Telemetry.Log("LITURGY", "SilentAim", "Orquestrador Master Iniciado. Backend: " .. (activeBackendName or "Nenhum"))
+    FlickAdapter._state = "initialized"
+    Telemetry.Log("LITURGY", "SilentAim", "Flick Adapter injetado instantaneamente.")
     return "initialized"
 end
 
-function SilentAim.Destroy()
-    if not isInitialized then return end
-    if FOVLimit then FOVLimit.Destroy() end
-    MarkStyle.Clear(); Loop.UnbindFromRender("SilentAim_Controller")
-    if SilentAim._inputBegan then SilentAim._inputBegan:Disconnect() end
-    if SilentAim._inputEnded then SilentAim._inputEnded:Disconnect() end
-    if activeBackendName then
-        local backend = Registry.Get(activeBackendName)
-        if backend then backend.destroy() end
-    end
-    lockedCharacter = nil; activeBackendName = nil; isInitialized = false
+function FlickAdapter.destroy()
+    if FlickAdapter._state ~= "initialized" then return end
+    isShooting = false
+    if flickConnectionBegan then flickConnectionBegan:Disconnect(); flickConnectionBegan = nil end
+    if flickConnectionEnded then flickConnectionEnded:Disconnect(); flickConnectionEnded = nil end
+    FlickAdapter._state = "destroyed"
 end
 
-local bodyPartsList = {"Head", "UpperTorso", "LowerTorso", "RightUpperArm", "LeftUpperArm", "RightUpperLeg", "LeftUpperLeg"}
-
-function SilentAim.GetLockedTargetPart(): BasePart?
-    if not lockedCharacter or not GetToggleState(KEY_ENABLED, false) then return nil end
-    local targetRoot = lockedCharacter:FindFirstChild("HumanoidRootPart")
-    if not targetRoot then return nil end
-
-    -- VALIDAÇÃO DE GATILHO (Fora do FOV = Tiro normal)
-    if GetToggleState(KEY_USE_FOV, true) then
-        local camera = Workspace.CurrentCamera
-        if camera then
-            local screenPos, onScreen = camera:WorldToViewportPoint(targetRoot.Position)
-            local fovRadius = tonumber(UIState.Get(KEY_FOV_RADIUS, 150)) or 150
-            local mousePos = UserInputService:GetMouseLocation()
-            
-            if not onScreen or (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude > fovRadius then
-                return nil 
-            end
-        end
-    end
-
-    -- MATEMÁTICA DE HIT CHANCE (0 a 100)
-    local hitChance = tonumber(UIState.Get(KEY_HIT_CHANCE, 100)) or 100
-    if math.random(1, 100) > hitChance then return nil end
-
-    local aimPartSetting = UIState.Get(KEY_AIM_PART, "Head")
-    if aimPartSetting == "Random" then
-        local validParts = {}
-        for _, partName in ipairs(bodyPartsList) do
-            local p = lockedCharacter:FindFirstChild(partName)
-            if p and p:IsA("BasePart") then table.insert(validParts, p) end
-        end
-        return #validParts > 0 and validParts[math.random(1, #validParts)] or targetRoot
-    end
-    
-    if aimPartSetting == "Closest" then
-        local camera = Workspace.CurrentCamera
-        local mousePos = UserInputService:GetMouseLocation()
-        local closestPart, shortestDist = nil, math.huge
-        for _, partName in ipairs(bodyPartsList) do
-            local p = lockedCharacter:FindFirstChild(partName)
-            if p and p:IsA("BasePart") then
-                local screenPos, onScreen = camera:WorldToViewportPoint(p.Position)
-                if onScreen then
-                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                    if dist < shortestDist then shortestDist = dist; closestPart = p end
-                end
-            end
-        end
-        return closestPart or targetRoot
-    end
-
-    return lockedCharacter:FindFirstChild(aimPartSetting) or targetRoot
-end
-
-return SilentAim
+return FlickAdapter
